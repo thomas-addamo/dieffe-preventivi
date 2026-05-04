@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import type { QuoteWithRelations } from "@/types";
+import { usePermissions } from "@/hooks/use-permissions";
 
 interface QuoteHeaderFormProps {
   quote: QuoteWithRelations;
@@ -27,6 +28,7 @@ export function QuoteHeaderForm({
   onChange,
 }: QuoteHeaderFormProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const { isViewer } = usePermissions();
 
   return (
     <div className="bg-card border rounded-lg overflow-hidden">
@@ -57,6 +59,7 @@ export function QuoteHeaderForm({
             <Input
               value={quote.title}
               onChange={(e) => onChange({ title: e.target.value })}
+              readOnly={isViewer}
               placeholder="Es: Ristrutturazione appartamento via Roma..."
               className="font-medium"
             />
@@ -78,6 +81,7 @@ export function QuoteHeaderForm({
               onValueChange={(v) =>
                 onChange({ clientId: v === "none" ? null : v })
               }
+              disabled={isViewer}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Seleziona cliente" />
@@ -98,6 +102,7 @@ export function QuoteHeaderForm({
             <Input
               value={quote.projectAddress ?? ""}
               onChange={(e) => onChange({ projectAddress: e.target.value })}
+              readOnly={isViewer}
               placeholder="Via e numero civico, città"
             />
           </div>
@@ -108,6 +113,7 @@ export function QuoteHeaderForm({
               type="date"
               value={quote.validUntil ?? ""}
               onChange={(e) => onChange({ validUntil: e.target.value || null })}
+              readOnly={isViewer}
             />
           </div>
 
@@ -116,6 +122,7 @@ export function QuoteHeaderForm({
             <Select
               value={String(quote.vatRate)}
               onValueChange={(v) => onChange({ vatRate: Number(v) })}
+              disabled={isViewer}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -134,6 +141,7 @@ export function QuoteHeaderForm({
             <Textarea
               value={quote.notes ?? ""}
               onChange={(e) => onChange({ notes: e.target.value })}
+              readOnly={isViewer}
               placeholder="Note aggiuntive per il preventivo..."
               rows={3}
             />

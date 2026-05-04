@@ -2,6 +2,15 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import {
+  DndContext,
+  DragEndEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+} from "@dnd-kit/core";
+import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { toast } from "sonner";
 import {
   Save,
@@ -13,6 +22,7 @@ import {
   ArrowLeft,
   MoreVertical,
   Copy,
+  Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +39,7 @@ import { QuoteHeaderForm } from "./QuoteHeaderForm";
 import type { QuoteWithRelations, SectionWithItems, ItemWithImages } from "@/types";
 import { QUOTE_STATUS_LABELS, QUOTE_STATUS_COLORS, generateId, formatCurrency } from "@/lib/utils";
 import { calcQuoteTotals } from "@/lib/calculations";
+import { usePermissions } from "@/hooks/use-permissions";
 
 interface QuoteEditorProps {
   initialQuote: QuoteWithRelations;
@@ -39,20 +50,26 @@ const SECTION_CODES = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
 export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
   const router = useRouter();
+  const { isViewer, can: perms } = usePermissions();
   const [quote, setQuote] = useState<QuoteWithRelations>(initialQuote);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
   const [saveState, setSaveState] = useState<"saved" | "saving" | "unsaved">("saved");
   const [mobileTotalsOpen, setMobileTotalsOpen] = useState(false);
+  const [readonlyBannerDismissed, setReadonlyBannerDismissed] = useState(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const scheduleSave = useCallback(
     (updatedQuote: QuoteWithRelations) => {
+      if (isViewer) return;
       setSaveState("unsaved");
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       saveTimerRef.current = setTimeout(() => {
         performSave(updatedQuote);
       }, 1200);
     },
-    []
+    [isViewer]
   );
 
   async function performSave(q: QuoteWithRelations) {
@@ -152,6 +169,26 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
     updateQuote({
       sections: quote.sections.filter((s) => s.id !== sectionId),
     });
+    fetch(`/api/quotes/${quote.id}/sections/${sectionId}`, { method: "DELETE" })
+      .catch(() => toast.error("Errore eliminazione sezione"));
+  }
+
+  function handleSectionDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = quote.sections.findIndex((s) => s.id === active.id);
+    const newIndex = quote.sections.findIndex((s) => s.id === over.id);
+    const reordered = arrayMove(quote.sections, oldIndex, newIndex).map(
+      (s, idx) => ({ ...s, orderIndex: idx })
+    );
+
+    setQuote((prev) => ({ ...prev, sections: reordered }));
+    fetch(`/api/quotes/${quote.id}/sections/reorder`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(reordered.map((s) => ({ id: s.id, orderIndex: s.orderIndex }))),
+    }).catch(() => toast.error("Errore salvataggio ordine sezioni"));
   }
 
   function addItem(sectionId: string) {
@@ -198,6 +235,8 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
     updateSection(sectionId, {
       items: section.items.filter((i) => i.id !== itemId),
     });
+    fetch(`/api/quotes/${quote.id}/items/${itemId}`, { method: "DELETE" })
+      .catch(() => toast.error("Errore eliminazione voce"));
   }
 
   function duplicateItem(sectionId: string, itemId: string) {
@@ -274,6 +313,20 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
 
   return (
     <div className="flex flex-col min-h-full">
+      {/* Read-only banner for viewer */}
+      {isViewer && !readonlyBannerDismissed && (
+        <div className="bg-muted/60 border-b px-4 py-2 flex items-center gap-2 text-sm text-muted-foreground">
+          <Lock className="w-3.5 h-3.5 shrink-0" />
+          <span>Modalità sola lettura — non hai i permessi per modificare questo preventivo.</span>
+          <button
+            className="ml-auto text-xs underline hover:text-foreground"
+            onClick={() => setReadonlyBannerDismissed(true)}
+          >
+            Chiudi
+          </button>
+        </div>
+      )}
+
       {/* Toolbar */}
       <div className="sticky top-0 z-10 bg-background border-b px-3 md:px-6 py-2.5 flex items-center gap-2 md:gap-3">
         <Button
@@ -292,36 +345,47 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
           <h1 className="font-semibold text-sm truncate">{quote.code}</h1>
         </div>
 
-        {/* Save state — hide on very small screens */}
-        <span className="hidden sm:block text-xs text-muted-foreground shrink-0">
-          {saveState === "saving"
-            ? "Salvataggio..."
-            : saveState === "saved"
-            ? "✓ Salvato"
-            : "Non salvato"}
-        </span>
+        {/* Save state — solo per editor/admin */}
+        {!isViewer && (
+          <span className="hidden sm:block text-xs text-muted-foreground shrink-0">
+            {saveState === "saving"
+              ? "Salvataggio..."
+              : saveState === "saved"
+              ? "✓ Salvato"
+              : "Non salvato"}
+          </span>
+        )}
 
-        {/* Status dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-1.5 h-8 px-2 md:px-3">
-              <Badge
-                variant="secondary"
-                className={`text-xs ${QUOTE_STATUS_COLORS[quote.status]}`}
-              >
-                {QUOTE_STATUS_LABELS[quote.status]}
-              </Badge>
-              <ChevronDown className="w-3 h-3 hidden sm:block" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {Object.entries(QUOTE_STATUS_LABELS).map(([k, v]) => (
-              <DropdownMenuItem key={k} onClick={() => changeStatus(k)}>
-                {v}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {/* Status badge — sempre visibile; dropdown solo per editor/admin */}
+        {perms.changeQuoteStatus ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1.5 h-8 px-2 md:px-3">
+                <Badge
+                  variant="secondary"
+                  className={`text-xs ${QUOTE_STATUS_COLORS[quote.status]}`}
+                >
+                  {QUOTE_STATUS_LABELS[quote.status]}
+                </Badge>
+                <ChevronDown className="w-3 h-3 hidden sm:block" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {Object.entries(QUOTE_STATUS_LABELS).map(([k, v]) => (
+                <DropdownMenuItem key={k} onClick={() => changeStatus(k)}>
+                  {v}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <Badge
+            variant="secondary"
+            className={`text-xs ${QUOTE_STATUS_COLORS[quote.status]}`}
+          >
+            {QUOTE_STATUS_LABELS[quote.status]}
+          </Badge>
+        )}
 
         {/* Desktop: export + delete buttons */}
         <div className="hidden md:flex items-center gap-2">
@@ -334,20 +398,26 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => exportQuote("pdf")}>PDF</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => exportQuote("excel")}>Excel (.xlsx)</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => exportQuote("csv")}>CSV</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => exportQuote("json")}>JSON (backup)</DropdownMenuItem>
+              {perms.exportQuoteAdvanced && (
+                <>
+                  <DropdownMenuItem onClick={() => exportQuote("excel")}>Excel (.xlsx)</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => exportQuote("csv")}>CSV</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => exportQuote("json")}>JSON (backup)</DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-destructive hover:text-destructive"
-            onClick={deleteQuote}
-          >
-            <Trash2 className="w-4 h-4" />
-          </Button>
+          {perms.deleteQuote && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-destructive hover:text-destructive"
+              onClick={deleteQuote}
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          )}
         </div>
 
         {/* Mobile: kebab menu */}
@@ -361,16 +431,22 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
             <DropdownMenuItem onClick={() => exportQuote("pdf")}>
               <Download className="w-3.5 h-3.5 mr-2" /> Apri PDF
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => exportQuote("excel")}>
-              <Download className="w-3.5 h-3.5 mr-2" /> Excel
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
-              onClick={deleteQuote}
-            >
-              <Trash2 className="w-3.5 h-3.5 mr-2" /> Elimina preventivo
-            </DropdownMenuItem>
+            {perms.exportQuoteAdvanced && (
+              <DropdownMenuItem onClick={() => exportQuote("excel")}>
+                <Download className="w-3.5 h-3.5 mr-2" /> Excel
+              </DropdownMenuItem>
+            )}
+            {perms.deleteQuote && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={deleteQuote}
+                >
+                  <Trash2 className="w-3.5 h-3.5 mr-2" /> Elimina preventivo
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -387,28 +463,41 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
             />
 
             <div className="space-y-3 md:space-y-4">
-              {quote.sections.map((section, sIdx) => (
-                <SectionBlock
-                  key={section.id}
-                  section={section}
-                  sectionIndex={sIdx}
-                  quoteId={quote.id}
-                  onUpdate={(patch) => updateSection(section.id, patch)}
-                  onDelete={() => deleteSection(section.id)}
-                  onAddItem={() => addItem(section.id)}
-                  onUpdateItem={(itemId, patch) => updateItem(section.id, itemId, patch)}
-                  onDeleteItem={(itemId) => deleteItem(section.id, itemId)}
-                  onDuplicateItem={(itemId) => duplicateItem(section.id, itemId)}
-                />
-              ))}
-
-              <Button
-                variant="outline"
-                onClick={addSection}
-                className="w-full gap-2 border-dashed text-muted-foreground hover:text-foreground h-11 md:h-9"
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleSectionDragEnd}
               >
-                <Plus className="w-4 h-4" /> Aggiungi sezione
-              </Button>
+                <SortableContext
+                  items={quote.sections.map((s) => s.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {quote.sections.map((section, sIdx) => (
+                    <SectionBlock
+                      key={section.id}
+                      section={section}
+                      sectionIndex={sIdx}
+                      quoteId={quote.id}
+                      onUpdate={(patch) => updateSection(section.id, patch)}
+                      onDelete={() => deleteSection(section.id)}
+                      onAddItem={() => addItem(section.id)}
+                      onUpdateItem={(itemId, patch) => updateItem(section.id, itemId, patch)}
+                      onDeleteItem={(itemId) => deleteItem(section.id, itemId)}
+                      onDuplicateItem={(itemId) => duplicateItem(section.id, itemId)}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
+
+              {!isViewer && (
+                <Button
+                  variant="outline"
+                  onClick={addSection}
+                  className="w-full gap-2 border-dashed text-muted-foreground hover:text-foreground h-11 md:h-9"
+                >
+                  <Plus className="w-4 h-4" /> Aggiungi sezione
+                </Button>
+              )}
             </div>
           </div>
         </div>

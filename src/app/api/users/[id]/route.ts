@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 import { getCurrentUser, hashPassword } from "@/lib/auth";
 
 const patchSchema = z.object({
-  role: z.enum(["admin", "user"]).optional(),
+  role: z.enum(["admin", "editor", "viewer"]).optional(),
   disabled: z.boolean().optional(),
   password: z.string().min(8).optional(),
   name: z.string().min(2).optional(),

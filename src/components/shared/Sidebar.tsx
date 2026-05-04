@@ -19,10 +19,10 @@ const navItems = [
   { href: "/preventivi", label: "Preventivi", icon: FileText },
   { href: "/clienti", label: "Clienti", icon: Users },
   { href: "/template", label: "Template", icon: LayoutTemplate },
-  { href: "/impostazioni", label: "Impostazioni", icon: Settings },
 ];
 
 const adminItems = [
+  { href: "/impostazioni", label: "Impostazioni", icon: Settings },
   { href: "/utenti", label: "Utenti", icon: UserCog },
 ];
 

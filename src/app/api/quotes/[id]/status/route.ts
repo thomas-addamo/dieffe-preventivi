@@ -13,6 +13,7 @@ export async function PATCH(
 ) {
   const session = await getCurrentUser();
   if (!session) return NextResponse.json({ error: "Non autorizzato" }, { status: 401 });
+  if (session.user.role === "viewer") return NextResponse.json({ error: "Permessi insufficienti" }, { status: 403 });
 
   const { id } = await params;
   const body = await req.json().catch(() => ({}));

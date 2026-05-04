@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { SectionWithItems } from "@/types";
+import { usePermissions } from "@/hooks/use-permissions";
 import {
   formatCurrency,
   PAYMENT_TERMS_TEMPLATES,
@@ -60,6 +61,7 @@ export function TotalsPanel({
   onChangeDiscount,
   onChangePaymentTerms,
 }: TotalsPanelProps) {
+  const { isViewer } = usePermissions();
   return (
     <div className="space-y-4">
       <h3 className="font-semibold text-sm">Riepilogo</h3>
@@ -100,6 +102,7 @@ export function TotalsPanel({
               if (v === "none") onChangeDiscount(null, null);
               else onChangeDiscount(v as "percent" | "fixed", discountValue ?? 0);
             }}
+            disabled={isViewer}
           >
             <SelectTrigger className="w-24 h-7 text-xs">
               <SelectValue />
@@ -123,6 +126,7 @@ export function TotalsPanel({
               onChange={(e) =>
                 onChangeDiscount(discountType, Number(e.target.value))
               }
+              disabled={isViewer}
               className="flex-1 h-7 text-xs text-right"
               min="0"
               step="0.01"
@@ -155,6 +159,7 @@ export function TotalsPanel({
         <Select
           value={String(vatRate)}
           onValueChange={(v) => onChangeVat(Number(v))}
+          disabled={isViewer}
         >
           <SelectTrigger className="h-7 text-xs">
             <SelectValue />
@@ -188,28 +193,31 @@ export function TotalsPanel({
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <Label className="text-xs">Condizioni di pagamento</Label>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-6 text-xs gap-1 px-2">
-                Template <ChevronDown className="w-3 h-3" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-72">
-              {PAYMENT_TERMS_TEMPLATES.map((t) => (
-                <DropdownMenuItem
-                  key={t}
-                  onClick={() => onChangePaymentTerms(t)}
-                  className="text-xs whitespace-normal"
-                >
-                  {t}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {!isViewer && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-6 text-xs gap-1 px-2">
+                  Template <ChevronDown className="w-3 h-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-72">
+                {PAYMENT_TERMS_TEMPLATES.map((t) => (
+                  <DropdownMenuItem
+                    key={t}
+                    onClick={() => onChangePaymentTerms(t)}
+                    className="text-xs whitespace-normal"
+                  >
+                    {t}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
         <Textarea
           value={paymentTerms ?? ""}
           onChange={(e) => onChangePaymentTerms(e.target.value)}
+          readOnly={isViewer}
           placeholder="Condizioni di pagamento..."
           rows={3}
           className="text-xs resize-none"

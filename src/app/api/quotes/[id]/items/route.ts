@@ -18,6 +18,7 @@ const itemSchema = z.object({
 export async function POST(req: NextRequest) {
   const session = await getCurrentUser();
   if (!session) return NextResponse.json({ error: "Non autorizzato" }, { status: 401 });
+  if (session.user.role === "viewer") return NextResponse.json({ error: "Permessi insufficienti" }, { status: 403 });
 
   const body = await req.json().catch(() => ({}));
   const parsed = itemSchema.safeParse(body);
@@ -33,6 +34,7 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   const session = await getCurrentUser();
   if (!session) return NextResponse.json({ error: "Non autorizzato" }, { status: 401 });
+  if (session.user.role === "viewer") return NextResponse.json({ error: "Permessi insufficienti" }, { status: 403 });
 
   const body = await req.json().catch(() => ({}));
   const itemsSchema = z.array(itemSchema);

@@ -27,6 +27,7 @@ import {
 import { toast } from "sonner";
 import { formatDate } from "@/lib/utils";
 import type { Client } from "@/lib/db/schema";
+import { usePermissions } from "@/hooks/use-permissions";
 
 const schema = z.object({
   name: z.string().min(1, "Nome obbligatorio"),
@@ -48,6 +49,7 @@ export function ClientiClient({
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<Client | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const { can: perms } = usePermissions();
 
   const {
     register,
@@ -133,9 +135,11 @@ export function ClientiClient({
             {clients.length} client{clients.length === 1 ? "e" : "i"} registrat{clients.length === 1 ? "o" : "i"}
           </p>
         </div>
-        <Button onClick={openNew} className="gap-2 hidden lg:flex">
-          <Plus className="w-4 h-4" /> Nuovo cliente
-        </Button>
+        {perms.manageClients && (
+          <Button onClick={openNew} className="gap-2 hidden lg:flex">
+            <Plus className="w-4 h-4" /> Nuovo cliente
+          </Button>
+        )}
       </div>
 
       <div className="relative mb-4">
@@ -158,7 +162,7 @@ export function ClientiClient({
               <TableHead>Email</TableHead>
               <TableHead>Telefono</TableHead>
               <TableHead>Creato</TableHead>
-              <TableHead className="w-20">Azioni</TableHead>
+              {perms.manageClients && <TableHead className="w-20">Azioni</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -180,21 +184,23 @@ export function ClientiClient({
                   <TableCell className="text-sm text-muted-foreground tabular-nums">
                     {formatDate(c.createdAt)}
                   </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(c)}>
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-destructive hover:text-destructive"
-                        onClick={() => deleteClient(c.id)}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    </div>
-                  </TableCell>
+                  {perms.manageClients && (
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(c)}>
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive hover:text-destructive"
+                          onClick={() => deleteClient(c.id)}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             )}
@@ -218,19 +224,21 @@ export function ClientiClient({
                     <p className="font-mono text-xs text-muted-foreground">{c.vatNumber}</p>
                   )}
                 </div>
-                <div className="flex gap-1 shrink-0">
-                  <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => openEdit(c)}>
-                    <Edit2 className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-10 w-10 text-destructive hover:text-destructive"
-                    onClick={() => deleteClient(c.id)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
+                {perms.manageClients && (
+                  <div className="flex gap-1 shrink-0">
+                    <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => openEdit(c)}>
+                      <Edit2 className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-10 w-10 text-destructive hover:text-destructive"
+                      onClick={() => deleteClient(c.id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
               {(c.email || c.phone) && (
                 <div className="space-y-1">
@@ -254,14 +262,15 @@ export function ClientiClient({
         )}
       </div>
 
-      {/* FAB — mobile only */}
-      <button
-        onClick={openNew}
-        className="fixed bottom-6 right-6 z-40 lg:hidden w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all"
-        aria-label="Nuovo cliente"
-      >
-        <Plus className="w-6 h-6" />
-      </button>
+      {perms.manageClients && (
+        <button
+          onClick={openNew}
+          className="fixed bottom-6 right-6 z-40 lg:hidden w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all"
+          aria-label="Nuovo cliente"
+        >
+          <Plus className="w-6 h-6" />
+        </button>
+      )}
 
       <Dialog open={showForm} onOpenChange={(o) => !o && setShowForm(false)}>
         <DialogContent className="max-w-md w-full">

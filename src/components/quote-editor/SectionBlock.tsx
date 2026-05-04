@@ -17,9 +17,20 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  DndContext,
+  DragEndEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+} from "@dnd-kit/core";
+import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { LineItem } from "./LineItem";
 import type { SectionWithItems, ItemWithImages } from "@/types";
 import { cn } from "@/lib/utils";
+import { usePermissions } from "@/hooks/use-permissions";
 
 interface SectionBlockProps {
   section: SectionWithItems;
@@ -45,39 +56,84 @@ export function SectionBlock({
   onDuplicateItem,
 }: SectionBlockProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const { isViewer } = usePermissions();
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: section.id });
+
+  const itemSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
+
+  function handleItemDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = section.items.findIndex((i) => i.id === active.id);
+    const newIndex = section.items.findIndex((i) => i.id === over.id);
+    const reordered = arrayMove(section.items, oldIndex, newIndex).map(
+      (item, idx) => ({ ...item, orderIndex: idx })
+    );
+
+    onUpdate({ items: reordered });
+    fetch(`/api/quotes/${quoteId}/items/reorder`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(reordered.map((i) => ({ id: i.id, orderIndex: i.orderIndex }))),
+    }).catch(() => {});
+  }
+
+  const sectionStyle = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
 
   return (
-    <div className="bg-card border rounded-lg overflow-hidden">
+    <div ref={setNodeRef} style={sectionStyle} className="bg-card border rounded-lg overflow-hidden">
       {/* Section header */}
       <div className="flex items-center gap-2 px-3 md:px-4 py-3 bg-blue-50/60 dark:bg-blue-950/20 border-b">
-        <GripVertical className="w-4 h-4 text-muted-foreground shrink-0 cursor-grab" />
+        <GripVertical
+          {...(!isViewer ? { ...attributes, ...listeners } : {})}
+          className="w-4 h-4 text-muted-foreground shrink-0 cursor-grab"
+        />
 
         <Input
           value={section.code}
           onChange={(e) => onUpdate({ code: e.target.value.toUpperCase().slice(0, 3) })}
+          disabled={isViewer}
           className="w-14 h-7 text-center font-mono font-bold bg-transparent border-none shadow-none focus-visible:ring-0 text-sm p-1"
         />
 
         <Input
           value={section.title}
           onChange={(e) => onUpdate({ title: e.target.value })}
+          disabled={isViewer}
           className="flex-1 h-7 font-semibold bg-transparent border-none shadow-none focus-visible:ring-0 text-sm min-w-0"
           placeholder="Titolo sezione"
         />
 
         {/* Desktop actions */}
         <div className="hidden md:flex items-center gap-1 shrink-0">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-muted-foreground hover:text-destructive"
-            onClick={() => {
-              if (!confirm("Eliminare questa sezione e tutte le sue voci?")) return;
-              onDelete();
-            }}
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </Button>
+          {!isViewer && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+              onClick={() => {
+                if (!confirm("Eliminare questa sezione e tutte le sue voci?")) return;
+                onDelete();
+              }}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"
@@ -98,24 +154,26 @@ export function SectionBlock({
           >
             {collapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
           </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground">
-                <MoreVertical className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onClick={() => {
-                  if (!confirm("Eliminare questa sezione e tutte le sue voci?")) return;
-                  onDelete();
-                }}
-              >
-                <Trash2 className="w-3.5 h-3.5 mr-2" /> Elimina sezione
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {!isViewer && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground">
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => {
+                    if (!confirm("Eliminare questa sezione e tutte le sue voci?")) return;
+                    onDelete();
+                  }}
+                >
+                  <Trash2 className="w-3.5 h-3.5 mr-2" /> Elimina sezione
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
 
@@ -146,31 +204,44 @@ export function SectionBlock({
           )}
 
           {/* Items */}
-          <div className="divide-y">
-            {section.items.map((item, idx) => (
-              <LineItem
-                key={item.id}
-                item={item}
-                itemNumber={`${section.code}.${idx + 1}`}
-                quoteId={quoteId}
-                onUpdate={(patch) => onUpdateItem(item.id, patch)}
-                onDelete={() => onDeleteItem(item.id)}
-                onDuplicate={() => onDuplicateItem(item.id)}
-              />
-            ))}
-          </div>
+          <DndContext
+            sensors={itemSensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleItemDragEnd}
+          >
+            <SortableContext
+              items={section.items.map((i) => i.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="divide-y">
+                {section.items.map((item, idx) => (
+                  <LineItem
+                    key={item.id}
+                    item={item}
+                    itemNumber={`${section.code}.${idx + 1}`}
+                    quoteId={quoteId}
+                    onUpdate={(patch) => onUpdateItem(item.id, patch)}
+                    onDelete={() => onDeleteItem(item.id)}
+                    onDuplicate={() => onDuplicateItem(item.id)}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
 
           {/* Add item */}
-          <div className="px-3 md:px-4 py-2.5 border-t bg-muted/10">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onAddItem}
-              className="gap-2 text-muted-foreground hover:text-foreground text-xs h-9 md:h-7"
-            >
-              <Plus className="w-3.5 h-3.5" /> Aggiungi voce
-            </Button>
-          </div>
+          {!isViewer && (
+            <div className="px-3 md:px-4 py-2.5 border-t bg-muted/10">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onAddItem}
+                className="gap-2 text-muted-foreground hover:text-foreground text-xs h-9 md:h-7"
+              >
+                <Plus className="w-3.5 h-3.5" /> Aggiungi voce
+              </Button>
+            </div>
+          )}
         </>
       )}
     </div>

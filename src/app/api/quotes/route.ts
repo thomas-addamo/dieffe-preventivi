@@ -60,6 +60,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const session = await getCurrentUser();
   if (!session) return NextResponse.json({ error: "Non autorizzato" }, { status: 401 });
+  if (session.user.role === "viewer") return NextResponse.json({ error: "Permessi insufficienti" }, { status: 403 });
 
   const body = await req.json().catch(() => ({}));
   const parsed = createSchema.safeParse(body);

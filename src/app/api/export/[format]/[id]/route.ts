@@ -16,6 +16,10 @@ export async function GET(
   if (!session) return NextResponse.json({ error: "Non autorizzato" }, { status: 401 });
 
   const { format, id } = await params;
+
+  if (session.user.role === "viewer") {
+    return NextResponse.json({ error: "Permessi insufficienti" }, { status: 403 });
+  }
   const quote = await getQuoteWithRelations(id);
   if (!quote) return NextResponse.json({ error: "Preventivo non trovato" }, { status: 404 });
 

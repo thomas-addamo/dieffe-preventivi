@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Edit2, Trash2, Loader2, Shield, User } from "lucide-react";
+import { Plus, Edit2, Trash2, Loader2, Shield, User, Eye } from "lucide-react";
+import { ROLES } from "@/lib/permissions/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,6 +36,23 @@ import {
 import { toast } from "sonner";
 import { formatDate } from "@/lib/utils";
 
+function RoleBadge({ role, size = "md" }: { role: string; size?: "sm" | "md" }) {
+  const cfg =
+    role === "admin"
+      ? { cls: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300", Icon: Shield, label: "Admin" }
+      : role === "editor"
+      ? { cls: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300", Icon: User, label: "Editor" }
+      : { cls: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400", Icon: Eye, label: "Viewer" };
+  const iconSize = size === "sm" ? "w-2.5 h-2.5" : "w-3 h-3";
+  const textSize = size === "sm" ? "text-xs" : "";
+  return (
+    <Badge variant="secondary" className={`${cfg.cls} ${textSize}`}>
+      <cfg.Icon className={`${iconSize} mr-1`} />
+      {cfg.label}
+    </Badge>
+  );
+}
+
 type UserRow = {
   id: string;
   email: string;
@@ -49,12 +67,12 @@ const createSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
   password: z.string().min(8),
-  role: z.enum(["admin", "user"]),
+  role: z.enum(["admin", "editor", "viewer"]),
 });
 
 const editSchema = z.object({
   name: z.string().min(2),
-  role: z.enum(["admin", "user"]),
+  role: z.enum(["admin", "editor", "viewer"]),
   password: z.string().min(8).optional().or(z.literal("")),
 });
 
@@ -69,7 +87,7 @@ export function UtentiClient({
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState<UserRow | null>(null);
 
-  const createForm = useForm({ resolver: zodResolver(createSchema), defaultValues: { role: "user" as const } });
+  const createForm = useForm({ resolver: zodResolver(createSchema), defaultValues: { role: "editor" as const } });
   const editForm = useForm({ resolver: zodResolver(editSchema) });
 
   async function onCreate(data: z.infer<typeof createSchema>) {
@@ -179,17 +197,7 @@ export function UtentiClient({
                 </TableCell>
                 <TableCell className="text-sm">{u.email}</TableCell>
                 <TableCell>
-                  <Badge
-                    variant="secondary"
-                    className={
-                      u.role === "admin"
-                        ? "bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300"
-                        : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
-                    }
-                  >
-                    {u.role === "admin" ? <Shield className="w-3 h-3 mr-1" /> : <User className="w-3 h-3 mr-1" />}
-                    {u.role === "admin" ? "Admin" : "Utente"}
-                  </Badge>
+                  <RoleBadge role={u.role} />
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground tabular-nums">
                   {u.lastLoginAt ? formatDate(u.lastLoginAt) : "—"}
@@ -207,7 +215,7 @@ export function UtentiClient({
                       className="h-7 w-7"
                       onClick={() => {
                         setEditing(u);
-                        editForm.reset({ name: u.name, role: u.role as "admin" | "user", password: "" });
+                        editForm.reset({ name: u.name, role: u.role as "admin" | "editor" | "viewer", password: "" });
                       }}
                     >
                       <Edit2 className="w-3.5 h-3.5" />
@@ -243,17 +251,7 @@ export function UtentiClient({
                       <span className="ml-1.5 text-xs text-muted-foreground font-normal">(tu)</span>
                     )}
                   </p>
-                  <Badge
-                    variant="secondary"
-                    className={
-                      u.role === "admin"
-                        ? "bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300 text-xs"
-                        : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 text-xs"
-                    }
-                  >
-                    {u.role === "admin" ? <Shield className="w-2.5 h-2.5 mr-1" /> : <User className="w-2.5 h-2.5 mr-1" />}
-                    {u.role === "admin" ? "Admin" : "Utente"}
-                  </Badge>
+                  <RoleBadge role={u.role} size="sm" />
                 </div>
                 <p className="text-xs text-muted-foreground truncate">{u.email}</p>
                 {u.lastLoginAt && (
@@ -275,7 +273,7 @@ export function UtentiClient({
                   className="h-10 w-10"
                   onClick={() => {
                     setEditing(u);
-                    editForm.reset({ name: u.name, role: u.role as "admin" | "user", password: "" });
+                    editForm.reset({ name: u.name, role: u.role as "admin" | "editor" | "viewer", password: "" });
                   }}
                 >
                   <Edit2 className="w-4 h-4" />
@@ -327,15 +325,21 @@ export function UtentiClient({
             <div className="space-y-1.5">
               <Label>Ruolo</Label>
               <Select
-                defaultValue="user"
-                onValueChange={(v) => createForm.setValue("role", v as "admin" | "user")}
+                defaultValue="editor"
+                onValueChange={(v) => createForm.setValue("role", v as "admin" | "editor" | "viewer")}
               >
                 <SelectTrigger className="h-11 md:h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="user">Utente</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
+                  {(Object.keys(ROLES) as Array<keyof typeof ROLES>).map((r) => (
+                    <SelectItem key={r} value={r}>
+                      <div>
+                        <span className="font-medium">{ROLES[r].label}</span>
+                        <span className="block text-xs text-muted-foreground">{ROLES[r].description}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -366,15 +370,21 @@ export function UtentiClient({
             <div className="space-y-1.5">
               <Label>Ruolo</Label>
               <Select
-                defaultValue={editing?.role ?? "user"}
-                onValueChange={(v) => editForm.setValue("role", v as "admin" | "user")}
+                defaultValue={editing?.role ?? "editor"}
+                onValueChange={(v) => editForm.setValue("role", v as "admin" | "editor" | "viewer")}
               >
                 <SelectTrigger className="h-11 md:h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="user">Utente</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
+                  {(Object.keys(ROLES) as Array<keyof typeof ROLES>).map((r) => (
+                    <SelectItem key={r} value={r}>
+                      <div>
+                        <span className="font-medium">{ROLES[r].label}</span>
+                        <span className="block text-xs text-muted-foreground">{ROLES[r].description}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

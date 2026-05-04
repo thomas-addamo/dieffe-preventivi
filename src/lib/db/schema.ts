@@ -19,9 +19,9 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   name: text("name").notNull(),
-  role: text("role", { enum: ["admin", "user"] })
+  role: text("role", { enum: ["admin", "editor", "viewer"] })
     .notNull()
-    .default("user"),
+    .default("editor"),
   mustChangePassword: boolean("must_change_password").notNull().default(true),
   disabled: boolean("disabled").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })

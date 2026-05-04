@@ -20,6 +20,7 @@ export async function POST(
 ) {
   const session = await getCurrentUser();
   if (!session) return NextResponse.json({ error: "Non autorizzato" }, { status: 401 });
+  if (session.user.role === "viewer") return NextResponse.json({ error: "Permessi insufficienti" }, { status: 403 });
 
   const { id: quoteId } = await params;
   const body = await req.json().catch(() => ({}));
@@ -38,6 +39,7 @@ export async function PUT(
 ) {
   const session = await getCurrentUser();
   if (!session) return NextResponse.json({ error: "Non autorizzato" }, { status: 401 });
+  if (session.user.role === "viewer") return NextResponse.json({ error: "Permessi insufficienti" }, { status: 403 });
 
   const { id: quoteId } = await params;
   const body = await req.json().catch(() => ({}));

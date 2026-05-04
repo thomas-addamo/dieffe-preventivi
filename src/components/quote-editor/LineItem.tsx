@@ -16,9 +16,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { ImageUploader } from "./ImageUploader";
 import type { ItemWithImages } from "@/types";
 import { UNIT_OF_MEASURES, formatCurrency } from "@/lib/utils";
+import { usePermissions } from "@/hooks/use-permissions";
 
 interface LineItemProps {
   item: ItemWithImages;
@@ -38,8 +41,24 @@ export function LineItem({
   onDuplicate,
 }: LineItemProps) {
   const [showImages, setShowImages] = useState(false);
+  const { isViewer, can: perms } = usePermissions();
   const descDesktopRef = useRef<HTMLTextAreaElement>(null);
   const descMobileRef = useRef<HTMLTextAreaElement>(null);
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id });
+
+  const dragStyle = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
 
   function autoResize(el: HTMLTextAreaElement | null) {
     if (!el) return;
@@ -59,12 +78,15 @@ export function LineItem({
   }
 
   return (
-    <>
+    <div ref={setNodeRef} style={dragStyle}>
       {/* ── Desktop layout (md+) ── */}
       <div className="hidden md:grid grid-cols-[3rem_1fr_5rem_5.5rem_6rem_4rem_6rem_5.5rem] gap-1 px-4 py-2.5 hover:bg-muted/20 group items-start">
         {/* Drag + number */}
         <div className="flex items-center gap-1 pt-1.5">
-          <GripVertical className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 cursor-grab shrink-0" />
+          <GripVertical
+            {...(!isViewer ? { ...attributes, ...listeners } : {})}
+            className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 cursor-grab shrink-0"
+          />
           <span className="font-mono text-xs text-muted-foreground tabular-nums">
             {itemNumber}
           </span>
@@ -77,6 +99,7 @@ export function LineItem({
             value={item.description}
             onChange={(e) => onUpdate({ description: e.target.value })}
             onKeyDown={handleKeyDown}
+            readOnly={isViewer}
             placeholder="Descrizione voce..."
             rows={1}
             className="w-full resize-none bg-transparent text-sm outline-none focus:outline-none placeholder:text-muted-foreground/60 overflow-hidden leading-5 py-1"
@@ -91,7 +114,11 @@ export function LineItem({
           )}
         </div>
 
-        <Select value={item.unitOfMeasure} onValueChange={(v) => onUpdate({ unitOfMeasure: v })}>
+        <Select
+          value={item.unitOfMeasure}
+          onValueChange={(v) => onUpdate({ unitOfMeasure: v })}
+          disabled={isViewer}
+        >
           <SelectTrigger className="h-7 text-xs border-muted">
             <SelectValue />
           </SelectTrigger>
@@ -106,6 +133,7 @@ export function LineItem({
           type="number"
           value={item.quantity}
           onChange={(e) => onUpdate({ quantity: Number(e.target.value) || 0 })}
+          disabled={isViewer}
           className="h-7 text-xs text-right tabular-nums border-muted"
           step="0.01"
         />
@@ -114,6 +142,7 @@ export function LineItem({
           type="number"
           value={item.unitPrice}
           onChange={(e) => onUpdate({ unitPrice: Number(e.target.value) || 0 })}
+          disabled={isViewer}
           className="h-7 text-xs text-right tabular-nums border-muted"
           step="0.01"
         />
@@ -122,6 +151,7 @@ export function LineItem({
           type="number"
           value={item.discount}
           onChange={(e) => onUpdate({ discount: Number(e.target.value) || 0 })}
+          disabled={isViewer}
           className="h-7 text-xs text-right tabular-nums border-muted"
           step="0.5"
           min="0"
@@ -135,25 +165,39 @@ export function LineItem({
         </div>
 
         <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 relative"
-            onClick={() => setShowImages(true)}
-          >
-            <ImageIcon className="w-3.5 h-3.5 text-muted-foreground" />
-            {item.images.length > 0 && (
+          {item.images.length > 0 && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 relative"
+              onClick={() => setShowImages(true)}
+            >
+              <ImageIcon className="w-3.5 h-3.5 text-muted-foreground" />
               <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-primary text-white text-[8px] flex items-center justify-center font-bold">
                 {item.images.length}
               </span>
-            )}
-          </Button>
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onDuplicate}>
-            <Copy className="w-3.5 h-3.5 text-muted-foreground" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onDelete}>
-            <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
-          </Button>
+            </Button>
+          )}
+          {perms.manageQuoteImages && item.images.length === 0 && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 relative"
+              onClick={() => setShowImages(true)}
+            >
+              <ImageIcon className="w-3.5 h-3.5 text-muted-foreground" />
+            </Button>
+          )}
+          {!isViewer && (
+            <>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onDuplicate}>
+                <Copy className="w-3.5 h-3.5 text-muted-foreground" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onDelete}>
+                <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -162,7 +206,10 @@ export function LineItem({
         {/* Row 1: number + description */}
         <div className="flex gap-2 items-start">
           <div className="flex items-center gap-1 pt-2 shrink-0">
-            <GripVertical className="w-3.5 h-3.5 text-muted-foreground cursor-grab" />
+            <GripVertical
+              {...(!isViewer ? { ...attributes, ...listeners } : {})}
+              className="w-3.5 h-3.5 text-muted-foreground cursor-grab"
+            />
             <span className="font-mono text-xs text-muted-foreground tabular-nums">
               {itemNumber}
             </span>
@@ -172,6 +219,7 @@ export function LineItem({
             value={item.description}
             onChange={(e) => onUpdate({ description: e.target.value })}
             onKeyDown={handleKeyDown}
+            readOnly={isViewer}
             placeholder="Descrizione voce..."
             rows={2}
             className="flex-1 resize-none bg-transparent text-sm outline-none focus:outline-none placeholder:text-muted-foreground/60 overflow-hidden leading-5 py-1.5 min-h-[44px]"
@@ -180,7 +228,11 @@ export function LineItem({
 
         {/* Row 2: U.M. | Qty | Prezzo | Sconto */}
         <div className="grid grid-cols-4 gap-2">
-          <Select value={item.unitOfMeasure} onValueChange={(v) => onUpdate({ unitOfMeasure: v })}>
+          <Select
+            value={item.unitOfMeasure}
+            onValueChange={(v) => onUpdate({ unitOfMeasure: v })}
+            disabled={isViewer}
+          >
             <SelectTrigger className="h-10 text-xs border-muted">
               <SelectValue />
             </SelectTrigger>
@@ -194,6 +246,7 @@ export function LineItem({
             type="number"
             value={item.quantity}
             onChange={(e) => onUpdate({ quantity: Number(e.target.value) || 0 })}
+            disabled={isViewer}
             className="h-10 text-sm text-right tabular-nums border-muted"
             placeholder="Qtà"
             step="0.01"
@@ -202,6 +255,7 @@ export function LineItem({
             type="number"
             value={item.unitPrice}
             onChange={(e) => onUpdate({ unitPrice: Number(e.target.value) || 0 })}
+            disabled={isViewer}
             className="h-10 text-sm text-right tabular-nums border-muted"
             placeholder="€"
             step="0.01"
@@ -210,6 +264,7 @@ export function LineItem({
             type="number"
             value={item.discount}
             onChange={(e) => onUpdate({ discount: Number(e.target.value) || 0 })}
+            disabled={isViewer}
             className="h-10 text-sm text-right tabular-nums border-muted"
             placeholder="Sc.%"
             step="0.5"
@@ -224,30 +279,36 @@ export function LineItem({
             {formatCurrency(item.total)}
           </span>
           <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-11 w-11 relative"
-              onClick={() => setShowImages(true)}
-            >
-              <ImageIcon className="w-4 h-4 text-muted-foreground" />
-              {item.images.length > 0 && (
-                <span className="absolute top-1 right-1 w-3.5 h-3.5 rounded-full bg-primary text-white text-[8px] flex items-center justify-center font-bold">
-                  {item.images.length}
-                </span>
-              )}
-            </Button>
-            <Button variant="ghost" size="icon" className="h-11 w-11" onClick={onDuplicate}>
-              <Copy className="w-4 h-4 text-muted-foreground" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-11 w-11 text-destructive hover:text-destructive"
-              onClick={onDelete}
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
+            {(perms.manageQuoteImages || item.images.length > 0) && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-11 w-11 relative"
+                onClick={() => setShowImages(true)}
+              >
+                <ImageIcon className="w-4 h-4 text-muted-foreground" />
+                {item.images.length > 0 && (
+                  <span className="absolute top-1 right-1 w-3.5 h-3.5 rounded-full bg-primary text-white text-[8px] flex items-center justify-center font-bold">
+                    {item.images.length}
+                  </span>
+                )}
+              </Button>
+            )}
+            {!isViewer && (
+              <>
+                <Button variant="ghost" size="icon" className="h-11 w-11" onClick={onDuplicate}>
+                  <Copy className="w-4 h-4 text-muted-foreground" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-11 w-11 text-destructive hover:text-destructive"
+                  onClick={onDelete}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -260,6 +321,6 @@ export function LineItem({
           onUpdate={(images) => onUpdate({ images })}
         />
       )}
-    </>
+    </div>
   );
 }

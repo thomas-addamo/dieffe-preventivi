@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { formatDate } from "@/lib/utils";
 import type { QuoteTemplate } from "@/lib/db/schema";
 import type { TemplateData } from "@/types";
+import { usePermissions } from "@/hooks/use-permissions";
 
 export function TemplateClient({
   initialTemplates,
@@ -15,6 +16,7 @@ export function TemplateClient({
   initialTemplates: QuoteTemplate[];
 }) {
   const [templates, setTemplates] = useState(initialTemplates);
+  const { can: perms } = usePermissions();
 
   async function deleteTemplate(id: string) {
     if (!confirm("Eliminare questo template?")) return;
@@ -79,14 +81,16 @@ export function TemplateClient({
                       {formatDate(t.createdAt)}
                     </p>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 shrink-0 text-destructive hover:text-destructive"
-                    onClick={() => deleteTemplate(t.id)}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
+                  {perms.manageTemplates && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 shrink-0 text-destructive hover:text-destructive"
+                      onClick={() => deleteTemplate(t.id)}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
                 </div>
               </div>
             );

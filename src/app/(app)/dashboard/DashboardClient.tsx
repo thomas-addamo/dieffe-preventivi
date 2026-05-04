@@ -44,6 +44,7 @@ import {
   QUOTE_STATUS_COLORS,
 } from "@/lib/utils";
 import { NewQuoteModal } from "@/components/quote-editor/NewQuoteModal";
+import { usePermissions } from "@/hooks/use-permissions";
 
 type QuoteRow = {
   id: string;
@@ -96,6 +97,7 @@ export function DashboardClient({
   stats,
 }: DashboardClientProps) {
   const router = useRouter();
+  const { can: perms } = usePermissions();
   const [quotes, setQuotes] = useState(initialQuotes);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -165,10 +167,11 @@ export function DashboardClient({
             Gestione preventivi e stato lavori
           </p>
         </div>
-        {/* Desktop button only */}
-        <Button onClick={() => setShowNewModal(true)} className="gap-2 hidden lg:flex">
-          <Plus className="w-4 h-4" /> Nuovo Preventivo
-        </Button>
+        {perms.createQuote && (
+          <Button onClick={() => setShowNewModal(true)} className="gap-2 hidden lg:flex">
+            <Plus className="w-4 h-4" /> Nuovo Preventivo
+          </Button>
+        )}
       </div>
 
       {/* Stats */}
@@ -334,7 +337,7 @@ export function DashboardClient({
                   </span>
                 </TableHead>
               ))}
-              <TableHead className="w-20">Azioni</TableHead>
+              {perms.deleteQuote && <TableHead className="w-20">Azioni</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -386,23 +389,25 @@ export function DashboardClient({
                   <TableCell className="text-sm text-muted-foreground">
                     {q.authorName}
                   </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <Link href={`/preventivi/${q.id}`}>
-                        <Button variant="ghost" size="icon" className="h-7 w-7">
-                          <Eye className="w-3.5 h-3.5" />
+                  {perms.deleteQuote && (
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Link href={`/preventivi/${q.id}`}>
+                          <Button variant="ghost" size="icon" className="h-7 w-7">
+                            <Eye className="w-3.5 h-3.5" />
+                          </Button>
+                        </Link>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive hover:text-destructive"
+                          onClick={() => deleteQuote(q.id)}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
                         </Button>
-                      </Link>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-destructive hover:text-destructive"
-                        onClick={() => deleteQuote(q.id)}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    </div>
-                  </TableCell>
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             )}
@@ -462,21 +467,24 @@ export function DashboardClient({
         </p>
       )}
 
-      {/* FAB — mobile only */}
-      <button
-        onClick={() => setShowNewModal(true)}
-        className="fixed bottom-6 right-6 z-40 lg:hidden w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all"
-        aria-label="Nuovo preventivo"
-      >
-        <Plus className="w-6 h-6" />
-      </button>
+      {perms.createQuote && (
+        <button
+          onClick={() => setShowNewModal(true)}
+          className="fixed bottom-6 right-6 z-40 lg:hidden w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all"
+          aria-label="Nuovo preventivo"
+        >
+          <Plus className="w-6 h-6" />
+        </button>
+      )}
 
-      <NewQuoteModal
-        open={showNewModal}
-        onClose={() => setShowNewModal(false)}
-        onCreated={(id) => router.push(`/preventivi/${id}`)}
-        clients={clients}
-      />
+      {perms.createQuote && (
+        <NewQuoteModal
+          open={showNewModal}
+          onClose={() => setShowNewModal(false)}
+          onCreated={(id) => router.push(`/preventivi/${id}`)}
+          clients={clients}
+        />
+      )}
     </div>
   );
 }

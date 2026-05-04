@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
+import { UserRoleProvider } from "./UserRoleContext";
+import type { UserRole } from "@/lib/permissions/types";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -15,6 +17,7 @@ export function AppShell({ children, userRole, userName, userEmail }: AppShellPr
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
+    <UserRoleProvider role={userRole as UserRole}>
     <div className="flex h-screen overflow-hidden">
       {/* Desktop sidebar — always visible */}
       <div className="hidden lg:block">
@@ -45,5 +48,6 @@ export function AppShell({ children, userRole, userName, userEmail }: AppShellPr
         </main>
       </div>
     </div>
+    </UserRoleProvider>
   );
 }
