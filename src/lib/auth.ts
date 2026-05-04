@@ -1,6 +1,7 @@
 import { db } from "@/lib/db/client";
 import { users, sessions } from "@/lib/db/schema";
-import { eq, and, gt } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import argon2 from "argon2";
 import { generateId } from "@/lib/utils";
 import { cookies } from "next/headers";
@@ -42,12 +43,11 @@ export async function createSession(
 }
 
 export async function getSessionUser(token: string) {
-  const now = new Date().toISOString();
   const result = await db
     .select({ user: users, session: sessions })
     .from(sessions)
     .innerJoin(users, eq(sessions.userId, users.id))
-    .where(and(eq(sessions.token, token), gt(sessions.expiresAt, now)))
+    .where(and(eq(sessions.token, token), sql`${sessions.expiresAt} > now()`))
     .limit(1);
 
   return result[0] ?? null;

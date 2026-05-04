@@ -1,17 +1,22 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: "standalone",
   reactCompiler: true,
-  serverExternalPackages: ["better-sqlite3", "argon2", "pino", "@react-pdf/renderer"],
-  async rewrites() {
-    return [
-      {
-        source: "/storage/:path*",
-        destination: "/api/storage/:path*",
-      },
-    ];
+  experimental: {
+    serverActions: { bodySizeLimit: "10mb" },
   },
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "res.cloudinary.com" },
+    ],
+  },
+  serverExternalPackages: [
+    "argon2",
+    "pino",
+    "@react-pdf/renderer",
+    "exceljs",
+    "cloudinary",
+  ],
 };
 
 export default nextConfig;

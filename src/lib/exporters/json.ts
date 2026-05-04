@@ -1,9 +1,7 @@
 import type { QuoteWithRelations } from "@/types";
-import path from "path";
-import fs from "fs";
 
 export async function exportToJson(quote: QuoteWithRelations): Promise<string> {
-  // embed images as base64
+  // embed images as base64 fetching from Cloudinary
   const sectionsWithBase64 = await Promise.all(
     quote.sections.map(async (section) => ({
       ...section,
@@ -14,9 +12,11 @@ export async function exportToJson(quote: QuoteWithRelations): Promise<string> {
             item.images.map(async (img) => {
               let base64: string | undefined;
               try {
-                const filePath = path.join(process.cwd(), "storage", "uploads", img.path.replace("/storage/uploads/", ""));
-                const buf = fs.readFileSync(filePath);
-                base64 = buf.toString("base64");
+                const res = await fetch(img.cloudinaryUrl);
+                if (res.ok) {
+                  const buf = await res.arrayBuffer();
+                  base64 = Buffer.from(buf).toString("base64");
+                }
               } catch {
                 base64 = undefined;
               }
@@ -29,7 +29,11 @@ export async function exportToJson(quote: QuoteWithRelations): Promise<string> {
   );
 
   return JSON.stringify(
-    { ...quote, sections: sectionsWithBase64, exportedAt: new Date().toISOString() },
+    {
+      ...quote,
+      sections: sectionsWithBase64,
+      exportedAt: new Date().toISOString(),
+    },
     null,
     2
   );

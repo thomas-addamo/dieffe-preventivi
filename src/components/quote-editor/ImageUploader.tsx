@@ -51,8 +51,8 @@ export function ImageUploader({
           {
             id: uploaded.id,
             itemId: item.id,
-            filename: uploaded.filename,
-            path: uploaded.path,
+            cloudinaryPublicId: uploaded.cloudinaryPublicId,
+            cloudinaryUrl: uploaded.cloudinaryUrl,
             caption: null,
             orderIndex: prev.length,
           },
@@ -122,8 +122,8 @@ export function ImageUploader({
             {images.map((img) => (
               <div key={img.id} className="group relative">
                 <img
-                  src={img.path}
-                  alt={img.caption ?? img.filename}
+                  src={img.cloudinaryUrl}
+                  alt={img.caption ?? img.cloudinaryPublicId}
                   className="w-full aspect-square object-cover rounded-lg border"
                 />
                 <button

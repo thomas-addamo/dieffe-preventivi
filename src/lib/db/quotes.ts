@@ -8,7 +8,7 @@ import {
   clients,
   users,
 } from "@/lib/db/schema";
-import { eq, asc, desc, and, like, inArray, sql } from "drizzle-orm";
+import { eq, asc, inArray } from "drizzle-orm";
 import { generateId } from "@/lib/utils";
 import { calcItemTotal } from "@/lib/calculations";
 import type { QuoteWithRelations } from "@/types";
@@ -16,21 +16,21 @@ import type { QuoteWithRelations } from "@/types";
 export async function generateQuoteCode(): Promise<string> {
   const year = new Date().getFullYear();
 
-  const existing = db
+  const [existing] = await db
     .select()
     .from(quoteYearCounters)
     .where(eq(quoteYearCounters.year, year))
-    .get();
+    .limit(1);
 
   if (!existing) {
-    db.insert(quoteYearCounters).values({ year, counter: 1 }).run();
+    await db.insert(quoteYearCounters).values({ year, counter: 1 });
     return `PREV-${year}-001`;
   } else {
     const next = existing.counter + 1;
-    db.update(quoteYearCounters)
+    await db
+      .update(quoteYearCounters)
       .set({ counter: next })
-      .where(eq(quoteYearCounters.year, year))
-      .run();
+      .where(eq(quoteYearCounters.year, year));
     return `PREV-${year}-${String(next).padStart(3, "0")}`;
   }
 }
@@ -161,13 +161,14 @@ export async function upsertSection(
   }
 ) {
   const id = data.id ?? generateId();
-  const existing = data.id
-    ? db
+
+  const [existing] = data.id
+    ? await db
         .select()
         .from(quoteSections)
         .where(eq(quoteSections.id, data.id))
-        .get()
-    : null;
+        .limit(1)
+    : [];
 
   if (existing) {
     await db
@@ -208,13 +209,13 @@ export async function upsertItem(
   const id = data.id ?? generateId();
   const total = calcItemTotal(data.quantity, data.unitPrice, data.discount);
 
-  const existing = data.id
-    ? db
+  const [existing] = data.id
+    ? await db
         .select()
         .from(quoteItems)
         .where(eq(quoteItems.id, data.id))
-        .get()
-    : null;
+        .limit(1)
+    : [];
 
   if (existing) {
     await db

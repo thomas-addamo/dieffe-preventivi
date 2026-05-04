@@ -268,13 +268,8 @@ const s = StyleSheet.create({
 export interface ClassicTemplateProps {
   quote: QuoteWithRelations;
   settings: CompanySettings | null;
-  /** Absolute file-system path to the logo file (passed by the server route). */
-  logoAbsPath?: string | null;
-  /**
-   * Map of image id → absolute file-system path.
-   * Populated by the server route so react-pdf can read local files.
-   */
-  imageAbsPaths?: Record<string, string>;
+  /** Cloudinary URL del logo aziendale. */
+  logoUrl?: string | null;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -282,8 +277,7 @@ export interface ClassicTemplateProps {
 export function ClassicTemplate({
   quote,
   settings,
-  logoAbsPath,
-  imageAbsPaths = {},
+  logoUrl,
 }: ClassicTemplateProps) {
   const totals = calcQuoteTotals(
     quote.sections,
@@ -306,10 +300,10 @@ export function ClassicTemplate({
         <View style={s.header}>
           {/* Left: logo + company info */}
           <View style={{ flexDirection: "row", alignItems: "flex-start", flex: 1 }}>
-            {logoAbsPath ? (
-              <Image src={logoAbsPath} style={s.logo} />
+            {logoUrl ? (
+              <Image src={logoUrl} style={s.logo} />
             ) : null}
-            <View style={[s.companyBlock, logoAbsPath ? {} : { paddingLeft: 0 }]}>
+            <View style={[s.companyBlock, logoUrl ? {} : { paddingLeft: 0 }]}>
               <Text style={s.companyName}>{companyName}</Text>
               {address ? <Text style={s.companyInfo}>{address}</Text> : null}
               {vatNum ? (
@@ -414,15 +408,17 @@ export function ClassicTemplate({
                     <Text style={s.colTotal}>{fmtCurrency(item.total)}</Text>
                   </View>
 
-                  {/* Images row (only when images exist and path resolved) */}
+                  {/* Images row */}
                   {hasImages && (
                     <View style={s.imagesRow}>
                       {item.images.map((img) => {
-                        const absPath = imageAbsPaths[img.id];
-                        if (!absPath) return null;
+                        const src = img.cloudinaryUrl.replace(
+                          "/upload/",
+                          "/upload/f_auto,q_auto,w_800/"
+                        );
                         return (
                           <View key={img.id} style={s.imageBox}>
-                            <Image src={absPath} style={s.itemImage} />
+                            <Image src={src} style={s.itemImage} />
                             {img.caption ? (
                               <Text style={s.imageCaption}>{img.caption}</Text>
                             ) : null}

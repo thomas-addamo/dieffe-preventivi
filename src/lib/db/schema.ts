@@ -1,16 +1,20 @@
 import {
-  sqliteTable,
+  pgTable,
   text,
   integer,
-  real,
+  boolean,
+  doublePrecision,
+  serial,
+  jsonb,
   index,
   uniqueIndex,
-} from "drizzle-orm/sqlite-core";
+  timestamp,
+} from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
 // ─── Users ───────────────────────────────────────────────────────────────────
 
-export const users = sqliteTable("users", {
+export const users = pgTable("users", {
   id: text("id").primaryKey(),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
@@ -18,36 +22,40 @@ export const users = sqliteTable("users", {
   role: text("role", { enum: ["admin", "user"] })
     .notNull()
     .default("user"),
-  mustChangePassword: integer("must_change_password", { mode: "boolean" })
+  mustChangePassword: boolean("must_change_password").notNull().default(true),
+  disabled: boolean("disabled").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
     .notNull()
-    .default(true),
-  disabled: integer("disabled", { mode: "boolean" }).notNull().default(false),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`(datetime('now'))`),
-  lastLoginAt: text("last_login_at"),
+    .defaultNow(),
+  lastLoginAt: timestamp("last_login_at", {
+    withTimezone: true,
+    mode: "string",
+  }),
 });
 
 // ─── Sessions ────────────────────────────────────────────────────────────────
 
-export const sessions = sqliteTable("sessions", {
+export const sessions = pgTable("sessions", {
   id: text("id").primaryKey(),
   userId: text("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   token: text("token").notNull().unique(),
-  expiresAt: text("expires_at").notNull(),
+  expiresAt: timestamp("expires_at", {
+    withTimezone: true,
+    mode: "string",
+  }).notNull(),
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
-  createdAt: text("created_at")
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
     .notNull()
-    .default(sql`(datetime('now'))`),
+    .defaultNow(),
 });
 
 // ─── Company Settings ─────────────────────────────────────────────────────────
 
-export const companySettings = sqliteTable("company_settings", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const companySettings = pgTable("company_settings", {
+  id: serial("id").primaryKey(),
   companyName: text("company_name").notNull().default(""),
   logoPath: text("logo_path"),
   address: text("address"),
@@ -55,7 +63,7 @@ export const companySettings = sqliteTable("company_settings", {
   email: text("email"),
   phone: text("phone"),
   website: text("website"),
-  defaultVatRate: real("default_vat_rate").notNull().default(22),
+  defaultVatRate: doublePrecision("default_vat_rate").notNull().default(22),
   defaultExportPath: text("default_export_path"),
   pdfTemplate: text("pdf_template", {
     enum: ["classic", "modern", "minimal"],
@@ -64,14 +72,14 @@ export const companySettings = sqliteTable("company_settings", {
     .default("classic"),
   primaryColor: text("primary_color").notNull().default("#1e40af"),
   accentColor: text("accent_color").notNull().default("#059669"),
-  updatedAt: text("updated_at")
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
     .notNull()
-    .default(sql`(datetime('now'))`),
+    .defaultNow(),
 });
 
 // ─── Clients ──────────────────────────────────────────────────────────────────
 
-export const clients = sqliteTable("clients", {
+export const clients = pgTable("clients", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   address: text("address"),
@@ -79,14 +87,14 @@ export const clients = sqliteTable("clients", {
   email: text("email"),
   phone: text("phone"),
   notes: text("notes"),
-  createdAt: text("created_at")
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
     .notNull()
-    .default(sql`(datetime('now'))`),
+    .defaultNow(),
 });
 
 // ─── Quotes ───────────────────────────────────────────────────────────────────
 
-export const quotes = sqliteTable(
+export const quotes = pgTable(
   "quotes",
   {
     id: text("id").primaryKey(),
@@ -104,19 +112,19 @@ export const quotes = sqliteTable(
       .notNull()
       .default("draft"),
     projectAddress: text("project_address"),
-    vatRate: real("vat_rate").notNull().default(22),
+    vatRate: doublePrecision("vat_rate").notNull().default(22),
     discountType: text("discount_type", { enum: ["percent", "fixed"] }),
-    discountValue: real("discount_value"),
+    discountValue: doublePrecision("discount_value"),
     notes: text("notes"),
     paymentTerms: text("payment_terms"),
     validUntil: text("valid_until"),
-    createdAt: text("created_at")
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
       .notNull()
-      .default(sql`(datetime('now'))`),
-    updatedAt: text("updated_at")
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
       .notNull()
-      .default(sql`(datetime('now'))`),
-    sentAt: text("sent_at"),
+      .defaultNow(),
+    sentAt: timestamp("sent_at", { withTimezone: true, mode: "string" }),
   },
   (t) => [
     uniqueIndex("quotes_code_idx").on(t.code),
@@ -127,14 +135,14 @@ export const quotes = sqliteTable(
 
 // ─── Quote Year Counters ──────────────────────────────────────────────────────
 
-export const quoteYearCounters = sqliteTable("quote_year_counters", {
+export const quoteYearCounters = pgTable("quote_year_counters", {
   year: integer("year").primaryKey(),
   counter: integer("counter").notNull().default(0),
 });
 
 // ─── Quote Sections ───────────────────────────────────────────────────────────
 
-export const quoteSections = sqliteTable(
+export const quoteSections = pgTable(
   "quote_sections",
   {
     id: text("id").primaryKey(),
@@ -151,7 +159,7 @@ export const quoteSections = sqliteTable(
 
 // ─── Quote Items ──────────────────────────────────────────────────────────────
 
-export const quoteItems = sqliteTable(
+export const quoteItems = pgTable(
   "quote_items",
   {
     id: text("id").primaryKey(),
@@ -160,10 +168,10 @@ export const quoteItems = sqliteTable(
       .references(() => quoteSections.id, { onDelete: "cascade" }),
     description: text("description").notNull().default(""),
     unitOfMeasure: text("unit_of_measure").notNull().default("n°"),
-    quantity: real("quantity").notNull().default(1),
-    unitPrice: real("unit_price").notNull().default(0),
-    discount: real("discount").notNull().default(0),
-    total: real("total").notNull().default(0),
+    quantity: doublePrecision("quantity").notNull().default(1),
+    unitPrice: doublePrecision("unit_price").notNull().default(0),
+    discount: doublePrecision("discount").notNull().default(0),
+    total: doublePrecision("total").notNull().default(0),
     notes: text("notes"),
     orderIndex: integer("order_index").notNull().default(0),
   },
@@ -172,42 +180,42 @@ export const quoteItems = sqliteTable(
 
 // ─── Quote Item Images ────────────────────────────────────────────────────────
 
-export const quoteItemImages = sqliteTable("quote_item_images", {
+export const quoteItemImages = pgTable("quote_item_images", {
   id: text("id").primaryKey(),
   itemId: text("item_id")
     .notNull()
     .references(() => quoteItems.id, { onDelete: "cascade" }),
-  filename: text("filename").notNull(),
-  path: text("path").notNull(),
+  cloudinaryPublicId: text("cloudinary_public_id").notNull(),
+  cloudinaryUrl: text("cloudinary_url").notNull(),
   caption: text("caption"),
   orderIndex: integer("order_index").notNull().default(0),
 });
 
 // ─── Quote Templates ──────────────────────────────────────────────────────────
 
-export const quoteTemplates = sqliteTable("quote_templates", {
+export const quoteTemplates = pgTable("quote_templates", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description"),
-  data: text("data", { mode: "json" }).notNull(),
+  data: jsonb("data").notNull(),
   userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
-  createdAt: text("created_at")
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
     .notNull()
-    .default(sql`(datetime('now'))`),
+    .defaultNow(),
 });
 
 // ─── Audit Log ────────────────────────────────────────────────────────────────
 
-export const auditLog = sqliteTable("audit_log", {
+export const auditLog = pgTable("audit_log", {
   id: text("id").primaryKey(),
   userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
   action: text("action").notNull(),
   entityType: text("entity_type").notNull(),
   entityId: text("entity_id"),
-  changes: text("changes", { mode: "json" }),
-  createdAt: text("created_at")
+  changes: jsonb("changes"),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
     .notNull()
-    .default(sql`(datetime('now'))`),
+    .defaultNow(),
 });
 
 // ─── Types ────────────────────────────────────────────────────────────────────

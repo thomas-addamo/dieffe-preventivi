@@ -1,0 +1,15 @@
+{
+  "framework": "nextjs",
+  "regions": ["fra1"],
+  "functions": {
+    "src/app/api/export/[format]/[id]/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/export/pdf/[id]/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/import/route.ts": {
+      "maxDuration": 60
+    }
+  }
+}

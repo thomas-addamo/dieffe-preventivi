@@ -1,125 +1,119 @@
 # Dieffe Preventivi
 
-Applicazione locale per la gestione di preventivi edili — Dieffe Ristrutturazioni.
+Applicazione web per la gestione di preventivi edili — Dieffe Ristrutturazioni.
 
-## Requisiti
+Ospitata su Vercel, database su Neon (PostgreSQL), immagini su Cloudinary.
 
-- **Node.js** 20 o superiore
-- **pnpm** (installabile con `npm install -g pnpm`)
+## Accesso
 
-## Primo avvio (macOS / Linux)
+URL produzione: fornito da Vercel dopo il primo deploy.
 
-```bash
-# Doppio click su start.sh oppure da terminale:
-bash scripts/start.sh
-```
-
-Il browser si aprirà automaticamente su `http://localhost:3847`.
-
-**Credenziali default:**
+Credenziali default (cambiarle dopo il primo accesso):
 - Email: `admin@dieffe.it`
 - Password: `admin123`
 
-> Cambia la password al primo accesso dalla pagina Utenti.
+---
 
-## Primo avvio (Windows)
+## Sviluppo locale
 
-Doppio click su `scripts/start.bat`.
+### Prerequisiti
 
-## Installazione manuale
+- Node.js 20 o superiore
+- pnpm (`npm install -g pnpm`)
+- Account Neon (database) e Cloudinary (immagini)
+
+### Configurazione
+
+```bash
+cp .env.example .env.local
+# Compilare .env.local con le credenziali Neon e Cloudinary
+```
+
+### Avvio
 
 ```bash
 pnpm install
-pnpm db:migrate
-pnpm db:seed
-pnpm build
-pnpm start
+pnpm db:migrate   # applica migrazioni sul database Neon
+pnpm db:seed      # inserisce dati esempio (solo prima volta)
+pnpm dev          # avvia su http://localhost:3847
 ```
 
-## Sviluppo
+---
 
-```bash
-pnpm dev
-# apri http://localhost:3847
-```
+## Setup Neon (database PostgreSQL)
 
-## Backup
+1. Creare un account su [neon.tech](https://neon.tech)
+2. Creare un nuovo progetto (regione: EU Central o EU West)
+3. Dalla dashboard, copiare la **Connection String** (formato `postgresql://...`)
+4. Incollarla in `.env.local` come `DATABASE_URL`
 
-Copia la cartella `./storage/` in un posto sicuro. Contiene:
-- `database.sqlite` — tutti i dati
-- `uploads/` — immagini caricate nei preventivi
-- `exports/` — file esportati
+---
 
-```bash
-# Backup rapido
-cp -r storage/ ~/Backup/dieffe-preventivi-$(date +%Y%m%d)/
-```
+## Setup Cloudinary (storage immagini)
+
+1. Creare un account su [cloudinary.com](https://cloudinary.com)
+2. Dalla dashboard, copiare Cloud Name, API Key e API Secret
+3. Andare in **Settings → Upload → Upload presets** e creare un preset:
+   - Nome: `dieffe-quotes`
+   - Signing mode: **Signed**
+4. Compilare in `.env.local`:
+   ```
+   CLOUDINARY_CLOUD_NAME=...
+   CLOUDINARY_API_KEY=...
+   CLOUDINARY_API_SECRET=...
+   NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=...
+   ```
+
+---
+
+## Deploy su Vercel
+
+1. Pubblicare il repository su GitHub (privato)
+2. Su [vercel.com](https://vercel.com): **New Project** → selezionare il repo
+3. Configurare le variabili d'ambiente (stesse di `.env.local`) nella sezione **Environment Variables**
+4. Impostare il **Build Command** su:
+   ```
+   pnpm db:migrate && pnpm build
+   ```
+5. Cliccare **Deploy**
+6. Dopo il primo deploy, copiare l'URL Vercel e impostare `BETTER_AUTH_URL` (se usato) o aggiornare la configurazione auth con l'URL effettivo, poi fare redeploy
+
+---
 
 ## Aggiornamenti
 
+Ogni `git push` su `main` avvia automaticamente un nuovo deploy su Vercel, con esecuzione delle eventuali nuove migrazioni database.
+
 ```bash
-git pull
-pnpm install
-pnpm db:migrate
-pnpm build
-# riavvia l'app
+git add .
+git commit -m "Descrizione modifica"
+git push
 ```
+
+---
 
 ## Export preventivi
 
-Dall'editor preventivo, usa il menu **Esporta** per generare:
-- **PDF** — 3 template disponibili (Classico, Moderno, Minimale)
-- **Excel (.xlsx)** — con formule reali, modificabile in Excel
+Dall'editor preventivo, menu **Esporta**:
+- **PDF** — template classico con immagini
+- **Excel (.xlsx)** — con formule, modificabile
 - **CSV** — flat export di tutte le voci
-- **JSON** — backup completo con immagini, reimportabile
+- **JSON** — backup completo, reimportabile
 
-## Template riutilizzabili
+## Backup dati
 
-Dall'editor preventivo puoi salvare sezioni come template. I template sono accessibili dalla pagina **Template** e riutilizzabili in qualsiasi preventivo.
+Dall'editor preventivo, usare **Esporta → JSON** per ogni preventivo. Il file JSON contiene tutti i dati ed e reimportabile in qualsiasi momento.
 
-## Personalizzazione template PDF
+Per un backup completo del database, usare il tool di export di Neon dalla dashboard.
 
-I template PDF si trovano in:
-```
-src/components/pdf-templates/
-├── ClassicTemplate.tsx
-├── ModernTemplate.tsx
-└── MinimalTemplate.tsx
-```
-
-Colori e template attivo si configurano in **Impostazioni** → Template PDF.
-
-## Troubleshooting
-
-**Il server non si avvia:**
-```bash
-# Verifica che la porta 3847 sia libera
-lsof -i :3847
-# Se occupata, termina il processo trovato
-kill -9 <PID>
-```
-
-**Database corrotto:**
-```bash
-# Elimina il DB e ricrea (ATTENZIONE: perdi tutti i dati)
-rm storage/database.sqlite
-pnpm db:migrate
-pnpm db:seed
-```
-
-**Errore "argon2 not found" o "better-sqlite3 not found":**
-```bash
-pnpm install
-pnpm rebuild argon2 better-sqlite3
-```
-
-**Font non caricati / app lenta al primo avvio:**
-I font Google vengono scaricati automaticamente al primo avvio tramite `next/font`. È normale che il primo avvio sia più lento.
+---
 
 ## Stack tecnico
 
 - **Framework**: Next.js 16 (App Router) + TypeScript strict
-- **Database**: SQLite via better-sqlite3 + Drizzle ORM
+- **Database**: PostgreSQL su Neon + Drizzle ORM
+- **Storage immagini**: Cloudinary
+- **Hosting**: Vercel
 - **UI**: Tailwind CSS v4 + shadcn/ui
 - **PDF**: @react-pdf/renderer
 - **Excel**: ExcelJS

@@ -1,26 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
 import React from "react";
-import path from "path";
-import fs from "fs";
 import { getCurrentUser } from "@/lib/auth";
 import { getQuoteWithRelations } from "@/lib/db/quotes";
 import { db } from "@/lib/db/client";
 import { companySettings } from "@/lib/db/schema";
 import { ClassicTemplate } from "@/components/pdf-templates/ClassicTemplate";
 import { generateExportFilename } from "@/lib/utils";
-
-/** Convert a storage-relative URL like /storage/logo/logo.png → absolute FS path.
- *  Returns null if the file doesn't exist. */
-function storageUrlToAbs(url: string | null | undefined): string | null {
-  if (!url) return null;
-  // strip query string (cache-busting tokens)
-  const clean = url.split("?")[0];
-  // /storage/... → <cwd>/storage/...
-  const rel = clean.replace(/^\/storage\//, "");
-  const abs = path.join(process.cwd(), "storage", rel);
-  return fs.existsSync(abs) ? abs : null;
-}
+import { cloudinary } from "@/lib/cloudinary";
 
 export async function GET(
   _req: NextRequest,
@@ -41,27 +28,23 @@ export async function GET(
   const [settings] = await db.select().from(companySettings).limit(1);
   const s = settings ?? null;
 
-  // ── Resolve logo absolute path ──────────────────────────────────────────────
-  const logoAbsPath = storageUrlToAbs(s?.logoPath);
-
-  // ── Resolve all item image absolute paths ───────────────────────────────────
-  const imageAbsPaths: Record<string, string> = {};
-  for (const section of quote.sections) {
-    for (const item of section.items) {
-      for (const img of item.images) {
-        const abs = storageUrlToAbs(img.path);
-        if (abs) imageAbsPaths[img.id] = abs;
-      }
-    }
+  // logoPath contiene il public_id di Cloudinary; generiamo l'URL ottimizzato
+  let logoUrl: string | null = null;
+  if (s?.logoPath) {
+    logoUrl = cloudinary.url(s.logoPath, {
+      fetch_format: "auto",
+      quality: "auto",
+      width: 280,
+      crop: "limit",
+      secure: true,
+    });
   }
 
-  // ── Render ──────────────────────────────────────────────────────────────────
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const element = React.createElement(ClassicTemplate as any, {
     quote,
     settings: s,
-    logoAbsPath,
-    imageAbsPaths,
+    logoUrl,
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

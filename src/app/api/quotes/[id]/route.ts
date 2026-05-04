@@ -5,6 +5,7 @@ import { quotes } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 import { getQuoteWithRelations, updateQuoteField } from "@/lib/db/quotes";
+import { deleteCloudinaryFolder } from "@/lib/cloudinary";
 
 const patchSchema = z.object({
   title: z.string().min(1).optional(),
@@ -58,6 +59,8 @@ export async function DELETE(
   if (!session) return NextResponse.json({ error: "Non autorizzato" }, { status: 401 });
 
   const { id } = await params;
+  // Elimina immagini Cloudinary prima della cascade DB
+  await deleteCloudinaryFolder(`dieffe-preventivi/${id}`).catch(() => {});
   await db.delete(quotes).where(eq(quotes.id, id));
   return NextResponse.json({ ok: true });
 }

@@ -40,8 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# local storage (database, uploads, exports)
-/storage/database.sqlite
-/storage/uploads/
-/storage/exports/
-/storage/logs/
+# local storage (legacy — non usato in produzione cloud)
+/storage/
+*.sqlite
+*.sqlite-journal
+*.sqlite-shm
+*.sqlite-wal
