@@ -38,13 +38,18 @@ export function LineItem({
   onDuplicate,
 }: LineItemProps) {
   const [showImages, setShowImages] = useState(false);
-  const descRef = useRef<HTMLTextAreaElement>(null);
+  const descDesktopRef = useRef<HTMLTextAreaElement>(null);
+  const descMobileRef = useRef<HTMLTextAreaElement>(null);
+
+  function autoResize(el: HTMLTextAreaElement | null) {
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }
 
   useEffect(() => {
-    if (descRef.current) {
-      descRef.current.style.height = "auto";
-      descRef.current.style.height = `${descRef.current.scrollHeight}px`;
-    }
+    autoResize(descDesktopRef.current);
+    autoResize(descMobileRef.current);
   }, [item.description]);
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -68,7 +73,7 @@ export function LineItem({
         {/* Description */}
         <div className="pt-0.5">
           <textarea
-            ref={descRef}
+            ref={descDesktopRef}
             value={item.description}
             onChange={(e) => onUpdate({ description: e.target.value })}
             onKeyDown={handleKeyDown}
@@ -163,7 +168,7 @@ export function LineItem({
             </span>
           </div>
           <textarea
-            ref={descRef}
+            ref={descMobileRef}
             value={item.description}
             onChange={(e) => onUpdate({ description: e.target.value })}
             onKeyDown={handleKeyDown}
