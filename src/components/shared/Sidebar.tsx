@@ -10,6 +10,7 @@ import {
   Settings,
   UserCog,
   Building2,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -27,21 +28,31 @@ const adminItems = [
 
 interface SidebarProps {
   userRole: string;
+  onClose?: () => void;
 }
 
-export function Sidebar({ userRole }: SidebarProps) {
+export function Sidebar({ userRole, onClose }: SidebarProps) {
   const pathname = usePathname();
 
   return (
     <aside className="flex flex-col w-60 shrink-0 border-r bg-[var(--sidebar-bg)] border-[var(--sidebar-border)] h-screen sticky top-0">
       {/* Logo */}
-      <div className="flex items-center gap-2.5 px-5 h-14 border-b border-[var(--sidebar-border)]">
+      <div className="flex items-center gap-2.5 px-5 h-14 border-b border-[var(--sidebar-border)] shrink-0">
         <div className="w-7 h-7 rounded bg-primary flex items-center justify-center">
           <Building2 className="w-4 h-4 text-white" />
         </div>
-        <span className="font-semibold text-sm tracking-tight">
+        <span className="font-semibold text-sm tracking-tight flex-1">
           Dieffe Preventivi
         </span>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="lg:hidden p-1 rounded hover:bg-accent text-muted-foreground"
+            aria-label="Chiudi menu"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       {/* Nav */}
@@ -53,8 +64,9 @@ export function Sidebar({ userRole }: SidebarProps) {
             <Link
               key={href}
               href={href}
+              onClick={onClose}
               className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors min-h-[44px]",
                 active
                   ? "bg-primary/10 text-primary"
                   : "text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -79,8 +91,9 @@ export function Sidebar({ userRole }: SidebarProps) {
                 <Link
                   key={href}
                   href={href}
+                  onClick={onClose}
                   className={cn(
-                    "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                    "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors min-h-[44px]",
                     active
                       ? "bg-primary/10 text-primary"
                       : "text-muted-foreground hover:bg-accent hover:text-foreground"

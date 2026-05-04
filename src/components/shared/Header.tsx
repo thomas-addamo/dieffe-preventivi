@@ -1,6 +1,6 @@
 "use client";
 
-import { Moon, Sun, Monitor, LogOut, User, ChevronDown } from "lucide-react";
+import { Moon, Sun, Monitor, LogOut, User, ChevronDown, Menu } from "lucide-react";
 import { useTheme } from "@/components/shared/ThemeProvider";
 import {
   DropdownMenu,
@@ -17,9 +17,10 @@ interface HeaderProps {
   userName: string;
   userEmail: string;
   title?: string;
+  onMenuClick?: () => void;
 }
 
-export function Header({ userName, userEmail, title }: HeaderProps) {
+export function Header({ userName, userEmail, title, onMenuClick }: HeaderProps) {
   const { theme, setTheme } = useTheme();
   const router = useRouter();
 
@@ -33,15 +34,28 @@ export function Header({ userName, userEmail, title }: HeaderProps) {
     theme === "dark" ? Moon : theme === "light" ? Sun : Monitor;
 
   return (
-    <header className="flex items-center justify-between h-14 px-6 border-b bg-background sticky top-0 z-20">
-      <div className="text-sm font-medium text-foreground">
-        {title ?? "Dieffe Ristrutturazioni"}
+    <header className="flex items-center justify-between h-14 px-4 md:px-6 border-b bg-background sticky top-0 z-20 shrink-0">
+      <div className="flex items-center gap-3">
+        {/* Hamburger — visible only on mobile */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 lg:hidden"
+          onClick={onMenuClick}
+          aria-label="Apri menu"
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+
+        <div className="text-sm font-medium text-foreground">
+          {title ?? "Dieffe Ristrutturazioni"}
+        </div>
       </div>
 
       <div className="flex items-center gap-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Button variant="ghost" size="icon" className="h-9 w-9">
               <ThemeIcon className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -60,14 +74,14 @@ export function Header({ userName, userEmail, title }: HeaderProps) {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="gap-2 h-8 px-3">
-              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
+            <Button variant="ghost" size="sm" className="gap-2 h-9 px-2 md:px-3">
+              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                 <User className="w-3.5 h-3.5 text-primary" />
               </div>
-              <span className="text-sm font-medium max-w-32 truncate">
+              <span className="hidden sm:block text-sm font-medium max-w-32 truncate">
                 {userName}
               </span>
-              <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+              <ChevronDown className="w-3.5 h-3.5 text-muted-foreground hidden sm:block" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-52">

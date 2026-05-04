@@ -51,8 +51,8 @@ export function QuoteHeaderForm({
       </button>
 
       {!collapsed && (
-        <div className="px-5 pb-5 grid grid-cols-2 gap-4 border-t">
-          <div className="space-y-1.5 col-span-2">
+        <div className="px-4 md:px-5 pb-5 grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
+          <div className="space-y-1.5 col-span-1 md:col-span-2">
             <Label>Titolo preventivo</Label>
             <Input
               value={quote.title}
@@ -93,7 +93,7 @@ export function QuoteHeaderForm({
             </Select>
           </div>
 
-          <div className="space-y-1.5 col-span-2">
+          <div className="space-y-1.5 col-span-1 md:col-span-2">
             <Label>Indirizzo cantiere</Label>
             <Input
               value={quote.projectAddress ?? ""}
@@ -129,7 +129,7 @@ export function QuoteHeaderForm({
             </Select>
           </div>
 
-          <div className="space-y-1.5 col-span-2">
+          <div className="space-y-1.5 col-span-1 md:col-span-2">
             <Label>Note generali</Label>
             <Textarea
               value={quote.notes ?? ""}

@@ -105,7 +105,7 @@ export function ImpostazioniClient({
   }
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <div className="p-3 md:p-6 max-w-2xl mx-auto">
       <div className="mb-6">
         <h1 className="text-xl font-semibold">Impostazioni azienda</h1>
         <p className="text-sm text-muted-foreground mt-0.5">
@@ -187,8 +187,8 @@ export function ImpostazioniClient({
         {/* Azienda */}
         <div className="bg-card border rounded-lg p-5 space-y-4">
           <h2 className="font-medium text-sm">Dati azienda</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2 space-y-1.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-2 space-y-1.5">
               <Label>Ragione sociale *</Label>
               <Input
                 {...register("companyName")}
@@ -227,7 +227,7 @@ export function ImpostazioniClient({
                 placeholder="diefferistrutturazioni.it"
               />
             </div>
-            <div className="col-span-2 space-y-1.5">
+            <div className="sm:col-span-2 space-y-1.5">
               <Label>Indirizzo</Label>
               <Input
                 {...register("address")}
@@ -240,7 +240,7 @@ export function ImpostazioniClient({
         {/* Preventivi */}
         <div className="bg-card border rounded-lg p-5 space-y-4">
           <h2 className="font-medium text-sm">Impostazioni preventivi</h2>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>IVA predefinita %</Label>
               <Input

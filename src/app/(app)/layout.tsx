@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { Sidebar } from "@/components/shared/Sidebar";
-import { Header } from "@/components/shared/Header";
+import { AppShell } from "@/components/shared/AppShell";
 import { QueryProvider } from "@/components/shared/QueryProvider";
 
 export default async function AppLayout({
@@ -16,15 +15,13 @@ export default async function AppLayout({
 
   return (
     <QueryProvider>
-      <div className="flex h-screen overflow-hidden">
-        <Sidebar userRole={user.role} />
-        <div className="flex flex-col flex-1 overflow-hidden">
-          <Header userName={user.name} userEmail={user.email} />
-          <main className="flex-1 overflow-y-auto bg-background">
-            {children}
-          </main>
-        </div>
-      </div>
+      <AppShell
+        userRole={user.role}
+        userName={user.name}
+        userEmail={user.email}
+      >
+        {children}
+      </AppShell>
     </QueryProvider>
   );
 }

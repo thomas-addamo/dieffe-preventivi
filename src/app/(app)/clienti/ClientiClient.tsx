@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Search, Edit2, Trash2, Loader2 } from "lucide-react";
+import { Plus, Search, Edit2, Trash2, Loader2, Building2, Mail, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -125,15 +125,15 @@ export function ClientiClient({
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-3 md:p-6 max-w-5xl mx-auto pb-20 lg:pb-6">
+      <div className="flex items-center justify-between mb-4 md:mb-6">
         <div>
-          <h1 className="text-xl font-semibold">Clienti</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <h1 className="text-lg md:text-xl font-semibold">Clienti</h1>
+          <p className="text-xs md:text-sm text-muted-foreground mt-0.5">
             {clients.length} client{clients.length === 1 ? "e" : "i"} registrat{clients.length === 1 ? "o" : "i"}
           </p>
         </div>
-        <Button onClick={openNew} className="gap-2">
+        <Button onClick={openNew} className="gap-2 hidden lg:flex">
           <Plus className="w-4 h-4" /> Nuovo cliente
         </Button>
       </div>
@@ -144,11 +144,12 @@ export function ClientiClient({
           placeholder="Cerca clienti..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="pl-9 max-w-sm"
+          className="pl-9 h-11 md:h-9 text-base md:text-sm"
         />
       </div>
 
-      <div className="border rounded-lg overflow-hidden bg-card">
+      {/* Desktop table */}
+      <div className="hidden lg:block border rounded-lg overflow-hidden bg-card">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40 hover:bg-muted/40">
@@ -181,12 +182,7 @@ export function ClientiClient({
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => openEdit(c)}
-                      >
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(c)}>
                         <Edit2 className="w-3.5 h-3.5" />
                       </Button>
                       <Button
@@ -206,8 +202,69 @@ export function ClientiClient({
         </Table>
       </div>
 
+      {/* Mobile card list */}
+      <div className="lg:hidden space-y-3">
+        {filtered.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">
+            {search ? "Nessun cliente trovato" : "Nessun cliente ancora."}
+          </div>
+        ) : (
+          filtered.map((c) => (
+            <div key={c.id} className="bg-card border rounded-lg p-4 space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold truncate">{c.name}</p>
+                  {c.vatNumber && (
+                    <p className="font-mono text-xs text-muted-foreground">{c.vatNumber}</p>
+                  )}
+                </div>
+                <div className="flex gap-1 shrink-0">
+                  <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => openEdit(c)}>
+                    <Edit2 className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-10 w-10 text-destructive hover:text-destructive"
+                    onClick={() => deleteClient(c.id)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+              {(c.email || c.phone) && (
+                <div className="space-y-1">
+                  {c.email && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Mail className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">{c.email}</span>
+                    </div>
+                  )}
+                  {c.phone && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Phone className="w-3.5 h-3.5 shrink-0" />
+                      <span>{c.phone}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">{formatDate(c.createdAt)}</p>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* FAB — mobile only */}
+      <button
+        onClick={openNew}
+        className="fixed bottom-6 right-6 z-40 lg:hidden w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all"
+        aria-label="Nuovo cliente"
+      >
+        <Plus className="w-6 h-6" />
+      </button>
+
       <Dialog open={showForm} onOpenChange={(o) => !o && setShowForm(false)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md w-full">
           <DialogHeader>
             <DialogTitle>
               {editing ? "Modifica cliente" : "Nuovo cliente"}
@@ -216,41 +273,41 @@ export function ClientiClient({
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-2">
             <div className="space-y-1.5">
               <Label>Nome / Ragione sociale *</Label>
-              <Input {...register("name")} placeholder="Mario Rossi Srl" />
+              <Input {...register("name")} placeholder="Mario Rossi Srl" className="h-11 md:h-9 text-base md:text-sm" />
               {errors.name && (
                 <p className="text-xs text-destructive">{errors.name.message}</p>
               )}
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>P.IVA / CF</Label>
-                <Input {...register("vatNumber")} placeholder="IT..." className="font-mono" />
+                <Input {...register("vatNumber")} placeholder="IT..." className="font-mono h-11 md:h-9 text-base md:text-sm" />
               </div>
               <div className="space-y-1.5">
                 <Label>Telefono</Label>
-                <Input {...register("phone")} placeholder="+39 ..." />
+                <Input {...register("phone")} placeholder="+39 ..." className="h-11 md:h-9 text-base md:text-sm" />
               </div>
             </div>
             <div className="space-y-1.5">
               <Label>Email</Label>
-              <Input {...register("email")} type="email" placeholder="cliente@email.com" />
+              <Input {...register("email")} type="email" placeholder="cliente@email.com" className="h-11 md:h-9 text-base md:text-sm" />
               {errors.email && (
                 <p className="text-xs text-destructive">{errors.email.message}</p>
               )}
             </div>
             <div className="space-y-1.5">
               <Label>Indirizzo</Label>
-              <Input {...register("address")} placeholder="Via Roma 1, 10100 Torino" />
+              <Input {...register("address")} placeholder="Via Roma 1, 10100 Torino" className="h-11 md:h-9 text-base md:text-sm" />
             </div>
             <div className="space-y-1.5">
               <Label>Note</Label>
               <Textarea {...register("notes")} rows={2} placeholder="Note interne..." />
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button type="button" variant="outline" onClick={() => setShowForm(false)} className="w-full sm:w-auto">
                 Annulla
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {editing ? "Aggiorna" : "Crea cliente"}
               </Button>

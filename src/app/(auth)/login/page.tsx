@@ -15,7 +15,7 @@ export default async function LoginPage() {
     .from(users);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/30">
+    <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary mb-4">

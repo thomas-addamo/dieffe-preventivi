@@ -142,20 +142,21 @@ export function UtentiClient({
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-3 md:p-6 max-w-4xl mx-auto pb-20 lg:pb-6">
+      <div className="flex items-center justify-between mb-4 md:mb-6">
         <div>
-          <h1 className="text-xl font-semibold">Utenti</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <h1 className="text-lg md:text-xl font-semibold">Utenti</h1>
+          <p className="text-xs md:text-sm text-muted-foreground mt-0.5">
             Gestione accessi
           </p>
         </div>
-        <Button onClick={() => setShowCreate(true)} className="gap-2">
+        <Button onClick={() => setShowCreate(true)} className="gap-2 hidden lg:flex">
           <Plus className="w-4 h-4" /> Nuovo utente
         </Button>
       </div>
 
-      <div className="border rounded-lg overflow-hidden bg-card">
+      {/* Desktop table */}
+      <div className="hidden lg:block border rounded-lg overflow-hidden bg-card">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40 hover:bg-muted/40">
@@ -182,15 +183,11 @@ export function UtentiClient({
                     variant="secondary"
                     className={
                       u.role === "admin"
-                        ? "bg-violet-100 text-violet-700"
-                        : "bg-zinc-100 text-zinc-600"
+                        ? "bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300"
+                        : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
                     }
                   >
-                    {u.role === "admin" ? (
-                      <Shield className="w-3 h-3 mr-1" />
-                    ) : (
-                      <User className="w-3 h-3 mr-1" />
-                    )}
+                    {u.role === "admin" ? <Shield className="w-3 h-3 mr-1" /> : <User className="w-3 h-3 mr-1" />}
                     {u.role === "admin" ? "Admin" : "Utente"}
                   </Badge>
                 </TableCell>
@@ -199,10 +196,7 @@ export function UtentiClient({
                 </TableCell>
                 <TableCell>
                   {u.id !== currentUserId && (
-                    <Switch
-                      checked={!u.disabled}
-                      onCheckedChange={() => toggleDisabled(u)}
-                    />
+                    <Switch checked={!u.disabled} onCheckedChange={() => toggleDisabled(u)} />
                   )}
                 </TableCell>
                 <TableCell>
@@ -236,24 +230,99 @@ export function UtentiClient({
         </Table>
       </div>
 
+      {/* Mobile card list */}
+      <div className="lg:hidden space-y-3">
+        {users.map((u) => (
+          <div key={u.id} className="bg-card border rounded-lg p-4 space-y-2">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="font-semibold">
+                    {u.name}
+                    {u.id === currentUserId && (
+                      <span className="ml-1.5 text-xs text-muted-foreground font-normal">(tu)</span>
+                    )}
+                  </p>
+                  <Badge
+                    variant="secondary"
+                    className={
+                      u.role === "admin"
+                        ? "bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300 text-xs"
+                        : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 text-xs"
+                    }
+                  >
+                    {u.role === "admin" ? <Shield className="w-2.5 h-2.5 mr-1" /> : <User className="w-2.5 h-2.5 mr-1" />}
+                    {u.role === "admin" ? "Admin" : "Utente"}
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+                {u.lastLoginAt && (
+                  <p className="text-xs text-muted-foreground">
+                    Accesso: {formatDate(u.lastLoginAt)}
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                {u.id !== currentUserId && (
+                  <Switch
+                    checked={!u.disabled}
+                    onCheckedChange={() => toggleDisabled(u)}
+                  />
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10"
+                  onClick={() => {
+                    setEditing(u);
+                    editForm.reset({ name: u.name, role: u.role as "admin" | "user", password: "" });
+                  }}
+                >
+                  <Edit2 className="w-4 h-4" />
+                </Button>
+                {u.id !== currentUserId && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-10 w-10 text-destructive hover:text-destructive"
+                    onClick={() => deleteUser(u.id)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* FAB — mobile only */}
+      <button
+        onClick={() => setShowCreate(true)}
+        className="fixed bottom-6 right-6 z-40 lg:hidden w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all"
+        aria-label="Nuovo utente"
+      >
+        <Plus className="w-6 h-6" />
+      </button>
+
       {/* Create dialog */}
       <Dialog open={showCreate} onOpenChange={(o) => !o && setShowCreate(false)}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm w-full">
           <DialogHeader>
             <DialogTitle>Nuovo utente</DialogTitle>
           </DialogHeader>
           <form onSubmit={createForm.handleSubmit(onCreate)} className="space-y-4 pt-2">
             <div className="space-y-1.5">
               <Label>Nome</Label>
-              <Input {...createForm.register("name")} placeholder="Mario Rossi" />
+              <Input {...createForm.register("name")} placeholder="Mario Rossi" className="h-11 md:h-9 text-base md:text-sm" />
             </div>
             <div className="space-y-1.5">
               <Label>Email</Label>
-              <Input {...createForm.register("email")} type="email" />
+              <Input {...createForm.register("email")} type="email" className="h-11 md:h-9 text-base md:text-sm" />
             </div>
             <div className="space-y-1.5">
               <Label>Password temporanea</Label>
-              <Input {...createForm.register("password")} type="password" placeholder="Minimo 8 caratteri" />
+              <Input {...createForm.register("password")} type="password" placeholder="Minimo 8 caratteri" className="h-11 md:h-9 text-base md:text-sm" />
             </div>
             <div className="space-y-1.5">
               <Label>Ruolo</Label>
@@ -261,7 +330,7 @@ export function UtentiClient({
                 defaultValue="user"
                 onValueChange={(v) => createForm.setValue("role", v as "admin" | "user")}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-11 md:h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -270,9 +339,11 @@ export function UtentiClient({
                 </SelectContent>
               </Select>
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setShowCreate(false)}>Annulla</Button>
-              <Button type="submit" disabled={createForm.formState.isSubmitting}>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button type="button" variant="outline" onClick={() => setShowCreate(false)} className="w-full sm:w-auto">
+                Annulla
+              </Button>
+              <Button type="submit" disabled={createForm.formState.isSubmitting} className="w-full sm:w-auto">
                 {createForm.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Crea
               </Button>
@@ -283,14 +354,14 @@ export function UtentiClient({
 
       {/* Edit dialog */}
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm w-full">
           <DialogHeader>
             <DialogTitle>Modifica utente</DialogTitle>
           </DialogHeader>
           <form onSubmit={editForm.handleSubmit(onEdit)} className="space-y-4 pt-2">
             <div className="space-y-1.5">
               <Label>Nome</Label>
-              <Input {...editForm.register("name")} />
+              <Input {...editForm.register("name")} className="h-11 md:h-9 text-base md:text-sm" />
             </div>
             <div className="space-y-1.5">
               <Label>Ruolo</Label>
@@ -298,7 +369,7 @@ export function UtentiClient({
                 defaultValue={editing?.role ?? "user"}
                 onValueChange={(v) => editForm.setValue("role", v as "admin" | "user")}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-11 md:h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -309,11 +380,13 @@ export function UtentiClient({
             </div>
             <div className="space-y-1.5">
               <Label>Nuova password (lascia vuoto per non cambiare)</Label>
-              <Input {...editForm.register("password")} type="password" placeholder="Minimo 8 caratteri" />
+              <Input {...editForm.register("password")} type="password" placeholder="Minimo 8 caratteri" className="h-11 md:h-9 text-base md:text-sm" />
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setEditing(null)}>Annulla</Button>
-              <Button type="submit" disabled={editForm.formState.isSubmitting}>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button type="button" variant="outline" onClick={() => setEditing(null)} className="w-full sm:w-auto">
+                Annulla
+              </Button>
+              <Button type="submit" disabled={editForm.formState.isSubmitting} className="w-full sm:w-auto">
                 {editForm.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Salva
               </Button>
