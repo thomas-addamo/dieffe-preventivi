@@ -118,7 +118,7 @@ export function SectionsDragList({
           <Button
             variant="outline"
             onClick={() => onAddSection(true)}
-            className="flex-1 gap-2 border-dashed border-red-300 text-red-500 hover:text-red-600 hover:border-red-400 h-11 md:h-9"
+            className="flex-1 gap-2 border-dashed border-violet-300 text-violet-500 hover:text-violet-600 hover:border-violet-400 h-11 md:h-9"
           >
             <Plus className="w-4 h-4" /> Aggiungi sezione opzionale
           </Button>

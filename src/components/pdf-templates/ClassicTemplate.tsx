@@ -28,9 +28,10 @@ function fmtNum(n: number): string {
 
 const PRIMARY = "#1e40af";
 const SECTION_BG = "#dbeafe";
-const OPTIONAL_BG = "#fee2e2";
-const OPTIONAL_BORDER = "#f87171";
-const OPTIONAL_TEXT = "#991b1b";
+const OPTIONAL_BG = "#f3e8ff";
+const OPTIONAL_BORDER = "#7c3aed";
+const OPTIONAL_TEXT = "#5b21b6";
+const OPTIONAL_HEADER_BG = "#6d28d9";
 const ROW_ALT = "#f9fafb";
 const BORDER = "#e4e4e7";
 const MUTED = "#71717a";
@@ -223,6 +224,15 @@ const s = StyleSheet.create({
     fontSize: 11,
     fontFamily: "Helvetica-Bold",
     color: "white",
+  },
+  // ── Optional table header ────────────────────────────────────────────────────
+  optionalTableHeader: {
+    flexDirection: "row",
+    backgroundColor: OPTIONAL_HEADER_BG,
+    paddingVertical: 5,
+    paddingHorizontal: 6,
+    borderRadius: 3,
+    marginBottom: 1,
   },
   // ── Optional section ─────────────────────────────────────────────────────────
   optionalHeader: {
@@ -578,7 +588,7 @@ export function ClassicTemplate({ quote, settings, logoUrl }: ClassicTemplatePro
               <Text style={s.optionalHeaderText}>PARTE OPZIONALE</Text>
             </View>
 
-            <View style={s.tableHeader}>
+            <View style={s.optionalTableHeader}>
               <Text style={[s.thText, s.colNum]}>N.</Text>
               <Text style={[s.thText, s.colDesc]}>Descrizione</Text>
               <Text style={[s.thText, s.colUm]}>U.M.</Text>

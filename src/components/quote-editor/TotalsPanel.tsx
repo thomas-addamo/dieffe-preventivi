@@ -100,7 +100,7 @@ export function TotalsPanel({
         <>
           <Separator />
           <div className="space-y-1.5">
-            <p className="text-xs font-medium text-red-500 uppercase tracking-wide mb-1">
+            <p className="text-xs font-medium text-violet-500 uppercase tracking-wide mb-1">
               Sezioni opzionali
             </p>
             {totals.optionalSections.map((s) => (
@@ -110,15 +110,15 @@ export function TotalsPanel({
                   checked={s.isIncluded}
                   onCheckedChange={(v) => onToggleOptionalIncluded(s.sectionId, !!v)}
                   disabled={isViewer}
-                  className="h-3.5 w-3.5 shrink-0 border-red-400 data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500"
+                  className="h-3.5 w-3.5 shrink-0 border-violet-400 data-[state=checked]:bg-violet-500 data-[state=checked]:border-violet-500"
                 />
                 <label
                   htmlFor={`totals-inc-${s.sectionId}`}
-                  className={`flex-1 truncate cursor-pointer ${s.isIncluded ? "text-foreground" : "text-red-400"}`}
+                  className={`flex-1 truncate cursor-pointer ${s.isIncluded ? "text-foreground" : "text-violet-400"}`}
                 >
                   {s.code} — {s.title}
                 </label>
-                <span className={`tabular-nums font-medium shrink-0 ${s.isIncluded ? "" : "text-red-400"}`}>
+                <span className={`tabular-nums font-medium shrink-0 ${s.isIncluded ? "" : "text-violet-400"}`}>
                   {formatCurrency(s.subtotal)}
                 </span>
               </div>

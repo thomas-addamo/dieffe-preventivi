@@ -19,8 +19,9 @@ export async function exportToExcel(
   const primary = settings?.primaryColor ?? "#1e40af";
   const primaryHex = primary.replace("#", "");
   const sectionBg = "dbeafe"; // blue-100
-  const optionalBg = "fee2e2"; // red-100
-  const optionalText = "991b1b";
+  const optionalBg = "f3e8ff"; // violet-100
+  const optionalText = "5b21b6"; // violet-800
+  const optionalHeaderBg = "6d28d9"; // violet-700
 
   ws.columns = [
     { key: "num", width: 8 },
@@ -213,6 +214,19 @@ export async function exportToExcel(
     optHeaderCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF" + optionalBg } };
     optHeaderCell.alignment = { horizontal: "center" };
     ws.getRow(row).height = 22;
+    row++;
+
+    // Optional table header row with violet background
+    const optTableHeaderRow = ws.getRow(row);
+    headers.forEach((h, i) => {
+      const cell = optTableHeaderRow.getCell(i + 1);
+      cell.value = h;
+      cell.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 10 };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF" + optionalHeaderBg } };
+      cell.alignment = { horizontal: i > 2 ? "right" : "left", vertical: "middle" };
+      cell.border = { bottom: { style: "thin", color: { argb: "FFE0E0E0" } } };
+    });
+    optTableHeaderRow.height = 22;
     row += 2;
 
     for (const section of optionalSections) {

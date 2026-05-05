@@ -104,7 +104,7 @@ export function SectionBlock({
   const isOptional = !!section.isOptional;
 
   const headerBg = isOptional
-    ? "bg-red-50/80 dark:bg-red-950/20 border-l-4 border-l-red-400"
+    ? "bg-violet-50/80 dark:bg-violet-950/20 border-l-4 border-l-violet-400"
     : "bg-blue-50/60 dark:bg-blue-950/20";
 
   const kebabMenu = !isViewer && (
@@ -167,7 +167,7 @@ export function SectionBlock({
         />
 
         {isOptional && (
-          <span className="hidden sm:inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-xs font-medium bg-red-100 text-red-600">
+          <span className="hidden sm:inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-xs font-medium bg-violet-100 text-violet-600">
             OPZIONALE
           </span>
         )}
@@ -180,9 +180,9 @@ export function SectionBlock({
                 id={`inc-${section.id}`}
                 checked={!!section.isOptionalIncluded}
                 onCheckedChange={(v) => onToggleOptionalIncluded(!!v)}
-                className="h-3.5 w-3.5 border-red-400 data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500"
+                className="h-3.5 w-3.5 border-violet-400 data-[state=checked]:bg-violet-500 data-[state=checked]:border-violet-500"
               />
-              <Label htmlFor={`inc-${section.id}`} className="text-xs text-red-600 cursor-pointer whitespace-nowrap">
+              <Label htmlFor={`inc-${section.id}`} className="text-xs text-violet-600 cursor-pointer whitespace-nowrap">
                 Includi nel totale
               </Label>
             </div>
@@ -255,7 +255,7 @@ export function SectionBlock({
       {/* Section note */}
       <div className={cn(
         "px-3 md:px-4 border-b",
-        isOptional ? "bg-red-50/40 dark:bg-red-950/10" : "bg-blue-50/20 dark:bg-blue-950/10"
+        isOptional ? "bg-violet-50/40 dark:bg-violet-950/10" : "bg-blue-50/20 dark:bg-blue-950/10"
       )}>
         {isViewer ? (
           section.sectionNote ? (
