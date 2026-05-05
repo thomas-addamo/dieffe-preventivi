@@ -153,6 +153,9 @@ export const quoteSections = pgTable(
     title: text("title").notNull(),
     description: text("description"),
     orderIndex: integer("order_index").notNull().default(0),
+    sectionNote: text("section_note"),
+    isOptional: boolean("is_optional").notNull().default(false),
+    isOptionalIncluded: boolean("is_optional_included").notNull().default(false),
   },
   (t) => [index("quote_sections_quote_id_idx").on(t.quoteId)]
 );

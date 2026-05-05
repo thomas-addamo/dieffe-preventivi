@@ -14,26 +14,64 @@ export function calcSectionSubtotal(items: Pick<QuoteItem, "total">[]): number {
 }
 
 export function calcQuoteTotals(
-  sections: { items: Pick<QuoteItem, "total">[] }[],
+  sections: {
+    id: string;
+    code: string;
+    title: string;
+    items: Pick<QuoteItem, "total">[];
+    isOptional?: boolean | null;
+    isOptionalIncluded?: boolean | null;
+  }[],
   vatRate: number,
   discountType?: "percent" | "fixed" | null,
   discountValue?: number | null
 ) {
-  const subtotal = sections.reduce(
-    (sum, s) => sum + calcSectionSubtotal(s.items),
-    0
-  );
+  const normalSections = sections.filter((s) => !s.isOptional);
+  const optionalSections = sections.filter((s) => !!s.isOptional);
+
+  const sectionSubtotals = normalSections.map((s) => ({
+    sectionId: s.id,
+    code: s.code,
+    title: s.title,
+    subtotal: calcSectionSubtotal(s.items),
+  }));
+
+  const optionalSectionDetails = optionalSections.map((s) => ({
+    sectionId: s.id,
+    code: s.code,
+    title: s.title,
+    subtotal: calcSectionSubtotal(s.items),
+    isIncluded: !!s.isOptionalIncluded,
+  }));
+
+  const baseSubtotal = sectionSubtotals.reduce((sum, s) => sum + s.subtotal, 0);
+  const optionalIncludedSubtotal = optionalSectionDetails
+    .filter((s) => s.isIncluded)
+    .reduce((sum, s) => sum + s.subtotal, 0);
+
+  const subtotalBeforeDiscount = baseSubtotal + optionalIncludedSubtotal;
 
   let discountAmount = 0;
   if (discountType === "percent" && discountValue) {
-    discountAmount = subtotal * (discountValue / 100);
+    discountAmount = subtotalBeforeDiscount * (discountValue / 100);
   } else if (discountType === "fixed" && discountValue) {
     discountAmount = discountValue;
   }
 
-  const taxableAmount = subtotal - discountAmount;
+  const taxableAmount = subtotalBeforeDiscount - discountAmount;
   const vatAmount = taxableAmount * (vatRate / 100);
   const total = taxableAmount + vatAmount;
 
-  return { subtotal, discountAmount, taxableAmount, vatAmount, total };
+  return {
+    sectionSubtotals,
+    baseSubtotal,
+    optionalSections: optionalSectionDetails,
+    optionalIncludedSubtotal,
+    subtotalBeforeDiscount,
+    discountAmount,
+    taxableAmount,
+    vatAmount,
+    total,
+    subtotal: subtotalBeforeDiscount,
+  };
 }

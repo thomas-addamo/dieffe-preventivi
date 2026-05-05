@@ -19,8 +19,9 @@ export async function exportToExcel(
   const primary = settings?.primaryColor ?? "#1e40af";
   const primaryHex = primary.replace("#", "");
   const sectionBg = "dbeafe"; // blue-100
+  const optionalBg = "fee2e2"; // red-100
+  const optionalText = "991b1b";
 
-  // column widths
   ws.columns = [
     { key: "num", width: 8 },
     { key: "desc", width: 45 },
@@ -56,7 +57,7 @@ export async function exportToExcel(
   ws.getCell(`A${row}`).font = { size: 9, color: { argb: "FF777777" } };
   row += 2;
 
-  // Preventivo info
+  // Quote info
   const infoRows: [string, string][] = [
     ["Preventivo N.", quote.code],
     ["Titolo", quote.title],
@@ -85,39 +86,49 @@ export async function exportToExcel(
     cell.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 10 };
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF" + primaryHex } };
     cell.alignment = { horizontal: i > 2 ? "right" : "left", vertical: "middle" };
-    cell.border = {
-      bottom: { style: "thin", color: { argb: "FFE0E0E0" } },
-    };
+    cell.border = { bottom: { style: "thin", color: { argb: "FFE0E0E0" } } };
   });
   headerRow.height = 22;
   row++;
 
-  // Sections and items
-  const sectionStartRows: number[] = [];
-  const sectionEndRows: number[] = [];
-
-  for (const section of quote.sections) {
-    // section header
+  function writeSection(
+    section: QuoteWithRelations["sections"][number],
+    isOptional: boolean
+  ) {
+    // section header row
     const secRow = ws.getRow(row);
     ws.mergeCells(`A${row}:G${row}`);
     const secCell = secRow.getCell(1);
-    secCell.value = `${section.code} — ${section.title}`;
-    secCell.font = { bold: true, size: 10 };
-    secCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF" + sectionBg } };
+    const optLabel = isOptional && section.isOptionalIncluded ? " [incluso nel totale]" : "";
+    secCell.value = `${section.code} — ${section.title}${optLabel}`;
+    secCell.font = {
+      bold: true,
+      size: 10,
+      color: isOptional ? { argb: "FF" + optionalText } : undefined,
+    };
+    secCell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF" + (isOptional ? optionalBg : sectionBg) },
+    };
     secCell.alignment = { horizontal: "left", vertical: "middle" };
     secRow.height = 18;
-    sectionStartRows.push(row);
-    row++;
+    return row + 1;
+  }
+
+  const normalSections = quote.sections.filter((s) => !s.isOptional);
+  const optionalSections = quote.sections.filter((s) => !!s.isOptional);
+
+  // Normal sections
+  for (const section of normalSections) {
+    row = writeSection(section, false);
 
     const itemStartRow = row;
-
     for (let idx = 0; idx < section.items.length; idx++) {
       const item = section.items[idx];
       const itemRow = ws.getRow(row);
       const isEven = idx % 2 === 1;
-
       const totalFormula = `=D${row}*E${row}*(1-F${row}/100)`;
-
       const cells = [
         `${section.code}.${idx + 1}`,
         item.description,
@@ -127,34 +138,22 @@ export async function exportToExcel(
         item.discount,
         { formula: totalFormula, result: item.total },
       ];
-
       cells.forEach((val, i) => {
         const cell = itemRow.getCell(i + 1);
         cell.value = val as ExcelJS.CellValue;
-        if (isEven) {
-          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF9FAFB" } };
-        }
+        if (isEven) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF9FAFB" } };
         if (i >= 3) {
           cell.alignment = { horizontal: "right" };
-          if (i === 4 || i === 6) {
-            cell.numFmt = '#,##0.00 "€"';
-          } else if (i === 5) {
-            cell.numFmt = '0.00"%"';
-          }
+          if (i === 4 || i === 6) cell.numFmt = '#,##0.00 "€"';
+          else if (i === 5) cell.numFmt = '0.00"%"';
         }
         cell.font = { size: 9 };
-        cell.border = {
-          bottom: { style: "hair", color: { argb: "FFE4E4E7" } },
-        };
+        cell.border = { bottom: { style: "hair", color: { argb: "FFE4E4E7" } } };
       });
-
       itemRow.height = 16;
       row++;
     }
 
-    sectionEndRows.push(row - 1);
-
-    // section subtotal
     if (section.items.length > 0) {
       const subRow = ws.getRow(row);
       ws.mergeCells(`A${row}:F${row}`);
@@ -180,7 +179,7 @@ export async function exportToExcel(
 
   row++;
   const totalsData: [string, number, string][] = [
-    ["Subtotale", totals.subtotal, '#,##0.00 "€"'],
+    ["Subtotale", totals.subtotalBeforeDiscount, '#,##0.00 "€"'],
   ];
   if (totals.discountAmount > 0) {
     totalsData.push(["Sconto", -totals.discountAmount, '#,##0.00 "€"']);
@@ -204,6 +203,85 @@ export async function exportToExcel(
     row++;
   }
 
+  // Optional sections block
+  if (optionalSections.length > 0) {
+    row += 2;
+    ws.mergeCells(`A${row}:G${row}`);
+    const optHeaderCell = ws.getCell(`A${row}`);
+    optHeaderCell.value = "PARTE OPZIONALE";
+    optHeaderCell.font = { bold: true, size: 12, color: { argb: "FF" + optionalText } };
+    optHeaderCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF" + optionalBg } };
+    optHeaderCell.alignment = { horizontal: "center" };
+    ws.getRow(row).height = 22;
+    row += 2;
+
+    for (const section of optionalSections) {
+      row = writeSection(section, true);
+
+      const itemStartRow = row;
+      for (let idx = 0; idx < section.items.length; idx++) {
+        const item = section.items[idx];
+        const itemRow = ws.getRow(row);
+        const isEven = idx % 2 === 1;
+        const totalFormula = `=D${row}*E${row}*(1-F${row}/100)`;
+        const cells = [
+          `${section.code}.${idx + 1}`,
+          item.description,
+          item.unitOfMeasure,
+          item.quantity,
+          item.unitPrice,
+          item.discount,
+          { formula: totalFormula, result: item.total },
+        ];
+        cells.forEach((val, i) => {
+          const cell = itemRow.getCell(i + 1);
+          cell.value = val as ExcelJS.CellValue;
+          if (isEven) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF9FAFB" } };
+          if (i >= 3) {
+            cell.alignment = { horizontal: "right" };
+            if (i === 4 || i === 6) cell.numFmt = '#,##0.00 "€"';
+            else if (i === 5) cell.numFmt = '0.00"%"';
+          }
+          cell.font = { size: 9 };
+          cell.border = { bottom: { style: "hair", color: { argb: "FFE4E4E7" } } };
+        });
+        itemRow.height = 16;
+        row++;
+      }
+
+      if (section.items.length > 0) {
+        const subRow = ws.getRow(row);
+        ws.mergeCells(`A${row}:F${row}`);
+        subRow.getCell(1).value = `Subtotale ${section.code}`;
+        subRow.getCell(1).font = { bold: true, size: 9, italic: true };
+        subRow.getCell(1).alignment = { horizontal: "right" };
+        subRow.getCell(7).value = { formula: `=SUM(G${itemStartRow}:G${row - 1})`, result: calcSectionSubtotal(section.items) };
+        subRow.getCell(7).numFmt = '#,##0.00 "€"';
+        subRow.getCell(7).font = { bold: true, size: 9, color: { argb: "FF" + optionalText } };
+        subRow.getCell(7).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF" + optionalBg } };
+        row++;
+      }
+      row++;
+    }
+
+    // Optional total (excluded only)
+    const optionalExcludedTotal = totals.optionalSections
+      .filter((s) => !s.isIncluded)
+      .reduce((sum, s) => sum + s.subtotal, 0);
+
+    if (optionalExcludedTotal > 0) {
+      ws.mergeCells(`A${row}:F${row}`);
+      ws.getCell(`A${row}`).value = "TOTALE PARTE OPZIONALE";
+      ws.getCell(`A${row}`).font = { bold: true, size: 10, color: { argb: "FF" + optionalText } };
+      ws.getCell(`A${row}`).alignment = { horizontal: "right" };
+      ws.getCell(`G${row}`).value = optionalExcludedTotal;
+      ws.getCell(`G${row}`).numFmt = '#,##0.00 "€"';
+      ws.getCell(`G${row}`).font = { bold: true, size: 10, color: { argb: "FF" + optionalText } };
+      ws.getCell(`G${row}`).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF" + optionalBg } };
+      row++;
+    }
+  }
+
   // Payment terms
   if (quote.paymentTerms) {
     row++;
@@ -216,18 +294,30 @@ export async function exportToExcel(
   // Summary sheet
   const ws2 = wb.addWorksheet("Riepilogo");
   ws2.columns = [
-    { key: "section", width: 30 },
+    { key: "section", width: 35 },
     { key: "total", width: 16 },
   ];
   ws2.addRow(["Sezione", "Totale"]).font = { bold: true };
-  for (const section of quote.sections) {
+  for (const section of normalSections) {
     ws2.addRow([
       `${section.code} — ${section.title}`,
       calcSectionSubtotal(section.items),
     ]).getCell(2).numFmt = '#,##0.00 "€"';
   }
   ws2.addRow([]);
-  ws2.addRow(["Subtotale", totals.subtotal]).getCell(2).numFmt = '#,##0.00 "€"';
+  ws2.addRow(["Subtotale sezioni principali", totals.baseSubtotal]).getCell(2).numFmt = '#,##0.00 "€"';
+
+  if (optionalSections.length > 0) {
+    ws2.addRow([]);
+    const optRow = ws2.addRow(["PARTE OPZIONALE"]);
+    optRow.font = { bold: true };
+    for (const section of optionalSections) {
+      const label = `${section.code} — ${section.title}${section.isOptionalIncluded ? " [incluso nel totale]" : ""}`;
+      ws2.addRow([label, calcSectionSubtotal(section.items)]).getCell(2).numFmt = '#,##0.00 "€"';
+    }
+    ws2.addRow([]);
+  }
+
   ws2.addRow([`IVA ${quote.vatRate}%`, totals.vatAmount]).getCell(2).numFmt = '#,##0.00 "€"';
   const totalRow2 = ws2.addRow(["TOTALE", totals.total]);
   totalRow2.font = { bold: true };

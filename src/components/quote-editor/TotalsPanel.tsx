@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { ChevronDown } from "lucide-react";
 import {
@@ -27,7 +28,19 @@ import {
   PAYMENT_TERMS_TEMPLATES,
   VAT_RATES,
 } from "@/lib/utils";
-import { calcSectionSubtotal } from "@/lib/calculations";
+
+type QuoteTotals = {
+  sectionSubtotals: { sectionId: string; code: string; title: string; subtotal: number }[];
+  baseSubtotal: number;
+  optionalSections: { sectionId: string; code: string; title: string; subtotal: number; isIncluded: boolean }[];
+  optionalIncludedSubtotal: number;
+  subtotalBeforeDiscount: number;
+  discountAmount: number;
+  taxableAmount: number;
+  vatAmount: number;
+  total: number;
+  subtotal: number;
+};
 
 interface TotalsPanelProps {
   sections: SectionWithItems[];
@@ -35,19 +48,11 @@ interface TotalsPanelProps {
   discountType?: "percent" | "fixed" | null;
   discountValue?: number | null;
   paymentTerms?: string | null;
-  totals: {
-    subtotal: number;
-    discountAmount: number;
-    taxableAmount: number;
-    vatAmount: number;
-    total: number;
-  };
+  totals: QuoteTotals;
   onChangeVat: (rate: number) => void;
-  onChangeDiscount: (
-    type: "percent" | "fixed" | null,
-    value: number | null
-  ) => void;
+  onChangeDiscount: (type: "percent" | "fixed" | null, value: number | null) => void;
   onChangePaymentTerms: (terms: string) => void;
+  onToggleOptionalIncluded: (sectionId: string, value: boolean) => void;
 }
 
 export function TotalsPanel({
@@ -60,26 +65,72 @@ export function TotalsPanel({
   onChangeVat,
   onChangeDiscount,
   onChangePaymentTerms,
+  onToggleOptionalIncluded,
 }: TotalsPanelProps) {
   const { isViewer } = usePermissions();
+  const hasOptional = totals.optionalSections.length > 0;
+
   return (
     <div className="space-y-4">
       <h3 className="font-semibold text-sm">Riepilogo</h3>
 
-      {/* Section subtotals */}
-      {sections.length > 0 && (
+      {/* Normal section subtotals */}
+      {totals.sectionSubtotals.length > 0 && (
         <div className="space-y-1.5">
-          {sections.map((s) => (
-            <div key={s.id} className="flex justify-between text-xs">
+          {hasOptional && (
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+              Sezioni principali
+            </p>
+          )}
+          {totals.sectionSubtotals.map((s) => (
+            <div key={s.sectionId} className="flex justify-between text-xs">
               <span className="text-muted-foreground truncate max-w-36">
                 {s.code} — {s.title}
               </span>
               <span className="tabular-nums font-medium">
-                {formatCurrency(calcSectionSubtotal(s.items))}
+                {formatCurrency(s.subtotal)}
               </span>
             </div>
           ))}
         </div>
+      )}
+
+      {/* Optional sections */}
+      {hasOptional && (
+        <>
+          <Separator />
+          <div className="space-y-1.5">
+            <p className="text-xs font-medium text-red-500 uppercase tracking-wide mb-1">
+              Sezioni opzionali
+            </p>
+            {totals.optionalSections.map((s) => (
+              <div key={s.sectionId} className="flex items-center gap-2 text-xs">
+                <Checkbox
+                  id={`totals-inc-${s.sectionId}`}
+                  checked={s.isIncluded}
+                  onCheckedChange={(v) => onToggleOptionalIncluded(s.sectionId, !!v)}
+                  disabled={isViewer}
+                  className="h-3.5 w-3.5 shrink-0 border-red-400 data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500"
+                />
+                <label
+                  htmlFor={`totals-inc-${s.sectionId}`}
+                  className={`flex-1 truncate cursor-pointer ${s.isIncluded ? "text-foreground" : "text-red-400"}`}
+                >
+                  {s.code} — {s.title}
+                </label>
+                <span className={`tabular-nums font-medium shrink-0 ${s.isIncluded ? "" : "text-red-400"}`}>
+                  {formatCurrency(s.subtotal)}
+                </span>
+              </div>
+            ))}
+            {totals.optionalIncludedSubtotal > 0 && (
+              <div className="flex justify-between text-xs text-muted-foreground pt-0.5">
+                <span>Opzionali incluse</span>
+                <span className="tabular-nums">{formatCurrency(totals.optionalIncludedSubtotal)}</span>
+              </div>
+            )}
+          </div>
+        </>
       )}
 
       <Separator />
@@ -88,7 +139,7 @@ export function TotalsPanel({
       <div className="flex justify-between text-sm">
         <span className="text-muted-foreground">Subtotale</span>
         <span className="tabular-nums font-medium">
-          {formatCurrency(totals.subtotal)}
+          {formatCurrency(totals.subtotalBeforeDiscount)}
         </span>
       </div>
 
@@ -108,24 +159,16 @@ export function TotalsPanel({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="none" className="text-xs">
-                Nessuno
-              </SelectItem>
-              <SelectItem value="percent" className="text-xs">
-                %
-              </SelectItem>
-              <SelectItem value="fixed" className="text-xs">
-                € fisso
-              </SelectItem>
+              <SelectItem value="none" className="text-xs">Nessuno</SelectItem>
+              <SelectItem value="percent" className="text-xs">%</SelectItem>
+              <SelectItem value="fixed" className="text-xs">€ fisso</SelectItem>
             </SelectContent>
           </Select>
           {discountType && (
             <Input
               type="number"
               value={discountValue ?? 0}
-              onChange={(e) =>
-                onChangeDiscount(discountType, Number(e.target.value))
-              }
+              onChange={(e) => onChangeDiscount(discountType, Number(e.target.value))}
               disabled={isViewer}
               className="flex-1 h-7 text-xs text-right"
               min="0"

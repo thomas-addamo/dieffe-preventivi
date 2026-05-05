@@ -28,9 +28,13 @@ function fmtNum(n: number): string {
 
 const PRIMARY = "#1e40af";
 const SECTION_BG = "#dbeafe";
+const OPTIONAL_BG = "#fee2e2";
+const OPTIONAL_BORDER = "#f87171";
+const OPTIONAL_TEXT = "#991b1b";
 const ROW_ALT = "#f9fafb";
 const BORDER = "#e4e4e7";
 const MUTED = "#71717a";
+const NOTE_COLOR = "#6b7280";
 
 const s = StyleSheet.create({
   page: {
@@ -127,6 +131,15 @@ const s = StyleSheet.create({
     width: 68,
     textAlign: "right",
   },
+  // ── Section note ────────────────────────────────────────────────────────────
+  sectionNote: {
+    fontSize: 8,
+    fontFamily: "Helvetica-Oblique",
+    color: NOTE_COLOR,
+    paddingHorizontal: 6,
+    paddingTop: 3,
+    paddingBottom: 4,
+  },
   // ── Item row ────────────────────────────────────────────────────────────────
   itemRow: {
     flexDirection: "row",
@@ -211,6 +224,79 @@ const s = StyleSheet.create({
     fontFamily: "Helvetica-Bold",
     color: "white",
   },
+  // ── Optional section ─────────────────────────────────────────────────────────
+  optionalHeader: {
+    marginTop: 20,
+    marginBottom: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    backgroundColor: OPTIONAL_BG,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderTopColor: OPTIONAL_BORDER,
+    borderBottomColor: OPTIONAL_BORDER,
+    borderRadius: 2,
+  },
+  optionalHeaderText: {
+    fontSize: 10,
+    fontFamily: "Helvetica-Bold",
+    color: OPTIONAL_TEXT,
+    textAlign: "center",
+    letterSpacing: 1,
+  },
+  optionalSectionRow: {
+    flexDirection: "row",
+    backgroundColor: OPTIONAL_BG,
+    paddingVertical: 5,
+    paddingHorizontal: 6,
+    marginTop: 6,
+    marginBottom: 1,
+    borderRadius: 2,
+    borderLeftWidth: 3,
+    borderLeftColor: OPTIONAL_BORDER,
+  },
+  optionalSectionTitle: {
+    fontFamily: "Helvetica-Bold",
+    fontSize: 9,
+    color: OPTIONAL_TEXT,
+    flex: 1,
+  },
+  optionalSectionSubtotal: {
+    fontFamily: "Helvetica-Bold",
+    fontSize: 9,
+    color: OPTIONAL_TEXT,
+    width: 68,
+    textAlign: "right",
+  },
+  optionalIncludedNote: {
+    fontSize: 7,
+    color: OPTIONAL_TEXT,
+    fontFamily: "Helvetica-Oblique",
+    marginLeft: 4,
+  },
+  optionalTotalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    backgroundColor: OPTIONAL_BG,
+    borderWidth: 1,
+    borderColor: OPTIONAL_BORDER,
+    borderRadius: 3,
+    marginTop: 8,
+    alignSelf: "flex-end",
+    width: 230,
+  },
+  optionalTotalLabel: {
+    fontSize: 10,
+    fontFamily: "Helvetica-Bold",
+    color: OPTIONAL_TEXT,
+  },
+  optionalTotalValue: {
+    fontSize: 10,
+    fontFamily: "Helvetica-Bold",
+    color: OPTIONAL_TEXT,
+  },
   // ── Payment / notes ──────────────────────────────────────────────────────────
   paymentBox: {
     marginTop: 18,
@@ -268,23 +354,105 @@ const s = StyleSheet.create({
 export interface ClassicTemplateProps {
   quote: QuoteWithRelations;
   settings: CompanySettings | null;
-  /** Cloudinary URL del logo aziendale. */
   logoUrl?: string | null;
+}
+
+// ─── Section rows renderer ────────────────────────────────────────────────────
+
+function SectionRows({
+  section,
+  isOptional,
+}: {
+  section: QuoteWithRelations["sections"][number];
+  isOptional: boolean;
+}) {
+  const rowStyle = isOptional ? s.optionalSectionRow : s.sectionRow;
+  const titleStyle = isOptional ? s.optionalSectionTitle : s.sectionTitle;
+  const subtotalStyle = isOptional ? s.optionalSectionSubtotal : s.sectionSubtotal;
+  const includedNote =
+    isOptional && section.isOptionalIncluded ? "(incluso nel totale)" : null;
+
+  return (
+    <View>
+      <View style={rowStyle}>
+        <Text style={titleStyle}>
+          {section.code} — {section.title}
+        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          {includedNote ? (
+            <Text style={s.optionalIncludedNote}>{includedNote}</Text>
+          ) : null}
+          <Text style={subtotalStyle}>
+            {fmtCurrency(calcSectionSubtotal(section.items))}
+          </Text>
+        </View>
+      </View>
+
+      {section.sectionNote ? (
+        <Text style={s.sectionNote}>{section.sectionNote}</Text>
+      ) : null}
+
+      {section.items.map((item, iIdx) => {
+        const hasImages = item.images.length > 0;
+        return (
+          <View key={item.id}>
+            <View style={[s.itemRow, iIdx % 2 === 1 ? s.itemRowAlt : {}]}>
+              <Text style={s.colNum}>
+                {section.code}.{iIdx + 1}
+              </Text>
+              <Text style={s.colDesc}>{item.description}</Text>
+              <Text style={s.colUm}>{item.unitOfMeasure}</Text>
+              <Text style={s.colQty}>{fmtNum(item.quantity)}</Text>
+              <Text style={s.colPrice}>{fmtCurrency(item.unitPrice)}</Text>
+              <Text style={s.colDisc}>
+                {item.discount > 0 ? `${item.discount}%` : "—"}
+              </Text>
+              <Text style={s.colTotal}>{fmtCurrency(item.total)}</Text>
+            </View>
+
+            {hasImages && (
+              <View style={s.imagesRow}>
+                {item.images.map((img) => {
+                  const src = img.cloudinaryUrl.replace(
+                    "/upload/",
+                    "/upload/f_auto,q_auto,w_800/"
+                  );
+                  return (
+                    <View key={img.id} style={s.imageBox}>
+                      <Image src={src} style={s.itemImage} />
+                      {img.caption ? (
+                        <Text style={s.imageCaption}>{img.caption}</Text>
+                      ) : null}
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+          </View>
+        );
+      })}
+    </View>
+  );
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export function ClassicTemplate({
-  quote,
-  settings,
-  logoUrl,
-}: ClassicTemplateProps) {
+export function ClassicTemplate({ quote, settings, logoUrl }: ClassicTemplateProps) {
   const totals = calcQuoteTotals(
     quote.sections,
     quote.vatRate,
     quote.discountType,
     quote.discountValue
   );
+
+  const normalSections = quote.sections.filter((s) => !s.isOptional);
+  const optionalSections = quote.sections.filter((s) => !!s.isOptional);
+  const hasOptional = optionalSections.length > 0;
+
+  // optional sections NOT included in main total
+  const optionalExcludedSubtotal = totals.optionalSections
+    .filter((s) => !s.isIncluded)
+    .reduce((sum, s) => sum + s.subtotal, 0);
 
   const companyName = settings?.companyName ?? "Dieffe Ristrutturazioni";
   const address = settings?.address;
@@ -298,28 +466,17 @@ export function ClassicTemplate({
       <Page size="A4" style={s.page}>
         {/* ── Header ── */}
         <View style={s.header}>
-          {/* Left: logo + company info */}
           <View style={{ flexDirection: "row", alignItems: "flex-start", flex: 1 }}>
-            {logoUrl ? (
-              <Image src={logoUrl} style={s.logo} />
-            ) : null}
+            {logoUrl ? <Image src={logoUrl} style={s.logo} /> : null}
             <View style={[s.companyBlock, logoUrl ? {} : { paddingLeft: 0 }]}>
               <Text style={s.companyName}>{companyName}</Text>
               {address ? <Text style={s.companyInfo}>{address}</Text> : null}
-              {vatNum ? (
-                <Text style={s.companyInfo}>P.IVA {vatNum}</Text>
-              ) : null}
-              {[email, phone, website]
-                .filter(Boolean)
-                .map((v, i) => (
-                  <Text key={i} style={s.companyInfo}>
-                    {v}
-                  </Text>
-                ))}
+              {vatNum ? <Text style={s.companyInfo}>P.IVA {vatNum}</Text> : null}
+              {[email, phone, website].filter(Boolean).map((v, i) => (
+                <Text key={i} style={s.companyInfo}>{v}</Text>
+              ))}
             </View>
           </View>
-
-          {/* Right: quote ref */}
           <View style={s.quoteInfo}>
             <Text style={s.quoteCode}>{quote.code}</Text>
             <Text style={s.quoteDate}>Data: {formatDate(quote.createdAt)}</Text>
@@ -342,9 +499,7 @@ export function ClassicTemplate({
               <Text style={s.clientDetail}>{quote.client.address}</Text>
             ) : null}
             {quote.client.vatNumber ? (
-              <Text style={s.clientDetail}>
-                P.IVA {quote.client.vatNumber}
-              </Text>
+              <Text style={s.clientDetail}>P.IVA {quote.client.vatNumber}</Text>
             ) : null}
             {quote.client.email ? (
               <Text style={s.clientDetail}>{quote.client.email}</Text>
@@ -355,9 +510,7 @@ export function ClassicTemplate({
         {/* ── Title ── */}
         <Text style={s.quoteTitle}>{quote.title}</Text>
         {quote.projectAddress ? (
-          <Text style={s.projectAddress}>
-            Cantiere: {quote.projectAddress}
-          </Text>
+          <Text style={s.projectAddress}>Cantiere: {quote.projectAddress}</Text>
         ) : null}
 
         {/* ── Table header ── */}
@@ -371,73 +524,28 @@ export function ClassicTemplate({
           <Text style={[s.thText, s.colTotal]}>Totale</Text>
         </View>
 
-        {/* ── Sections & items ── */}
-        {quote.sections.map((section) => (
-          <View key={section.id}>
-            {/* Section heading */}
-            <View style={s.sectionRow}>
-              <Text style={s.sectionTitle}>
-                {section.code} — {section.title}
-              </Text>
-              <Text style={s.sectionSubtotal}>
-                {fmtCurrency(calcSectionSubtotal(section.items))}
-              </Text>
-            </View>
-
-            {/* Items */}
-            {section.items.map((item, iIdx) => {
-              const hasImages = item.images.length > 0;
-              return (
-                <View key={item.id}>
-                  {/* Item row */}
-                  <View
-                    style={[s.itemRow, iIdx % 2 === 1 ? s.itemRowAlt : {}]}
-                  >
-                    <Text style={s.colNum}>
-                      {section.code}.{iIdx + 1}
-                    </Text>
-                    <Text style={s.colDesc}>{item.description}</Text>
-                    <Text style={s.colUm}>{item.unitOfMeasure}</Text>
-                    <Text style={s.colQty}>{fmtNum(item.quantity)}</Text>
-                    <Text style={s.colPrice}>
-                      {fmtCurrency(item.unitPrice)}
-                    </Text>
-                    <Text style={s.colDisc}>
-                      {item.discount > 0 ? `${item.discount}%` : "—"}
-                    </Text>
-                    <Text style={s.colTotal}>{fmtCurrency(item.total)}</Text>
-                  </View>
-
-                  {/* Images row */}
-                  {hasImages && (
-                    <View style={s.imagesRow}>
-                      {item.images.map((img) => {
-                        const src = img.cloudinaryUrl.replace(
-                          "/upload/",
-                          "/upload/f_auto,q_auto,w_800/"
-                        );
-                        return (
-                          <View key={img.id} style={s.imageBox}>
-                            <Image src={src} style={s.itemImage} />
-                            {img.caption ? (
-                              <Text style={s.imageCaption}>{img.caption}</Text>
-                            ) : null}
-                          </View>
-                        );
-                      })}
-                    </View>
-                  )}
-                </View>
-              );
-            })}
-          </View>
+        {/* ── Normal sections & items ── */}
+        {normalSections.map((section) => (
+          <SectionRows key={section.id} section={section} isOptional={false} />
         ))}
 
         {/* ── Totals ── */}
         <View style={s.totalsBox}>
+          {hasOptional && totals.baseSubtotal > 0 && (
+            <View style={s.totalRow}>
+              <Text style={s.totalLabel}>Subtotale sezioni principali</Text>
+              <Text style={s.totalValue}>{fmtCurrency(totals.baseSubtotal)}</Text>
+            </View>
+          )}
+          {totals.optionalIncludedSubtotal > 0 && (
+            <View style={s.totalRow}>
+              <Text style={s.totalLabel}>+ Opzionali incluse</Text>
+              <Text style={s.totalValue}>{fmtCurrency(totals.optionalIncludedSubtotal)}</Text>
+            </View>
+          )}
           <View style={s.totalRow}>
             <Text style={s.totalLabel}>Subtotale</Text>
-            <Text style={s.totalValue}>{fmtCurrency(totals.subtotal)}</Text>
+            <Text style={s.totalValue}>{fmtCurrency(totals.subtotalBeforeDiscount)}</Text>
           </View>
           {totals.discountAmount > 0 && (
             <>
@@ -449,9 +557,7 @@ export function ClassicTemplate({
               </View>
               <View style={s.totalRow}>
                 <Text style={s.totalLabel}>Imponibile</Text>
-                <Text style={s.totalValue}>
-                  {fmtCurrency(totals.taxableAmount)}
-                </Text>
+                <Text style={s.totalValue}>{fmtCurrency(totals.taxableAmount)}</Text>
               </View>
             </>
           )}
@@ -464,6 +570,38 @@ export function ClassicTemplate({
             <Text style={s.grandTotalValue}>{fmtCurrency(totals.total)}</Text>
           </View>
         </View>
+
+        {/* ── Optional sections ── */}
+        {hasOptional && (
+          <>
+            <View style={s.optionalHeader}>
+              <Text style={s.optionalHeaderText}>PARTE OPZIONALE</Text>
+            </View>
+
+            <View style={s.tableHeader}>
+              <Text style={[s.thText, s.colNum]}>N.</Text>
+              <Text style={[s.thText, s.colDesc]}>Descrizione</Text>
+              <Text style={[s.thText, s.colUm]}>U.M.</Text>
+              <Text style={[s.thText, s.colQty]}>Qtà</Text>
+              <Text style={[s.thText, s.colPrice]}>Prezzo</Text>
+              <Text style={[s.thText, s.colDisc]}>Sc.%</Text>
+              <Text style={[s.thText, s.colTotal]}>Totale</Text>
+            </View>
+
+            {optionalSections.map((section) => (
+              <SectionRows key={section.id} section={section} isOptional={true} />
+            ))}
+
+            {optionalExcludedSubtotal > 0 && (
+              <View style={s.optionalTotalRow}>
+                <Text style={s.optionalTotalLabel}>TOTALE PARTE OPZIONALE</Text>
+                <Text style={s.optionalTotalValue}>
+                  {fmtCurrency(optionalExcludedSubtotal)}
+                </Text>
+              </View>
+            )}
+          </>
+        )}
 
         {/* ── Payment terms ── */}
         {quote.paymentTerms ? (
@@ -485,9 +623,7 @@ export function ClassicTemplate({
         <View style={s.signatureRow}>
           <View style={s.signatureBox}>
             <View style={s.signatureLine} />
-            <Text style={s.signatureLabel}>
-              Firma e timbro {companyName}
-            </Text>
+            <Text style={s.signatureLabel}>Firma e timbro {companyName}</Text>
           </View>
           <View style={s.signatureBox}>
             <View style={s.signatureLine} />

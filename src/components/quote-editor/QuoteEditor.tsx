@@ -2,26 +2,15 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import {
-  DndContext,
-  DragEndEvent,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  closestCenter,
-} from "@dnd-kit/core";
-import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import {
-  Save,
   Trash2,
   Download,
   ChevronDown,
   ChevronUp,
-  Plus,
   ArrowLeft,
   MoreVertical,
-  Copy,
   Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -33,13 +22,35 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { SectionBlock } from "./SectionBlock";
 import { TotalsPanel } from "./TotalsPanel";
 import { QuoteHeaderForm } from "./QuoteHeaderForm";
 import type { QuoteWithRelations, SectionWithItems, ItemWithImages } from "@/types";
 import { QUOTE_STATUS_LABELS, QUOTE_STATUS_COLORS, generateId, formatCurrency } from "@/lib/utils";
 import { calcQuoteTotals } from "@/lib/calculations";
 import { usePermissions } from "@/hooks/use-permissions";
+
+// ─── Skeleton shown while SectionsDragList bundle loads ──────────────────────
+
+function SectionsSkeleton() {
+  return (
+    <div className="space-y-3">
+      {[1, 2].map((i) => (
+        <div key={i} className="h-14 bg-muted/30 rounded-lg animate-pulse" />
+      ))}
+    </div>
+  );
+}
+
+// ─── Dynamic import: disables SSR for all dnd-kit code ───────────────────────
+// dnd-kit generates non-deterministic aria IDs that differ between SSR and
+// client, causing hydration mismatches. Loading client-only fixes this.
+
+const SectionsDragList = dynamic(
+  () => import("./SectionsDragList").then((m) => m.SectionsDragList),
+  { ssr: false, loading: () => <SectionsSkeleton /> }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 interface QuoteEditorProps {
   initialQuote: QuoteWithRelations;
@@ -52,13 +63,14 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
   const router = useRouter();
   const { isViewer, can: perms } = usePermissions();
   const [quote, setQuote] = useState<QuoteWithRelations>(initialQuote);
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
-  );
   const [saveState, setSaveState] = useState<"saved" | "saving" | "unsaved">("saved");
   const [mobileTotalsOpen, setMobileTotalsOpen] = useState(false);
   const [readonlyBannerDismissed, setReadonlyBannerDismissed] = useState(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Tracks section IDs currently being deleted, so performSave won't
+  // re-insert them if a stale debounce fires concurrently with the DELETE.
+  const deletedSectionIdsRef = useRef<Set<string>>(new Set());
 
   const scheduleSave = useCallback(
     (updatedQuote: QuoteWithRelations) => {
@@ -92,6 +104,10 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
       });
 
       for (const section of q.sections) {
+        // Guard against race condition: skip sections with a pending DELETE
+        // to prevent re-inserting them in the DB right after they were deleted.
+        if (deletedSectionIdsRef.current.has(section.id)) continue;
+
         await fetch(`/api/quotes/${q.id}/sections`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -101,6 +117,9 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
             title: section.title,
             description: section.description,
             orderIndex: section.orderIndex,
+            sectionNote: section.sectionNote,
+            isOptional: section.isOptional,
+            isOptionalIncluded: section.isOptionalIncluded,
           }),
         });
 
@@ -138,7 +157,7 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
     });
   }
 
-  function addSection() {
+  function addSection(isOptional = false) {
     const usedCodes = new Set(quote.sections.map((s) => s.code));
     const code =
       SECTION_CODES.find((c) => !usedCodes.has(c)) ??
@@ -148,9 +167,12 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
       id: generateId(),
       quoteId: quote.id,
       code,
-      title: "Nuova sezione",
+      title: isOptional ? "Nuova sezione opzionale" : "Nuova sezione",
       description: null,
+      sectionNote: null,
       orderIndex: quote.sections.length,
+      isOptional,
+      isOptionalIncluded: false,
       items: [],
     };
 
@@ -165,24 +187,31 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
     });
   }
 
-  function deleteSection(sectionId: string) {
+  async function deleteSection(sectionId: string) {
+    // Mark as pending delete BEFORE any state update.
+    // performSave will skip this ID if it races with the DELETE API call.
+    deletedSectionIdsRef.current.add(sectionId);
+
+    // Optimistic UI update + schedule save for remaining sections.
     updateQuote({
       sections: quote.sections.filter((s) => s.id !== sectionId),
     });
-    fetch(`/api/quotes/${quote.id}/sections/${sectionId}`, { method: "DELETE" })
-      .catch(() => toast.error("Errore eliminazione sezione"));
+
+    try {
+      const res = await fetch(
+        `/api/quotes/${quote.id}/sections/${sectionId}`,
+        { method: "DELETE" }
+      );
+      if (!res.ok) toast.error("Errore eliminazione sezione");
+    } catch {
+      toast.error("Errore eliminazione sezione");
+    } finally {
+      // Safe to unmark once DELETE is confirmed (or failed).
+      deletedSectionIdsRef.current.delete(sectionId);
+    }
   }
 
-  function handleSectionDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-
-    const oldIndex = quote.sections.findIndex((s) => s.id === active.id);
-    const newIndex = quote.sections.findIndex((s) => s.id === over.id);
-    const reordered = arrayMove(quote.sections, oldIndex, newIndex).map(
-      (s, idx) => ({ ...s, orderIndex: idx })
-    );
-
+  function handleSectionsReordered(reordered: SectionWithItems[]) {
     setQuote((prev) => ({ ...prev, sections: reordered }));
     fetch(`/api/quotes/${quote.id}/sections/reorder`, {
       method: "PATCH",
@@ -256,6 +285,21 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
     updateSection(sectionId, { items });
   }
 
+  function toggleOptionalIncluded(sectionId: string, value: boolean) {
+    if (isViewer) return;
+    setQuote((prev) => {
+      const updated = {
+        ...prev,
+        sections: prev.sections.map((s) =>
+          s.id === sectionId ? { ...s, isOptionalIncluded: value } : s
+        ),
+      };
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      performSave(updated);
+      return updated;
+    });
+  }
+
   async function changeStatus(status: string) {
     const res = await fetch(`/api/quotes/${quote.id}/status`, {
       method: "PATCH",
@@ -313,7 +357,7 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
 
   return (
     <div className="flex flex-col min-h-full">
-      {/* Read-only banner for viewer */}
+      {/* Read-only banner */}
       {isViewer && !readonlyBannerDismissed && (
         <div className="bg-muted/60 border-b px-4 py-2 flex items-center gap-2 text-sm text-muted-foreground">
           <Lock className="w-3.5 h-3.5 shrink-0" />
@@ -345,7 +389,6 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
           <h1 className="font-semibold text-sm truncate">{quote.code}</h1>
         </div>
 
-        {/* Save state — solo per editor/admin */}
         {!isViewer && (
           <span className="hidden sm:block text-xs text-muted-foreground shrink-0">
             {saveState === "saving"
@@ -356,7 +399,6 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
           </span>
         )}
 
-        {/* Status badge — sempre visibile; dropdown solo per editor/admin */}
         {perms.changeQuoteStatus ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -387,7 +429,6 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
           </Badge>
         )}
 
-        {/* Desktop: export + delete buttons */}
         <div className="hidden md:flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -420,7 +461,6 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
           )}
         </div>
 
-        {/* Mobile: kebab menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-9 w-9 md:hidden">
@@ -462,43 +502,20 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
               onChange={(patch) => updateQuote(patch)}
             />
 
-            <div className="space-y-3 md:space-y-4">
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleSectionDragEnd}
-              >
-                <SortableContext
-                  items={quote.sections.map((s) => s.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  {quote.sections.map((section, sIdx) => (
-                    <SectionBlock
-                      key={section.id}
-                      section={section}
-                      sectionIndex={sIdx}
-                      quoteId={quote.id}
-                      onUpdate={(patch) => updateSection(section.id, patch)}
-                      onDelete={() => deleteSection(section.id)}
-                      onAddItem={() => addItem(section.id)}
-                      onUpdateItem={(itemId, patch) => updateItem(section.id, itemId, patch)}
-                      onDeleteItem={(itemId) => deleteItem(section.id, itemId)}
-                      onDuplicateItem={(itemId) => duplicateItem(section.id, itemId)}
-                    />
-                  ))}
-                </SortableContext>
-              </DndContext>
-
-              {!isViewer && (
-                <Button
-                  variant="outline"
-                  onClick={addSection}
-                  className="w-full gap-2 border-dashed text-muted-foreground hover:text-foreground h-11 md:h-9"
-                >
-                  <Plus className="w-4 h-4" /> Aggiungi sezione
-                </Button>
-              )}
-            </div>
+            {/* Sections — loaded client-only to avoid dnd-kit hydration mismatch */}
+            <SectionsDragList
+              sections={quote.sections}
+              quoteId={quote.id}
+              onSectionsReordered={handleSectionsReordered}
+              onUpdateSection={updateSection}
+              onDeleteSection={deleteSection}
+              onAddItem={addItem}
+              onUpdateItem={updateItem}
+              onDeleteItem={deleteItem}
+              onDuplicateItem={duplicateItem}
+              onToggleOptionalIncluded={toggleOptionalIncluded}
+              onAddSection={addSection}
+            />
           </div>
         </div>
 
@@ -517,6 +534,7 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
                 updateQuote({ discountType: type, discountValue: value })
               }
               onChangePaymentTerms={(terms) => updateQuote({ paymentTerms: terms })}
+              onToggleOptionalIncluded={toggleOptionalIncluded}
             />
           </div>
         </div>
@@ -524,7 +542,6 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
 
       {/* Mobile totals bottom bar */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-30">
-        {/* Expanded overlay */}
         {mobileTotalsOpen && (
           <div className="fixed inset-0 z-20 flex flex-col justify-end">
             <div
@@ -551,13 +568,13 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
                     updateQuote({ discountType: type, discountValue: value })
                   }
                   onChangePaymentTerms={(terms) => updateQuote({ paymentTerms: terms })}
+                  onToggleOptionalIncluded={toggleOptionalIncluded}
                 />
               </div>
             </div>
           </div>
         )}
 
-        {/* Fixed bar */}
         <button
           onClick={() => setMobileTotalsOpen(true)}
           className="w-full bg-background border-t px-5 py-3 flex items-center justify-between shadow-lg"

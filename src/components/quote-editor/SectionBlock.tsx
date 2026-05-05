@@ -11,10 +11,14 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -42,6 +46,7 @@ interface SectionBlockProps {
   onUpdateItem: (itemId: string, patch: Partial<ItemWithImages>) => void;
   onDeleteItem: (itemId: string) => void;
   onDuplicateItem: (itemId: string) => void;
+  onToggleOptionalIncluded: (value: boolean) => void;
 }
 
 export function SectionBlock({
@@ -54,6 +59,7 @@ export function SectionBlock({
   onUpdateItem,
   onDeleteItem,
   onDuplicateItem,
+  onToggleOptionalIncluded,
 }: SectionBlockProps) {
   const [collapsed, setCollapsed] = useState(false);
   const { isViewer } = usePermissions();
@@ -95,10 +101,51 @@ export function SectionBlock({
     opacity: isDragging ? 0.5 : 1,
   };
 
+  const isOptional = !!section.isOptional;
+
+  const headerBg = isOptional
+    ? "bg-red-50/80 dark:bg-red-950/20 border-l-4 border-l-red-400"
+    : "bg-blue-50/60 dark:bg-blue-950/20";
+
+  const kebabMenu = !isViewer && (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground">
+          <MoreVertical className="w-3.5 h-3.5" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {!isOptional ? (
+          <DropdownMenuItem
+            onClick={() => onUpdate({ isOptional: true, isOptionalIncluded: false })}
+          >
+            Segna come opzionale
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem
+            onClick={() => onUpdate({ isOptional: false, isOptionalIncluded: false })}
+          >
+            Rimuovi opzionale
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          className="text-destructive focus:text-destructive"
+          onClick={() => {
+            if (!confirm("Eliminare questa sezione e tutte le sue voci?")) return;
+            onDelete();
+          }}
+        >
+          <Trash2 className="w-3.5 h-3.5 mr-2" /> Elimina sezione
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
   return (
     <div ref={setNodeRef} style={sectionStyle} className="bg-card border rounded-lg overflow-hidden">
       {/* Section header */}
-      <div className="flex items-center gap-2 px-3 md:px-4 py-3 bg-blue-50/60 dark:bg-blue-950/20 border-b">
+      <div className={cn("flex items-center gap-2 px-3 md:px-4 py-3 border-b", headerBg)}>
         <GripVertical
           {...(!isViewer ? { ...attributes, ...listeners } : {})}
           className="w-4 h-4 text-muted-foreground shrink-0 cursor-grab"
@@ -119,21 +166,28 @@ export function SectionBlock({
           placeholder="Titolo sezione"
         />
 
+        {isOptional && (
+          <span className="hidden sm:inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-xs font-medium bg-red-100 text-red-600">
+            OPZIONALE
+          </span>
+        )}
+
         {/* Desktop actions */}
         <div className="hidden md:flex items-center gap-1 shrink-0">
-          {!isViewer && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 text-muted-foreground hover:text-destructive"
-              onClick={() => {
-                if (!confirm("Eliminare questa sezione e tutte le sue voci?")) return;
-                onDelete();
-              }}
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </Button>
+          {isOptional && !isViewer && (
+            <div className="flex items-center gap-1.5 mr-1">
+              <Checkbox
+                id={`inc-${section.id}`}
+                checked={!!section.isOptionalIncluded}
+                onCheckedChange={(v) => onToggleOptionalIncluded(!!v)}
+                className="h-3.5 w-3.5 border-red-400 data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500"
+              />
+              <Label htmlFor={`inc-${section.id}`} className="text-xs text-red-600 cursor-pointer whitespace-nowrap">
+                Includi nel totale
+              </Label>
+            </div>
           )}
+          {kebabMenu}
           <Button
             variant="ghost"
             size="icon"
@@ -144,7 +198,7 @@ export function SectionBlock({
           </Button>
         </div>
 
-        {/* Mobile kebab */}
+        {/* Mobile actions */}
         <div className="flex md:hidden items-center gap-1 shrink-0">
           <Button
             variant="ghost"
@@ -162,6 +216,27 @@ export function SectionBlock({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                {isOptional && (
+                  <DropdownMenuItem
+                    onClick={() => onToggleOptionalIncluded(!section.isOptionalIncluded)}
+                  >
+                    {section.isOptionalIncluded ? "Escludi dal totale" : "Includi nel totale"}
+                  </DropdownMenuItem>
+                )}
+                {!isOptional ? (
+                  <DropdownMenuItem
+                    onClick={() => onUpdate({ isOptional: true, isOptionalIncluded: false })}
+                  >
+                    Segna come opzionale
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    onClick={() => onUpdate({ isOptional: false, isOptionalIncluded: false })}
+                  >
+                    Rimuovi opzionale
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
                   onClick={() => {
@@ -175,6 +250,26 @@ export function SectionBlock({
             </DropdownMenu>
           )}
         </div>
+      </div>
+
+      {/* Section note */}
+      <div className={cn(
+        "px-3 md:px-4 border-b",
+        isOptional ? "bg-red-50/40 dark:bg-red-950/10" : "bg-blue-50/20 dark:bg-blue-950/10"
+      )}>
+        {isViewer ? (
+          section.sectionNote ? (
+            <p className="py-2 text-sm italic text-zinc-500">{section.sectionNote}</p>
+          ) : null
+        ) : (
+          <Textarea
+            value={section.sectionNote ?? ""}
+            onChange={(e) => onUpdate({ sectionNote: e.target.value || null })}
+            placeholder="Aggiungi una nota alla sezione (opzionale)"
+            rows={1}
+            className="min-h-[32px] resize-none bg-transparent border-none shadow-none focus-visible:ring-0 focus-visible:border-b focus-visible:border-zinc-300 text-sm italic text-zinc-500 placeholder:not-italic placeholder:text-zinc-400 py-2 px-0"
+          />
+        )}
       </div>
 
       {!collapsed && (

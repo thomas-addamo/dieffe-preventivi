@@ -12,6 +12,9 @@ const sectionSchema = z.object({
   title: z.string().min(1),
   description: z.string().nullable().optional(),
   orderIndex: z.number().int(),
+  sectionNote: z.string().nullable().optional(),
+  isOptional: z.boolean().optional(),
+  isOptionalIncluded: z.boolean().optional(),
 });
 
 export async function POST(

@@ -158,6 +158,9 @@ export async function upsertSection(
     title: string;
     description?: string | null;
     orderIndex: number;
+    sectionNote?: string | null;
+    isOptional?: boolean;
+    isOptionalIncluded?: boolean;
   }
 ) {
   const id = data.id ?? generateId();
@@ -178,6 +181,9 @@ export async function upsertSection(
         title: data.title,
         description: data.description ?? null,
         orderIndex: data.orderIndex,
+        sectionNote: data.sectionNote ?? null,
+        isOptional: data.isOptional ?? false,
+        isOptionalIncluded: data.isOptionalIncluded ?? false,
       })
       .where(eq(quoteSections.id, id));
   } else {
@@ -188,6 +194,9 @@ export async function upsertSection(
       title: data.title,
       description: data.description ?? null,
       orderIndex: data.orderIndex,
+      sectionNote: data.sectionNote ?? null,
+      isOptional: data.isOptional ?? false,
+      isOptionalIncluded: data.isOptionalIncluded ?? false,
     });
   }
   return id;
