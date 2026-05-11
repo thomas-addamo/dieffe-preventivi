@@ -76,6 +76,17 @@ export function ImageUploader({
   }
 
   function handleSave() {
+    // Delete from server any images removed during this session.
+    const removedIds = item.images
+      .filter((orig) => !images.some((cur) => cur.id === orig.id))
+      .map((img) => img.id);
+
+    for (const imageId of removedIds) {
+      fetch(`/api/quotes/${quoteId}/items/${item.id}/images/${imageId}`, {
+        method: "DELETE",
+      }).catch(() => {});
+    }
+
     onUpdate(images);
     onClose();
   }

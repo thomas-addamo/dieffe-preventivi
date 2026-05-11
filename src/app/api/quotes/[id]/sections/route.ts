@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@/lib/db/client";
-import { quoteSections, quoteItems, quoteItemImages } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 import { upsertSection } from "@/lib/db/quotes";
+import { logger } from "@/lib/logger";
 
 const sectionSchema = z.object({
   id: z.string().optional(),
@@ -33,6 +31,7 @@ export async function POST(
   }
 
   const sectionId = await upsertSection(quoteId, parsed.data);
+  logger.info({ sectionId, quoteId }, "section upserted");
   return NextResponse.json({ id: sectionId }, { status: 201 });
 }
 

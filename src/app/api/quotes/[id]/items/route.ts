@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
 import { upsertItem } from "@/lib/db/quotes";
+import { logger } from "@/lib/logger";
 
 const itemSchema = z.object({
   id: z.string().optional(),
@@ -28,6 +29,7 @@ export async function POST(req: NextRequest) {
 
   const { sectionId, ...data } = parsed.data;
   const itemId = await upsertItem(sectionId, data);
+  logger.info({ itemId, sectionId }, "item upserted");
   return NextResponse.json({ id: itemId }, { status: 201 });
 }
 

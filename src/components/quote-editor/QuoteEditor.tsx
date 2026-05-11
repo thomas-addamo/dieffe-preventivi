@@ -72,6 +72,14 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
   // re-insert them if a stale debounce fires concurrently with the DELETE.
   const deletedSectionIdsRef = useRef<Set<string>>(new Set());
 
+  // Tracks items/sections whose server-side creation POST is still in flight.
+  // performSave skips these to avoid a double-insert race; deleteItem/deleteSection
+  // abort the in-flight POST instead of calling DELETE (which would be a no-op).
+  const pendingItemIdsRef = useRef<Set<string>>(new Set());
+  const pendingSectionIdsRef = useRef<Set<string>>(new Set());
+  const itemAbortControllersRef = useRef<Map<string, AbortController>>(new Map());
+  const sectionAbortControllersRef = useRef<Map<string, AbortController>>(new Map());
+
   const scheduleSave = useCallback(
     (updatedQuote: QuoteWithRelations) => {
       if (isViewer) return;
@@ -104,9 +112,10 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
       });
 
       for (const section of q.sections) {
-        // Guard against race condition: skip sections with a pending DELETE
-        // to prevent re-inserting them in the DB right after they were deleted.
+        // Skip sections with a pending DELETE (re-insert guard).
         if (deletedSectionIdsRef.current.has(section.id)) continue;
+        // Skip sections whose create POST is still in flight (they're persisted separately).
+        if (pendingSectionIdsRef.current.has(section.id)) continue;
 
         await fetch(`/api/quotes/${q.id}/sections`, {
           method: "POST",
@@ -124,6 +133,9 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
         });
 
         for (const item of section.items) {
+          // Skip items whose create POST is still in flight.
+          if (pendingItemIdsRef.current.has(item.id)) continue;
+
           await fetch(`/api/quotes/${q.id}/items`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -157,7 +169,7 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
     });
   }
 
-  function addSection(isOptional = false) {
+  async function addSection(isOptional = false) {
     const usedCodes = new Set(quote.sections.map((s) => s.code));
     const code =
       SECTION_CODES.find((c) => !usedCodes.has(c)) ??
@@ -176,7 +188,45 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
       items: [],
     };
 
-    updateQuote({ sections: [...quote.sections, newSection] });
+    const controller = new AbortController();
+    pendingSectionIdsRef.current.add(newSection.id);
+    sectionAbortControllersRef.current.set(newSection.id, controller);
+
+    // Optimistic UI update — no scheduleSave, create is persisted immediately below.
+    setQuote((prev) => ({ ...prev, sections: [...prev.sections, newSection] }));
+
+    try {
+      const res = await fetch(`/api/quotes/${quote.id}/sections`, {
+        method: "POST",
+        signal: controller.signal,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: newSection.id,
+          code: newSection.code,
+          title: newSection.title,
+          description: newSection.description,
+          orderIndex: newSection.orderIndex,
+          sectionNote: newSection.sectionNote,
+          isOptional: newSection.isOptional,
+          isOptionalIncluded: newSection.isOptionalIncluded,
+        }),
+      });
+      if (!res.ok) throw new Error("server");
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        // Deleted before create completed; clean up in case POST already landed.
+        fetch(`/api/quotes/${quote.id}/sections/${newSection.id}`, { method: "DELETE" }).catch(() => {});
+      } else {
+        setQuote((prev) => ({
+          ...prev,
+          sections: prev.sections.filter((s) => s.id !== newSection.id),
+        }));
+        toast.error("Errore durante la creazione della sezione");
+      }
+    } finally {
+      pendingSectionIdsRef.current.delete(newSection.id);
+      sectionAbortControllersRef.current.delete(newSection.id);
+    }
   }
 
   function updateSection(sectionId: string, patch: Partial<SectionWithItems>) {
@@ -188,11 +238,19 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
   }
 
   async function deleteSection(sectionId: string) {
-    // Mark as pending delete BEFORE any state update.
-    // performSave will skip this ID if it races with the DELETE API call.
+    // If the section's create POST is still in flight, abort it instead of DELETE-ing.
+    if (pendingSectionIdsRef.current.has(sectionId)) {
+      sectionAbortControllersRef.current.get(sectionId)?.abort();
+      setQuote((prev) => ({
+        ...prev,
+        sections: prev.sections.filter((s) => s.id !== sectionId),
+      }));
+      return;
+    }
+
+    // Mark as pending delete BEFORE state update so performSave won't re-insert.
     deletedSectionIdsRef.current.add(sectionId);
 
-    // Optimistic UI update + schedule save for remaining sections.
     updateQuote({
       sections: quote.sections.filter((s) => s.id !== sectionId),
     });
@@ -206,7 +264,6 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
     } catch {
       toast.error("Errore eliminazione sezione");
     } finally {
-      // Safe to unmark once DELETE is confirmed (or failed).
       deletedSectionIdsRef.current.delete(sectionId);
     }
   }
@@ -220,7 +277,7 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
     }).catch(() => toast.error("Errore salvataggio ordine sezioni"));
   }
 
-  function addItem(sectionId: string) {
+  async function addItem(sectionId: string) {
     const section = quote.sections.find((s) => s.id === sectionId);
     if (!section) return;
 
@@ -238,7 +295,53 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
       images: [],
     };
 
-    updateSection(sectionId, { items: [...section.items, newItem] });
+    const controller = new AbortController();
+    pendingItemIdsRef.current.add(newItem.id);
+    itemAbortControllersRef.current.set(newItem.id, controller);
+
+    // Optimistic UI update — no scheduleSave, create is persisted immediately below.
+    setQuote((prev) => ({
+      ...prev,
+      sections: prev.sections.map((s) =>
+        s.id === sectionId ? { ...s, items: [...s.items, newItem] } : s
+      ),
+    }));
+
+    try {
+      const res = await fetch(`/api/quotes/${quote.id}/items`, {
+        method: "POST",
+        signal: controller.signal,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: newItem.id,
+          sectionId,
+          description: newItem.description,
+          unitOfMeasure: newItem.unitOfMeasure,
+          quantity: newItem.quantity,
+          unitPrice: newItem.unitPrice,
+          discount: newItem.discount,
+          notes: newItem.notes,
+          orderIndex: newItem.orderIndex,
+        }),
+      });
+      if (!res.ok) throw new Error("server");
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        // Deleted before create completed; clean up in case POST already landed.
+        fetch(`/api/quotes/${quote.id}/items/${newItem.id}`, { method: "DELETE" }).catch(() => {});
+      } else {
+        setQuote((prev) => ({
+          ...prev,
+          sections: prev.sections.map((s) =>
+            s.id === sectionId ? { ...s, items: s.items.filter((i) => i.id !== newItem.id) } : s
+          ),
+        }));
+        toast.error("Errore durante la creazione della voce");
+      }
+    } finally {
+      pendingItemIdsRef.current.delete(newItem.id);
+      itemAbortControllersRef.current.delete(newItem.id);
+    }
   }
 
   function updateItem(sectionId: string, itemId: string, patch: Partial<ItemWithImages>) {
@@ -259,30 +362,84 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
   }
 
   function deleteItem(sectionId: string, itemId: string) {
-    const section = quote.sections.find((s) => s.id === sectionId);
-    if (!section) return;
-    updateSection(sectionId, {
-      items: section.items.filter((i) => i.id !== itemId),
-    });
+    // Remove from UI immediately.
+    setQuote((prev) => ({
+      ...prev,
+      sections: prev.sections.map((s) =>
+        s.id === sectionId ? { ...s, items: s.items.filter((i) => i.id !== itemId) } : s
+      ),
+    }));
+
+    if (pendingItemIdsRef.current.has(itemId)) {
+      // Create POST still in flight — abort it; addItem's catch fires a cleanup DELETE.
+      itemAbortControllersRef.current.get(itemId)?.abort();
+      return;
+    }
+
+    // Item is confirmed server-side — DELETE immediately.
     fetch(`/api/quotes/${quote.id}/items/${itemId}`, { method: "DELETE" })
       .catch(() => toast.error("Errore eliminazione voce"));
   }
 
-  function duplicateItem(sectionId: string, itemId: string) {
+  async function duplicateItem(sectionId: string, itemId: string) {
     const section = quote.sections.find((s) => s.id === sectionId);
     if (!section) return;
     const orig = section.items.find((i) => i.id === itemId);
     if (!orig) return;
+
     const dup: ItemWithImages = {
       ...orig,
       id: generateId(),
       orderIndex: orig.orderIndex + 0.5,
       images: [],
     };
-    const items = [...section.items, dup].sort(
-      (a, b) => a.orderIndex - b.orderIndex
-    );
-    updateSection(sectionId, { items });
+    const items = [...section.items, dup].sort((a, b) => a.orderIndex - b.orderIndex);
+
+    const controller = new AbortController();
+    pendingItemIdsRef.current.add(dup.id);
+    itemAbortControllersRef.current.set(dup.id, controller);
+
+    setQuote((prev) => ({
+      ...prev,
+      sections: prev.sections.map((s) =>
+        s.id === sectionId ? { ...s, items } : s
+      ),
+    }));
+
+    try {
+      const res = await fetch(`/api/quotes/${quote.id}/items`, {
+        method: "POST",
+        signal: controller.signal,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: dup.id,
+          sectionId,
+          description: dup.description,
+          unitOfMeasure: dup.unitOfMeasure,
+          quantity: dup.quantity,
+          unitPrice: dup.unitPrice,
+          discount: dup.discount,
+          notes: dup.notes,
+          orderIndex: dup.orderIndex,
+        }),
+      });
+      if (!res.ok) throw new Error("server");
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        fetch(`/api/quotes/${quote.id}/items/${dup.id}`, { method: "DELETE" }).catch(() => {});
+      } else {
+        setQuote((prev) => ({
+          ...prev,
+          sections: prev.sections.map((s) =>
+            s.id === sectionId ? { ...s, items: s.items.filter((i) => i.id !== dup.id) } : s
+          ),
+        }));
+        toast.error("Errore durante la duplicazione della voce");
+      }
+    } finally {
+      pendingItemIdsRef.current.delete(dup.id);
+      itemAbortControllersRef.current.delete(dup.id);
+    }
   }
 
   function toggleOptionalIncluded(sectionId: string, value: boolean) {
