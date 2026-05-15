@@ -95,7 +95,7 @@ export function QuoteSignedEmail({
 
       <div style={{ padding: "12px 24px", background: "#f4f4f5", borderRadius: "0 0 8px 8px", textAlign: "center" }}>
         <p style={{ fontSize: 12, color: "#71717a", margin: 0 }}>
-          Dieffe Ristrutturazioni — diefferistrutturazioni.it
+          Dieffe Ristrutturazioni — impresadieffe.it
         </p>
       </div>
     </div>

@@ -91,12 +91,30 @@ function SignatureSection({ signature }: { signature: QuoteWithRelations["signat
                     : "—"}
                 </span>
               </div>
+              {signature.signerEmail && (
+                <div className="flex gap-2">
+                  <span className="text-muted-foreground w-32 shrink-0">Email:</span>
+                  <span>{signature.signerEmail}</span>
+                </div>
+              )}
               {signature.ipAddress && (
                 <div className="flex gap-2">
                   <span className="text-muted-foreground w-32 shrink-0">IP address:</span>
                   <span className="font-mono text-xs">{signature.ipAddress}</span>
                 </div>
               )}
+              <div className="flex gap-2 items-center">
+                <span className="text-muted-foreground w-32 shrink-0">Consenso IP:</span>
+                {signature.ipConsent ? (
+                  <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded px-2 py-0.5">
+                    ✓ IP registrato con consenso esplicito
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-xs font-medium text-zinc-500 bg-zinc-100 border border-zinc-200 rounded px-2 py-0.5">
+                    IP registrato senza consenso
+                  </span>
+                )}
+              </div>
               {signature.action === "accepted" && signature.signatureDataUrl && (
                 <div className="mt-3">
                   <p className="text-xs text-muted-foreground mb-1">Firma:</p>

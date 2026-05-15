@@ -65,6 +65,18 @@ type Settings = {
   accentColor: string;
 };
 
+function maskIp(ip: string): string {
+  const parts = ip.split(".");
+  if (parts.length === 4) {
+    return `${parts[0]}.XXX.XXX.${parts[3]}`;
+  }
+  return ip; // IPv6 — show as-is
+}
+
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmtCurrency(n: number) {
@@ -185,22 +197,79 @@ function ErrorPage({ error }: { error: string; status?: string }) {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SigRef = any;
 
+function IpBlockedMessage({ settings }: { settings: Settings | null }) {
+  return (
+    <div style={{ border: "1px solid #fbbf24", borderRadius: 12, padding: 24, background: "#fffbeb", marginTop: 32 }}>
+      <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: "#92400e" }}>
+        ⚠️ Impossibile completare la firma
+      </h3>
+      <p style={{ fontSize: 14, color: "#78350f", marginBottom: 12, lineHeight: 1.6 }}>
+        Non è possibile rilevare il tuo indirizzo IP, necessario per garantire la validità legale della firma elettronica.
+      </p>
+      <p style={{ fontSize: 13, color: "#78350f", marginBottom: 6, fontWeight: 600 }}>Questo può accadere se:</p>
+      <ul style={{ fontSize: 13, color: "#78350f", lineHeight: 1.8, paddingLeft: 20, marginBottom: 16 }}>
+        <li>Stai usando un browser con protezione avanzata della privacy (es. Brave)</li>
+        <li>Hai un'estensione che blocca il tracciamento</li>
+        <li>Stai usando una VPN con funzioni anti-tracking</li>
+        <li>La tua rete aziendale blocca certe connessioni</li>
+      </ul>
+      <p style={{ fontSize: 13, color: "#78350f", marginBottom: 6, fontWeight: 600 }}>Come risolvere:</p>
+      <ol style={{ fontSize: 13, color: "#78350f", lineHeight: 1.8, paddingLeft: 20, marginBottom: 20 }}>
+        <li>Prova ad aprire questo link in un altro browser (Chrome, Safari, Firefox)</li>
+        <li>Disabilita temporaneamente le estensioni privacy per questa pagina</li>
+        <li>Disabilita la VPN per completare la firma</li>
+      </ol>
+      <p style={{ fontSize: 13, color: "#78350f", fontWeight: 600 }}>Per assistenza contatta:</p>
+      <div style={{ fontSize: 13, color: "#78350f", marginTop: 4 }}>
+        {settings?.email && <p style={{ margin: "2px 0" }}>📧 {settings.email}</p>}
+        {settings?.phone && <p style={{ margin: "2px 0" }}>📞 {settings.phone}</p>}
+        {!settings?.email && <p style={{ margin: "2px 0" }}>📧 impresa.dieffe@gmail.com</p>}
+        {!settings?.phone && <p style={{ margin: "2px 0" }}>📞 3493191144</p>}
+      </div>
+    </div>
+  );
+}
+
 function SignatureBlock({
   quoteCode,
   token,
+  settings,
   onSigned,
 }: {
   quoteCode: string;
   token: string;
+  settings: Settings | null;
   onSigned: (result: { action: "accepted" | "rejected"; signerName: string; signedAt: Date }) => void;
 }) {
   const sigRef = useRef<SigRef>(null);
   const [signerName, setSignerName] = useState("");
+  const [signerEmail, setSignerEmail] = useState("");
   const [confirmed, setConfirmed] = useState(false);
+  const [ipConsent, setIpConsent] = useState(false);
   const [canvasEmpty, setCanvasEmpty] = useState(true);
   const [loading, setLoading] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // IP detection state
+  const [detectedIp, setDetectedIp] = useState<string | null>(null);
+  const [ipBlocked, setIpBlocked] = useState(false);
+  const [ipLoading, setIpLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/public/detect-ip")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.ip) {
+          setDetectedIp(d.ip);
+          setIpBlocked(false);
+        } else {
+          setIpBlocked(true);
+        }
+      })
+      .catch(() => setIpBlocked(true))
+      .finally(() => setIpLoading(false));
+  }, []);
 
   function clearSig() {
     sigRef.current?.clear();
@@ -221,7 +290,14 @@ function SignatureBlock({
       const res = await fetch(`/api/public/${token}/sign`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ signerName, signatureDataUrl, action }),
+        body: JSON.stringify({
+          signerName,
+          signerEmail,
+          signatureDataUrl,
+          action,
+          ipConsent,
+          clientIp: detectedIp,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -236,18 +312,27 @@ function SignatureBlock({
     }
   }
 
-  const canAccept = signerName.trim().length >= 2 && !canvasEmpty && confirmed;
+  const emailValid = isValidEmail(signerEmail);
+  const canAccept =
+    signerName.trim().length >= 2 &&
+    emailValid &&
+    !canvasEmpty &&
+    confirmed &&
+    !!detectedIp &&
+    ipConsent;
+  const canReject =
+    signerName.trim().length >= 2 &&
+    emailValid &&
+    !!detectedIp &&
+    ipConsent;
+
+  // Show IP-blocked error (but still allow page content to be read)
+  if (!ipLoading && ipBlocked) {
+    return <IpBlockedMessage settings={settings} />;
+  }
 
   return (
-    <div
-      style={{
-        border: "1px solid #e5e7eb",
-        borderRadius: 12,
-        padding: "24px",
-        background: "#fff",
-        marginTop: 32,
-      }}
-    >
+    <div style={{ border: "1px solid #e5e7eb", borderRadius: 12, padding: "24px", background: "#fff", marginTop: 32 }}>
       <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4, letterSpacing: 1, textTransform: "uppercase" }}>
         Accettazione del preventivo
       </h3>
@@ -256,6 +341,7 @@ function SignatureBlock({
         comprese le condizioni di pagamento.
       </p>
 
+      {/* Name */}
       <div style={{ marginBottom: 16 }}>
         <label style={{ display: "block", fontSize: 14, fontWeight: 600, marginBottom: 6 }}>
           Nome e cognome *
@@ -265,57 +351,87 @@ function SignatureBlock({
           placeholder="Mario Rossi"
           value={signerName}
           onChange={(e) => setSignerName(e.target.value)}
+          style={{ width: "100%", border: "1px solid #d1d5db", borderRadius: 6, padding: "10px 12px", fontSize: 15, boxSizing: "border-box" }}
+        />
+      </div>
+
+      {/* Email */}
+      <div style={{ marginBottom: 16 }}>
+        <label style={{ display: "block", fontSize: 14, fontWeight: 600, marginBottom: 6 }}>
+          Email *
+        </label>
+        <input
+          type="email"
+          placeholder="mario.rossi@email.com"
+          value={signerEmail}
+          onChange={(e) => setSignerEmail(e.target.value)}
           style={{
             width: "100%",
-            border: "1px solid #d1d5db",
+            border: `1px solid ${signerEmail && !emailValid ? "#ef4444" : "#d1d5db"}`,
             borderRadius: 6,
             padding: "10px 12px",
             fontSize: 15,
             boxSizing: "border-box",
           }}
         />
+        {signerEmail && !emailValid && (
+          <p style={{ fontSize: 12, color: "#ef4444", marginTop: 4 }}>Inserisci un indirizzo email valido</p>
+        )}
+        <p style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>
+          Riceverai una copia del preventivo firmato a questo indirizzo.
+        </p>
       </div>
 
+      {/* Signature canvas */}
       <div style={{ marginBottom: 8 }}>
         <label style={{ display: "block", fontSize: 14, fontWeight: 600, marginBottom: 6 }}>
           Firma *
         </label>
-        <div
-          style={{
-            border: "1px solid #d1d5db",
-            borderRadius: 6,
-            background: "#fff",
-            overflow: "hidden",
-            touchAction: "none",
-          }}
-        >
+        <div style={{ border: "1px solid #d1d5db", borderRadius: 6, background: "#fff", overflow: "hidden", touchAction: "none" }}>
           <SignatureCanvas
             ref={sigRef}
             penColor="#18181b"
-            canvasProps={{
-              style: { width: "100%", height: 150, display: "block" },
-            }}
+            canvasProps={{ style: { width: "100%", height: 150, display: "block" } }}
             onEnd={onSigEnd}
           />
         </div>
       </div>
-
       <button
         onClick={clearSig}
-        style={{
-          background: "none",
-          border: "none",
-          color: "#6b7280",
-          fontSize: 13,
-          cursor: "pointer",
-          padding: "4px 0",
-          marginBottom: 16,
-          textDecoration: "underline",
-        }}
+        style={{ background: "none", border: "none", color: "#6b7280", fontSize: 13, cursor: "pointer", padding: "4px 0", marginBottom: 16, textDecoration: "underline" }}
       >
         Cancella firma
       </button>
 
+      {/* IP consent box */}
+      {ipLoading ? (
+        <div style={{ background: "#f4f4f5", borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 13, color: "#6b7280" }}>
+          Verifica connessione in corso...
+        </div>
+      ) : detectedIp ? (
+        <div style={{ background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: 8, padding: "14px 16px", marginBottom: 16 }}>
+          <p style={{ fontWeight: 600, fontSize: 13, marginBottom: 8, color: "#0369a1" }}>
+            🔒 Raccolta dati per validità legale
+          </p>
+          <p style={{ fontSize: 13, color: "#0c4a6e", lineHeight: 1.6, marginBottom: 12 }}>
+            Per garantire la validità legale della firma, questo sistema registrerà il tuo indirizzo
+            IP (<strong>{maskIp(detectedIp)}</strong>) e la data/ora della firma.
+          </p>
+          <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer", fontSize: 13, color: "#0c4a6e" }}>
+            <input
+              type="checkbox"
+              checked={ipConsent}
+              onChange={(e) => setIpConsent(e.target.checked)}
+              style={{ marginTop: 2, width: 16, height: 16, flexShrink: 0 }}
+            />
+            <span>
+              Acconsento alla registrazione del mio indirizzo IP ai fini della validazione della firma elettronica.
+            </span>
+          </label>
+        </div>
+      ) : null}
+
+      {/* Accept terms checkbox */}
       <div style={{ marginBottom: 20 }}>
         <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer", fontSize: 14 }}>
           <input
@@ -340,7 +456,7 @@ function SignatureBlock({
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
         <button
           onClick={() => setShowRejectModal(true)}
-          disabled={loading}
+          disabled={loading || !canReject}
           style={{
             background: "none",
             border: "1px solid #ef4444",
@@ -349,8 +465,8 @@ function SignatureBlock({
             padding: "12px 20px",
             fontWeight: 600,
             fontSize: 14,
-            cursor: loading ? "not-allowed" : "pointer",
-            opacity: loading ? 0.5 : 1,
+            cursor: loading || !canReject ? "not-allowed" : "pointer",
+            opacity: loading || !canReject ? 0.4 : 1,
           }}
         >
           Rifiuta preventivo
@@ -378,27 +494,8 @@ function SignatureBlock({
 
       {/* Reject modal */}
       {showRejectModal && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.5)",
-            zIndex: 50,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 16,
-          }}
-        >
-          <div
-            style={{
-              background: "#fff",
-              borderRadius: 12,
-              padding: 24,
-              maxWidth: 420,
-              width: "100%",
-            }}
-          >
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ background: "#fff", borderRadius: 12, padding: 24, maxWidth: 420, width: "100%" }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
               <h3 style={{ fontWeight: 700, fontSize: 16, margin: 0 }}>Rifiuta preventivo</h3>
               <button onClick={() => setShowRejectModal(false)} style={{ background: "none", border: "none", cursor: "pointer" }}>
@@ -408,11 +505,6 @@ function SignatureBlock({
             <p style={{ color: "#6b7280", fontSize: 14, marginBottom: 20 }}>
               Sei sicuro di voler rifiutare il preventivo? Questa azione non può essere annullata.
             </p>
-            {signerName.trim().length < 2 && (
-              <p style={{ color: "#ef4444", fontSize: 13, marginBottom: 12 }}>
-                Inserisci il tuo nome e cognome prima di rifiutare.
-              </p>
-            )}
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
               <button
                 onClick={() => setShowRejectModal(false)}
@@ -422,17 +514,8 @@ function SignatureBlock({
               </button>
               <button
                 onClick={() => { setShowRejectModal(false); submit("rejected"); }}
-                disabled={signerName.trim().length < 2 || loading}
-                style={{
-                  background: "#ef4444",
-                  color: "white",
-                  border: "none",
-                  borderRadius: 6,
-                  padding: "10px 16px",
-                  fontWeight: 600,
-                  cursor: signerName.trim().length >= 2 ? "pointer" : "not-allowed",
-                  opacity: signerName.trim().length < 2 ? 0.5 : 1,
-                }}
+                disabled={loading}
+                style={{ background: "#ef4444", color: "white", border: "none", borderRadius: 6, padding: "10px 16px", fontWeight: 600, cursor: "pointer" }}
               >
                 Sì, rifiuta
               </button>
@@ -675,7 +758,7 @@ function QuoteView({
             </p>
           </div>
         ) : (
-          <SignatureBlock quoteCode={quote.code} token={token} onSigned={setSignedInfo} />
+          <SignatureBlock quoteCode={quote.code} token={token} settings={settings} onSigned={setSignedInfo} />
         )}
       </div>
 

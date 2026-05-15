@@ -689,7 +689,7 @@ export function ClassicTemplate({ quote, settings, logoUrl }: ClassicTemplatePro
               <Image src={signature.signatureDataUrl} style={s.digitalSigImage} />
             ) : null}
             <Text style={s.digitalSigNote}>
-              Documento firmato elettronicamente tramite dieffe-preventivi.vercel.app
+              Documento firmato elettronicamente con consenso esplicito alla registrazione IP tramite dieffe-preventivi.vercel.app
             </Text>
           </View>
         )}

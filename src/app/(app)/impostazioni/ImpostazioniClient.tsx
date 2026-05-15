@@ -30,6 +30,7 @@ const schema = z.object({
   pdfTemplate: z.enum(["classic", "modern", "minimal"]),
   primaryColor: z.string(),
   accentColor: z.string(),
+  emailFromAddress: z.string().email("Email non valida").optional().or(z.literal("")),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -64,6 +65,7 @@ export function ImpostazioniClient({
       pdfTemplate: initialSettings?.pdfTemplate ?? "classic",
       primaryColor: initialSettings?.primaryColor ?? "#1e40af",
       accentColor: initialSettings?.accentColor ?? "#059669",
+      emailFromAddress: initialSettings?.emailFromAddress ?? "",
     },
   });
 
@@ -315,6 +317,27 @@ export function ImpostazioniClient({
             <p className="text-xs text-muted-foreground">
               I file esportati vengono salvati in questa cartella con naming
               automatico
+            </p>
+          </div>
+        </div>
+
+        {/* Email configuration */}
+        <div className="bg-card border rounded-lg p-5 space-y-4">
+          <h2 className="font-medium text-sm">Configurazione Email</h2>
+          <div className="space-y-1.5">
+            <Label>Indirizzo email mittente</Label>
+            <Input
+              {...register("emailFromAddress")}
+              type="email"
+              placeholder="preventivi@tuaazienda.it"
+            />
+            {errors.emailFromAddress && (
+              <p className="text-xs text-destructive">
+                {errors.emailFromAddress.message}
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Usato come mittente per le email di conferma firma inviate ai clienti. Deve essere un dominio verificato su Resend.
             </p>
           </div>
         </div>

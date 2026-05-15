@@ -73,6 +73,7 @@ export const companySettings = pgTable("company_settings", {
     .default("classic"),
   primaryColor: text("primary_color").notNull().default("#1e40af"),
   accentColor: text("accent_color").notNull().default("#059669"),
+  emailFromAddress: text("email_from_address").default("onboarding@resend.dev"),
   updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
     .notNull()
     .defaultNow(),
@@ -219,8 +220,10 @@ export const quoteSignatures = pgTable("quote_signatures", {
     .notNull()
     .references(() => quotes.id, { onDelete: "cascade" }),
   signerName: text("signer_name").notNull(),
+  signerEmail: text("signer_email").notNull().default(""),
   signatureDataUrl: text("signature_data_url").notNull(),
   ipAddress: text("ip_address"),
+  ipConsent: boolean("ip_consent").notNull().default(false),
   userAgent: text("user_agent"),
   signedAt: timestamp("signed_at", { withTimezone: true }).defaultNow().notNull(),
   action: text("action", { enum: ["accepted", "rejected"] }).notNull(),

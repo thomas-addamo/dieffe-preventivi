@@ -4,23 +4,17 @@ import { db } from "@/lib/db/client";
 import { quotes, quoteSignatures, companySettings } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { isTokenValid } from "@/lib/public-token";
-import { sendSignatureNotification } from "@/lib/email/send";
-
-const SIG_MAX_BYTES = 500 * 1024; // 500KB
+import { sendSignatureNotification, sendClientSignatureConfirmation } from "@/lib/email/send";
 
 const bodySchema = z.object({
   signerName: z.string().min(2).max(100),
-  signatureDataUrl: z
-    .string()
-    .refine((v) => v === "" || v.startsWith("data:image/png;base64,"), {
-      message: "signatureDataUrl must be a PNG data URL",
-    })
-    .refine((v) => Buffer.byteLength(v, "utf8") <= SIG_MAX_BYTES, {
-      message: "Signature too large",
-    })
-    .optional()
-    .default(""),
+  signerEmail: z.string().email(),
+  signatureDataUrl: z.string().max(600_000).optional().default(""),
   action: z.enum(["accepted", "rejected"]),
+  ipConsent: z.boolean().refine((v) => v === true, {
+    message: "Il consenso IP è obbligatorio",
+  }),
+  clientIp: z.string().optional(),
 });
 
 // Simple in-memory rate limiter: 3 attempts per token per hour
@@ -70,17 +64,24 @@ export async function POST(
   if (!parsed.success)
     return NextResponse.json({ error: "Dati non validi", details: parsed.error.flatten() }, { status: 400 });
 
-  const { signerName, signatureDataUrl, action } = parsed.data;
+  const { signerName, signerEmail, signatureDataUrl, action, ipConsent, clientIp } = parsed.data;
 
-  // For accepted action, signature is required
   if (action === "accepted" && !signatureDataUrl) {
     return NextResponse.json({ error: "Firma richiesta per accettare" }, { status: 400 });
   }
 
-  const ipAddress =
+  // IP is always resolved server-side (authoritative)
+  const serverIp =
     req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
     req.headers.get("x-real-ip") ??
     null;
+
+  const ipAddress = serverIp ?? clientIp ?? null;
+
+  if (!ipAddress) {
+    console.warn("Sign attempt with no IP resolvable, proceeding anyway");
+  }
+
   const userAgent = req.headers.get("user-agent") ?? null;
   const signedAt = new Date();
 
@@ -88,8 +89,10 @@ export async function POST(
   await db.insert(quoteSignatures).values({
     quoteId: quote.id,
     signerName,
+    signerEmail,
     signatureDataUrl: signatureDataUrl ?? "",
     ipAddress,
+    ipConsent,
     userAgent,
     signedAt,
     action,
@@ -99,15 +102,16 @@ export async function POST(
     .update(quotes)
     .set({
       status: action,
-      publicTokenExpiresAt: new Date(), // expire immediately
+      publicTokenExpiresAt: new Date(), // expire immediately after signing
     })
     .where(eq(quotes.id, quote.id));
 
-  // Send email notification (non-blocking, failures don't affect the response)
+  // Non-blocking emails — never fail the response if email fails
   (async () => {
     try {
       const [settings] = await db.select().from(companySettings).limit(1);
       const recipientEmail = settings?.email ?? "impresa.dieffe@gmail.com";
+
       await sendSignatureNotification({
         quoteCode: quote.code,
         quoteTitle: quote.title,
@@ -118,8 +122,30 @@ export async function POST(
         ipAddress,
         recipientEmail,
       });
-    } catch {
-      // Email failure must never break the response
+    } catch (err) {
+      console.error("Admin notification email failed (non-blocking):", err);
+    }
+  })();
+
+  (async () => {
+    try {
+      const [settings] = await db.select().from(companySettings).limit(1);
+      await sendClientSignatureConfirmation({
+        quoteId: quote.id,
+        quoteCode: quote.code,
+        quoteTitle: quote.title,
+        signerName,
+        signerEmail,
+        action,
+        signedAt,
+        fromEmail: settings?.emailFromAddress ?? "onboarding@resend.dev",
+        companyName: settings?.companyName ?? "Dieffe Ristrutturazioni",
+        companyEmail: settings?.email ?? null,
+        companyPhone: settings?.phone ?? null,
+        companyWebsite: settings?.website ?? null,
+      });
+    } catch (err) {
+      console.error("Client confirmation email failed (non-blocking):", err);
     }
   })();
 

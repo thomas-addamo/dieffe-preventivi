@@ -17,6 +17,7 @@ const schema = z.object({
   pdfTemplate: z.enum(["classic", "modern", "minimal"]).optional(),
   primaryColor: z.string().optional(),
   accentColor: z.string().optional(),
+  emailFromAddress: z.string().nullable().optional(),
 });
 
 export async function GET() {
