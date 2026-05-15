@@ -15,6 +15,13 @@
       "when": 1777932315977,
       "tag": "0001_red_ser_duncan",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778835504019,
+      "tag": "0002_puzzling_wild_pack",
+      "breakpoints": true
     }
   ]
 }

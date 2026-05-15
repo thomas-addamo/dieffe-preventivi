@@ -27,6 +27,8 @@ export default async function DashboardPage() {
       updatedAt: quotes.updatedAt,
       clientName: clients.name,
       authorName: users.name,
+      publicToken: quotes.publicToken,
+      publicTokenExpiresAt: quotes.publicTokenExpiresAt,
     })
     .from(quotes)
     .leftJoin(clients, eq(quotes.clientId, clients.id))

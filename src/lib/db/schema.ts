@@ -9,6 +9,7 @@ import {
   index,
   uniqueIndex,
   timestamp,
+  uuid,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -125,6 +126,9 @@ export const quotes = pgTable(
       .notNull()
       .defaultNow(),
     sentAt: timestamp("sent_at", { withTimezone: true, mode: "string" }),
+    publicToken: text("public_token").unique(),
+    publicTokenExpiresAt: timestamp("public_token_expires_at", { withTimezone: true }),
+    publicTokenDays: integer("public_token_days").default(30),
   },
   (t) => [
     uniqueIndex("quotes_code_idx").on(t.code),
@@ -207,6 +211,21 @@ export const quoteTemplates = pgTable("quote_templates", {
     .defaultNow(),
 });
 
+// ─── Quote Signatures ─────────────────────────────────────────────────────────
+
+export const quoteSignatures = pgTable("quote_signatures", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  quoteId: text("quote_id")
+    .notNull()
+    .references(() => quotes.id, { onDelete: "cascade" }),
+  signerName: text("signer_name").notNull(),
+  signatureDataUrl: text("signature_data_url").notNull(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  signedAt: timestamp("signed_at", { withTimezone: true }).defaultNow().notNull(),
+  action: text("action", { enum: ["accepted", "rejected"] }).notNull(),
+});
+
 // ─── Audit Log ────────────────────────────────────────────────────────────────
 
 export const auditLog = pgTable("audit_log", {
@@ -237,3 +256,5 @@ export type QuoteItem = typeof quoteItems.$inferSelect;
 export type NewQuoteItem = typeof quoteItems.$inferInsert;
 export type QuoteItemImage = typeof quoteItemImages.$inferSelect;
 export type QuoteTemplate = typeof quoteTemplates.$inferSelect;
+export type QuoteSignature = typeof quoteSignatures.$inferSelect;
+export type NewQuoteSignature = typeof quoteSignatures.$inferInsert;

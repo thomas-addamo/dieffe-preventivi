@@ -18,6 +18,7 @@ import {
   Eye,
   Filter,
   X,
+  Link as LinkIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,6 +57,8 @@ type QuoteRow = {
   updatedAt: string;
   clientName: string | null;
   authorName: string;
+  publicToken?: string | null;
+  publicTokenExpiresAt?: Date | string | null;
 };
 
 type SortKey = keyof QuoteRow;
@@ -376,12 +379,19 @@ export function DashboardClient({
                     {q.clientName ?? "—"}
                   </TableCell>
                   <TableCell>
-                    <Badge
-                      variant="secondary"
-                      className={`text-xs ${QUOTE_STATUS_COLORS[q.status] ?? ""}`}
-                    >
-                      {QUOTE_STATUS_LABELS[q.status] ?? q.status}
-                    </Badge>
+                    <div className="flex items-center gap-1.5">
+                      <Badge
+                        variant="secondary"
+                        className={`text-xs ${QUOTE_STATUS_COLORS[q.status] ?? ""}`}
+                      >
+                        {QUOTE_STATUS_LABELS[q.status] ?? q.status}
+                      </Badge>
+                      {q.publicToken && q.publicTokenExpiresAt && new Date() < new Date(q.publicTokenExpiresAt) && (
+                        <span title="Link pubblico attivo" className="text-blue-500 inline-flex">
+                          <LinkIcon className="w-3.5 h-3.5" aria-label="Link pubblico attivo" />
+                        </span>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground tabular-nums">
                     {formatDate(q.createdAt)}
@@ -435,12 +445,19 @@ export function DashboardClient({
                   <span className="font-mono text-xs font-medium text-primary">
                     {q.code}
                   </span>
-                  <Badge
-                    variant="secondary"
-                    className={`text-xs shrink-0 ${QUOTE_STATUS_COLORS[q.status] ?? ""}`}
-                  >
-                    {QUOTE_STATUS_LABELS[q.status] ?? q.status}
-                  </Badge>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {q.publicToken && q.publicTokenExpiresAt && new Date() < new Date(q.publicTokenExpiresAt) && (
+                      <span title="Link pubblico attivo" className="inline-flex text-blue-500">
+                        <LinkIcon className="w-3.5 h-3.5" aria-label="Link pubblico attivo" />
+                      </span>
+                    )}
+                    <Badge
+                      variant="secondary"
+                      className={`text-xs ${QUOTE_STATUS_COLORS[q.status] ?? ""}`}
+                    >
+                      {QUOTE_STATUS_LABELS[q.status] ?? q.status}
+                    </Badge>
+                  </div>
                 </div>
                 <p className="font-medium text-sm leading-tight line-clamp-2">{q.title}</p>
                 {q.clientName && (

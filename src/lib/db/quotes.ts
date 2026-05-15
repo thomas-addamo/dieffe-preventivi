@@ -5,6 +5,7 @@ import {
   quoteItems,
   quoteItemImages,
   quoteYearCounters,
+  quoteSignatures,
   clients,
   users,
 } from "@/lib/db/schema";
@@ -99,6 +100,13 @@ export async function getQuoteWithRelations(
       .map((i) => itemMap.get(i.id)!),
   }));
 
+  const [sig] = await db
+    .select()
+    .from(quoteSignatures)
+    .where(eq(quoteSignatures.quoteId, id))
+    .orderBy(asc(quoteSignatures.signedAt))
+    .limit(1);
+
   return {
     ...quote.quotes,
     client: quote.clients ?? null,
@@ -108,6 +116,7 @@ export async function getQuoteWithRelations(
       email: quote.users.email,
     },
     sections: sectionsWithItems,
+    signature: sig ?? null,
   };
 }
 

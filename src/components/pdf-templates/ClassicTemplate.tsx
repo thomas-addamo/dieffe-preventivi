@@ -344,6 +344,33 @@ const s = StyleSheet.create({
     marginBottom: 3,
   },
   signatureLabel: { fontSize: 7, color: MUTED, textAlign: "center" },
+  // ── Digital signature section ─────────────────────────────────────────────────
+  digitalSigSection: {
+    marginTop: 20,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: BORDER,
+    borderRadius: 4,
+  },
+  digitalSigTitle: {
+    fontSize: 9,
+    fontFamily: "Helvetica-Bold",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    color: MUTED,
+    marginBottom: 8,
+    paddingBottom: 4,
+    borderBottomWidth: 0.5,
+    borderBottomColor: BORDER,
+  },
+  digitalSigRow: {
+    flexDirection: "row",
+    marginBottom: 3,
+  },
+  digitalSigLabel: { fontSize: 8, color: MUTED, width: 100 },
+  digitalSigValue: { fontSize: 8, flex: 1 },
+  digitalSigImage: { width: 200, height: 60, objectFit: "contain", marginTop: 6, borderWidth: 0.5, borderColor: BORDER, borderRadius: 2 },
+  digitalSigNote: { fontSize: 7, color: MUTED, marginTop: 8, fontFamily: "Helvetica-Oblique" },
   // ── Footer ───────────────────────────────────────────────────────────────────
   footer: {
     position: "absolute",
@@ -361,8 +388,16 @@ const s = StyleSheet.create({
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
+type DigitalSignature = {
+  signerName: string;
+  signatureDataUrl: string;
+  signedAt: Date | string;
+  ipAddress: string | null;
+  action: "accepted" | "rejected";
+};
+
 export interface ClassicTemplateProps {
-  quote: QuoteWithRelations;
+  quote: QuoteWithRelations & { signature?: DigitalSignature | null };
   settings: CompanySettings | null;
   logoUrl?: string | null;
 }
@@ -448,6 +483,7 @@ function SectionRows({
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function ClassicTemplate({ quote, settings, logoUrl }: ClassicTemplateProps) {
+  const { signature } = quote as { signature?: DigitalSignature | null };
   const totals = calcQuoteTotals(
     quote.sections,
     quote.vatRate,
@@ -628,6 +664,35 @@ export function ClassicTemplate({ quote, settings, logoUrl }: ClassicTemplatePro
             <Text style={s.bodyText}>{quote.notes}</Text>
           </View>
         ) : null}
+
+        {/* ── Digital signature (if present) ── */}
+        {signature && (
+          <View style={s.digitalSigSection}>
+            <Text style={s.digitalSigTitle}>Firma di accettazione</Text>
+            <View style={s.digitalSigRow}>
+              <Text style={s.digitalSigLabel}>
+                {signature.action === "accepted" ? "Accettato da:" : "Rifiutato da:"}
+              </Text>
+              <Text style={s.digitalSigValue}>{signature.signerName}</Text>
+            </View>
+            <View style={s.digitalSigRow}>
+              <Text style={s.digitalSigLabel}>Data e ora:</Text>
+              <Text style={s.digitalSigValue}>{formatDate(String(signature.signedAt))}</Text>
+            </View>
+            {signature.ipAddress ? (
+              <View style={s.digitalSigRow}>
+                <Text style={s.digitalSigLabel}>IP:</Text>
+                <Text style={s.digitalSigValue}>{signature.ipAddress}</Text>
+              </View>
+            ) : null}
+            {signature.action === "accepted" && signature.signatureDataUrl ? (
+              <Image src={signature.signatureDataUrl} style={s.digitalSigImage} />
+            ) : null}
+            <Text style={s.digitalSigNote}>
+              Documento firmato elettronicamente tramite dieffe-preventivi.vercel.app
+            </Text>
+          </View>
+        )}
 
         {/* ── Signature blocks ── */}
         <View style={s.signatureRow}>

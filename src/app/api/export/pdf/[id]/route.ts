@@ -4,7 +4,8 @@ import React from "react";
 import { getCurrentUser } from "@/lib/auth";
 import { getQuoteWithRelations } from "@/lib/db/quotes";
 import { db } from "@/lib/db/client";
-import { companySettings } from "@/lib/db/schema";
+import { companySettings, quoteSignatures } from "@/lib/db/schema";
+import { eq, asc } from "drizzle-orm";
 import { ClassicTemplate } from "@/components/pdf-templates/ClassicTemplate";
 import { generateExportFilename } from "@/lib/utils";
 import { cloudinary } from "@/lib/cloudinary";
@@ -28,6 +29,13 @@ export async function GET(
   const [settings] = await db.select().from(companySettings).limit(1);
   const s = settings ?? null;
 
+  const signatures = await db
+    .select()
+    .from(quoteSignatures)
+    .where(eq(quoteSignatures.quoteId, id))
+    .orderBy(asc(quoteSignatures.signedAt))
+    .limit(1);
+
   // logoPath contiene il public_id di Cloudinary; generiamo l'URL ottimizzato
   let logoUrl: string | null = null;
   if (s?.logoPath) {
@@ -42,7 +50,7 @@ export async function GET(
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const element = React.createElement(ClassicTemplate as any, {
-    quote,
+    quote: { ...quote, signature: signatures[0] ?? null },
     settings: s,
     logoUrl,
   });

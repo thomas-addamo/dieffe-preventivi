@@ -3,6 +3,7 @@ import type {
   QuoteSection,
   QuoteItem,
   QuoteItemImage,
+  QuoteSignature,
   Client,
   User,
 } from "@/lib/db/schema";
@@ -13,6 +14,7 @@ export type QuoteWithRelations = Quote & {
     items: (QuoteItem & { images: QuoteItemImage[] })[];
   })[];
   author: Pick<User, "id" | "name" | "email">;
+  signature?: QuoteSignature | null;
 };
 
 export type SectionWithItems = QuoteSection & {

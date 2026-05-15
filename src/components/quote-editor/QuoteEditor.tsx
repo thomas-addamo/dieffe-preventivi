@@ -13,6 +13,7 @@ import {
   MoreVertical,
   Lock,
 } from "lucide-react";
+import { SharePopover } from "./SharePopover";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -25,9 +26,11 @@ import {
 import { TotalsPanel } from "./TotalsPanel";
 import { QuoteHeaderForm } from "./QuoteHeaderForm";
 import type { QuoteWithRelations, SectionWithItems, ItemWithImages } from "@/types";
-import { QUOTE_STATUS_LABELS, QUOTE_STATUS_COLORS, generateId, formatCurrency } from "@/lib/utils";
+import { QUOTE_STATUS_LABELS, QUOTE_STATUS_COLORS, generateId, formatCurrency, formatDate } from "@/lib/utils";
 import { calcQuoteTotals } from "@/lib/calculations";
 import { usePermissions } from "@/hooks/use-permissions";
+import { format } from "date-fns";
+import { it } from "date-fns/locale";
 
 // ─── Skeleton shown while SectionsDragList bundle loads ──────────────────────
 
@@ -49,6 +52,69 @@ const SectionsDragList = dynamic(
   () => import("./SectionsDragList").then((m) => m.SectionsDragList),
   { ssr: false, loading: () => <SectionsSkeleton /> }
 );
+
+// ─── Signature section (admin view) ──────────────────────────────────────────
+
+function SignatureSection({ signature }: { signature: QuoteWithRelations["signature"] }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="border rounded-lg overflow-hidden">
+      <button
+        className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium bg-muted/30 hover:bg-muted/50 transition-colors"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span>Firma del cliente</span>
+        {open ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+      </button>
+      {open && (
+        <div className="p-4">
+          {!signature ? (
+            <p className="text-sm text-muted-foreground">Nessuna firma presente.</p>
+          ) : (
+            <div className="space-y-2 text-sm">
+              <div className="flex gap-2">
+                <span className="text-muted-foreground w-32 shrink-0">Nome firmatario:</span>
+                <span className="font-medium">{signature.signerName}</span>
+              </div>
+              <div className="flex gap-2">
+                <span className="text-muted-foreground w-32 shrink-0">Azione:</span>
+                <span className={`font-medium ${signature.action === "accepted" ? "text-green-600" : "text-red-600"}`}>
+                  {signature.action === "accepted" ? "✅ Accettato" : "❌ Rifiutato"}
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <span className="text-muted-foreground w-32 shrink-0">Data e ora:</span>
+                <span>
+                  {signature.signedAt
+                    ? format(new Date(signature.signedAt as unknown as string), "dd/MM/yyyy HH:mm", { locale: it })
+                    : "—"}
+                </span>
+              </div>
+              {signature.ipAddress && (
+                <div className="flex gap-2">
+                  <span className="text-muted-foreground w-32 shrink-0">IP address:</span>
+                  <span className="font-mono text-xs">{signature.ipAddress}</span>
+                </div>
+              )}
+              {signature.action === "accepted" && signature.signatureDataUrl && (
+                <div className="mt-3">
+                  <p className="text-xs text-muted-foreground mb-1">Firma:</p>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={signature.signatureDataUrl}
+                    alt="Firma"
+                    style={{ maxWidth: 300, border: "1px solid #e5e7eb", borderRadius: 4 }}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -587,6 +653,22 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
         )}
 
         <div className="hidden md:flex items-center gap-2">
+          {perms.editQuote && (
+            <SharePopover
+              quoteId={quote.id}
+              quoteStatus={quote.status}
+              publicToken={quote.publicToken ?? null}
+              publicTokenExpiresAt={quote.publicTokenExpiresAt ?? null}
+              onTokenChange={(token, expiresAt) =>
+                setQuote((prev) => ({
+                  ...prev,
+                  publicToken: token,
+                  publicTokenExpiresAt: expiresAt as never,
+                }))
+              }
+            />
+          )}
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="gap-2">
@@ -673,6 +755,9 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
               onToggleOptionalIncluded={toggleOptionalIncluded}
               onAddSection={addSection}
             />
+
+            {/* Firma del cliente */}
+            <SignatureSection signature={quote.signature ?? null} />
           </div>
         </div>
 
