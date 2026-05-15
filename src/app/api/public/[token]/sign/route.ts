@@ -71,10 +71,14 @@ export async function POST(
   }
 
   // IP is always resolved server-side (authoritative)
-  const serverIp =
+  const rawServerIp =
     req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
     req.headers.get("x-real-ip") ??
     null;
+
+  // Filter loopback — only occurs in local dev, never on Vercel
+  const isLoopback = !rawServerIp || rawServerIp === "::1" || rawServerIp === "127.0.0.1" || rawServerIp === "::ffff:127.0.0.1";
+  const serverIp = isLoopback ? null : rawServerIp;
 
   const ipAddress = serverIp ?? clientIp ?? null;
 
