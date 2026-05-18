@@ -217,7 +217,7 @@ const SECTION_CODES = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
 export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
   const router = useRouter();
-  const { isViewer, can: perms } = usePermissions();
+  const { isViewer, isAdmin, can: perms } = usePermissions();
   const [quote, setQuote] = useState<QuoteWithRelations>(initialQuote);
   const [saveState, setSaveState] = useState<"saved" | "saving" | "unsaved">("saved");
   const [mobileTotalsOpen, setMobileTotalsOpen] = useState(false);
@@ -851,7 +851,7 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
               signature={quote.signature ?? null}
               quoteId={quote.id}
               quoteStatus={quote.status}
-              canEdit={!isViewer}
+              canEdit={isAdmin}
               onRevoked={() =>
                 setQuote((q) => ({
                   ...q,

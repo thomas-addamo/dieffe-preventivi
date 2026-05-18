@@ -1,0 +1,1 @@
+ALTER TABLE "quotes" ADD COLUMN "public_pin" text;

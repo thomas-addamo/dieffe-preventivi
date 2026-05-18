@@ -4,7 +4,7 @@ import { db } from "@/lib/db/client";
 import { quotes } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
-import { generatePublicToken, computeExpiresAt } from "@/lib/public-token";
+import { generatePublicToken, computeExpiresAt, generatePin, hashPin } from "@/lib/public-token";
 import { env } from "@/lib/env";
 
 const bodySchema = z.object({
@@ -32,16 +32,23 @@ export async function POST(
   const { days } = parsed.data;
   const token = generatePublicToken();
   const expiresAt = computeExpiresAt(days);
+  const pin = generatePin();
 
   await db
     .update(quotes)
-    .set({ publicToken: token, publicTokenExpiresAt: expiresAt, publicTokenDays: days })
+    .set({
+      publicToken: token,
+      publicTokenExpiresAt: expiresAt,
+      publicTokenDays: days,
+      publicPin: hashPin(pin),
+    })
     .where(eq(quotes.id, id));
 
   return NextResponse.json({
     token,
     expiresAt: expiresAt.toISOString(),
     url: `${env.APP_URL}/p/${token}`,
+    pin, // mostrato una sola volta, mai recuperabile
   });
 }
 
@@ -58,7 +65,7 @@ export async function DELETE(
 
   await db
     .update(quotes)
-    .set({ publicToken: null, publicTokenExpiresAt: null })
+    .set({ publicToken: null, publicTokenExpiresAt: null, publicPin: null })
     .where(eq(quotes.id, id));
 
   return NextResponse.json({ ok: true });

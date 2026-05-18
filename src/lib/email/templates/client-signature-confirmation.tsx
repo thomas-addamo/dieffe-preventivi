@@ -128,7 +128,7 @@ export function ClientSignatureConfirmationEmail({
           {/* Footer */}
           <Section style={{ backgroundColor: "#f4f4f5", padding: "12px 24px", textAlign: "center" }}>
             <Text style={{ fontSize: 12, color: "#71717a", margin: 0 }}>
-              {companyName} — diefferistrutturazioni.it
+              {companyName} — impresadieffe.it
             </Text>
           </Section>
         </Container>

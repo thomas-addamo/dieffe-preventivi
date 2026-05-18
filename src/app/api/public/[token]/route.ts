@@ -89,6 +89,7 @@ export async function GET(
   }));
 
   return NextResponse.json({
+    requiresPin: !!quote.quotes.publicPin,
     quote: {
       id: quote.quotes.id,
       code: quote.quotes.code,

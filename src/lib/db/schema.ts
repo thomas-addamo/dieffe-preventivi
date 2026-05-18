@@ -130,6 +130,7 @@ export const quotes = pgTable(
     publicToken: text("public_token").unique(),
     publicTokenExpiresAt: timestamp("public_token_expires_at", { withTimezone: true }),
     publicTokenDays: integer("public_token_days").default(30),
+    publicPin: text("public_pin"),
   },
   (t) => [
     uniqueIndex("quotes_code_idx").on(t.code),

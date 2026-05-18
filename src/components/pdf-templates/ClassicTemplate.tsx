@@ -694,19 +694,21 @@ export function ClassicTemplate({ quote, settings, logoUrl }: ClassicTemplatePro
           </View>
         )}
 
-        {/* ── Signature blocks ── */}
-        <View style={s.signatureRow}>
-          <View style={s.signatureBox}>
-            <View style={s.signatureLine} />
-            <Text style={s.signatureLabel}>Firma e timbro {companyName}</Text>
+        {/* ── Signature blocks — solo se nessuna firma digitale presente ── */}
+        {!signature && (
+          <View style={s.signatureRow}>
+            <View style={s.signatureBox}>
+              <View style={s.signatureLine} />
+              <Text style={s.signatureLabel}>Firma e timbro {companyName}</Text>
+            </View>
+            <View style={s.signatureBox}>
+              <View style={s.signatureLine} />
+              <Text style={s.signatureLabel}>
+                Firma per accettazione — {quote.client?.name ?? "Cliente"}
+              </Text>
+            </View>
           </View>
-          <View style={s.signatureBox}>
-            <View style={s.signatureLine} />
-            <Text style={s.signatureLabel}>
-              Firma per accettazione — {quote.client?.name ?? "Cliente"}
-            </Text>
-          </View>
-        </View>
+        )}
 
         {/* ── Footer ── */}
         <View style={s.footer} fixed>

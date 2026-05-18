@@ -764,7 +764,7 @@ function QuoteView({
 
       {/* Footer */}
       <footer style={{ background: "#f4f4f5", borderTop: "1px solid #e5e7eb", padding: "16px", textAlign: "center", fontSize: 12, color: "#71717a" }}>
-        Documento generato da Dieffe Preventivi • diefferistrutturazioni.it
+        Documento generato da Dieffe Preventivi • impresadieffe.it
       </footer>
     </div>
   );
@@ -836,13 +836,187 @@ function TotalRow({ label, value, valueColor }: { label: string; value: string; 
   );
 }
 
+// ─── PIN screen ───────────────────────────────────────────────────────────────
+
+function PinScreen({
+  token,
+  settings,
+  onVerified,
+}: {
+  token: string;
+  settings: Settings | null;
+  onVerified: () => void;
+}) {
+  const [digits, setDigits] = useState<string[]>(["", "", "", "", "", ""]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [blocked, setBlocked] = useState(false);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  const primary = settings?.primaryColor ?? "#1e40af";
+  const logoUrl = settings?.logoPath
+    ? `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/f_auto,q_auto,w_200/${settings.logoPath}`
+    : null;
+
+  async function submitPin(pin: string) {
+    if (pin.length < 6 || blocked) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/public/${token}/verify-pin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        onVerified();
+      } else if (res.status === 429 || data.attemptsLeft === 0) {
+        setBlocked(true);
+        setError("Troppi tentativi. Riprova tra un'ora.");
+      } else {
+        setError(`PIN non corretto. Tentativi rimanenti: ${data.attemptsLeft ?? "?"}`);
+        setDigits(["", "", "", "", "", ""]);
+        setTimeout(() => inputRefs.current[0]?.focus(), 50);
+      }
+    } catch {
+      setError("Errore di rete. Riprova.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function handleDigitChange(index: number, value: string) {
+    const digit = value.replace(/\D/g, "").slice(-1);
+    const newDigits = [...digits];
+    newDigits[index] = digit;
+    setDigits(newDigits);
+    if (digit && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
+    if (index === 5 && digit && newDigits.every((d) => d !== "")) {
+      submitPin(newDigits.join(""));
+    }
+  }
+
+  function handleKeyDown(index: number, e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Backspace" && !digits[index] && index > 0) {
+      const newDigits = [...digits];
+      newDigits[index - 1] = "";
+      setDigits(newDigits);
+      inputRefs.current[index - 1]?.focus();
+    }
+    if (e.key === "Enter") {
+      submitPin(digits.join(""));
+    }
+  }
+
+  function handlePaste(e: React.ClipboardEvent<HTMLInputElement>) {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (!pasted) return;
+    const newDigits = ["", "", "", "", "", ""];
+    for (let i = 0; i < pasted.length; i++) newDigits[i] = pasted[i];
+    setDigits(newDigits);
+    const nextEmpty = pasted.length < 6 ? pasted.length : 5;
+    inputRefs.current[nextEmpty]?.focus();
+    if (pasted.length === 6) submitPin(pasted);
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#F9FAFB", display: "flex", flexDirection: "column" }}>
+      <header style={{ background: "#fff", borderBottom: "1px solid #e5e7eb", padding: "12px 16px" }}>
+        <div style={{ maxWidth: 900, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {logoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={logoUrl} alt={settings?.companyName} style={{ height: 36, objectFit: "contain" }} />
+            )}
+          </div>
+          <span style={{ fontWeight: 600, fontSize: 15 }}>{settings?.companyName ?? "Dieffe Ristrutturazioni"}</span>
+        </div>
+      </header>
+
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "32px 16px" }}>
+        <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: "32px 24px", width: "100%", maxWidth: 400, textAlign: "center" }}>
+          <div style={{ fontSize: 36, marginBottom: 16 }}>🔒</div>
+          <h2 style={{ fontSize: 20, fontWeight: 700, margin: "0 0 8px" }}>Preventivo riservato</h2>
+          <p style={{ fontSize: 14, color: "#6b7280", margin: "0 0 24px", lineHeight: 1.6 }}>
+            Inserisci il codice PIN di 6 cifre fornito dal nostro ufficio per accedere al documento.
+          </p>
+
+          <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 16 }}>
+            {digits.map((d, i) => (
+              <input
+                key={i}
+                ref={(el) => { inputRefs.current[i] = el; }}
+                type="text"
+                inputMode="numeric"
+                maxLength={1}
+                value={d}
+                onChange={(e) => handleDigitChange(i, e.target.value)}
+                onKeyDown={(e) => handleKeyDown(i, e)}
+                onPaste={handlePaste}
+                autoFocus={i === 0}
+                disabled={blocked || loading}
+                style={{
+                  width: 44,
+                  height: 52,
+                  textAlign: "center",
+                  fontSize: 22,
+                  fontWeight: 700,
+                  border: `2px solid ${error ? "#ef4444" : d ? primary : "#e5e7eb"}`,
+                  borderRadius: 8,
+                  outline: "none",
+                  fontFamily: "monospace",
+                  background: blocked ? "#f9fafb" : "#fff",
+                }}
+              />
+            ))}
+          </div>
+
+          {error && (
+            <p style={{ fontSize: 13, color: "#ef4444", margin: "0 0 16px" }}>{error}</p>
+          )}
+
+          <button
+            onClick={() => submitPin(digits.join(""))}
+            disabled={loading || digits.join("").length < 6 || blocked}
+            style={{
+              width: "100%",
+              padding: "12px",
+              background: primary,
+              color: "#fff",
+              border: "none",
+              borderRadius: 8,
+              fontSize: 15,
+              fontWeight: 700,
+              cursor: loading || digits.join("").length < 6 || blocked ? "not-allowed" : "pointer",
+              opacity: loading || digits.join("").length < 6 || blocked ? 0.5 : 1,
+            }}
+          >
+            {loading ? "Verifica in corso..." : "Accedi al documento"}
+          </button>
+
+          {(settings?.phone || settings?.email) && (
+            <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid #e5e7eb" }}>
+              <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 8px" }}>Hai bisogno di aiuto?</p>
+              {settings.phone && <p style={{ fontSize: 13, color: "#374151", margin: "4px 0" }}>📞 {settings.phone}</p>}
+              {settings.email && <p style={{ fontSize: 13, color: "#374151", margin: "4px 0" }}>📧 {settings.email}</p>}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function PublicQuotePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
-  const [state, setState] = useState<"loading" | "error" | "loaded">("loading");
+  const [state, setState] = useState<"loading" | "error" | "pin" | "loaded">("loading");
   const [errorType, setErrorType] = useState<string>("");
-  const [errorStatus, setErrorStatus] = useState<string | undefined>(undefined);
   const [quote, setQuote] = useState<PublicQuote | null>(null);
   const [settings, setSettings] = useState<Settings | null>(null);
 
@@ -861,7 +1035,13 @@ export default function PublicQuotePage({ params }: { params: Promise<{ token: s
         }
         setQuote(data.quote);
         setSettings(data.settings);
-        setState("loaded");
+
+        if (data.requiresPin) {
+          const verified = sessionStorage.getItem(`pin_verified_${token}`);
+          setState(verified === "true" ? "loaded" : "pin");
+        } else {
+          setState("loaded");
+        }
       })
       .catch(() => {
         setErrorType("unknown");
@@ -870,7 +1050,17 @@ export default function PublicQuotePage({ params }: { params: Promise<{ token: s
   }, [token]);
 
   if (state === "loading") return <Skeleton />;
-  if (state === "error") return <ErrorPage error={errorType} status={errorStatus} />;
+  if (state === "error") return <ErrorPage error={errorType} />;
+  if (state === "pin") return (
+    <PinScreen
+      token={token}
+      settings={settings}
+      onVerified={() => {
+        sessionStorage.setItem(`pin_verified_${token}`, "true");
+        setState("loaded");
+      }}
+    />
+  );
   if (!quote) return <ErrorPage error="unknown" />;
 
   return <QuoteView quote={quote} settings={settings} token={token} />;

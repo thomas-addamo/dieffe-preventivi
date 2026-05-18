@@ -11,8 +11,8 @@ export async function DELETE(
 ) {
   const session = await getCurrentUser();
   if (!session) return NextResponse.json({ error: "Non autorizzato" }, { status: 401 });
-  if (session.user.role === "viewer")
-    return NextResponse.json({ error: "Permessi insufficienti" }, { status: 403 });
+  if (session.user.role !== "admin")
+    return NextResponse.json({ error: "Permessi insufficienti — solo admin" }, { status: 403 });
 
   const { id } = await params;
 

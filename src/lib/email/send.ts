@@ -16,11 +16,6 @@ export async function sendSignatureNotification(params: {
   ipAddress: string | null;
   recipientEmail: string;
 }) {
-  console.log('[SEND-FN] sendSignatureNotification called', {
-    to: params.recipientEmail,
-    hasApiKey: !!process.env.RESEND_API_KEY,
-  });
-
   const { action, quoteCode, signerName } = params;
   const subject =
     action === "accepted"
@@ -40,7 +35,6 @@ export async function sendSignatureNotification(params: {
     })
   );
 
-  console.log('[SEND-FN] About to call resend.emails.send (admin)');
   const { data, error } = await getResend().emails.send({
     from: env.RESEND_FROM_EMAIL,
     to: params.recipientEmail,
@@ -49,11 +43,10 @@ export async function sendSignatureNotification(params: {
   });
 
   if (error) {
-    console.error('[SEND-FN] Resend returned error (admin):', JSON.stringify(error));
-    throw new Error(`Resend error: ${(error as { message?: string }).message ?? JSON.stringify(error)}`);
+    const msg = (error as { message?: string }).message ?? JSON.stringify(error);
+    throw new Error(`Resend error (admin): ${msg}`);
   }
 
-  console.log('[SEND-FN] ✅ Resend success (admin):', (data as { id?: string })?.id);
   return data;
 }
 
@@ -71,11 +64,6 @@ export async function sendClientSignatureConfirmation(params: {
   companyPhone: string | null;
   companyWebsite: string | null;
 }) {
-  console.log('[SEND-FN] sendClientSignatureConfirmation called', {
-    to: params.signerEmail,
-    hasApiKey: !!process.env.RESEND_API_KEY,
-  });
-
   const isAccepted = params.action === "accepted";
   const subject = isAccepted
     ? `Preventivo ${params.quoteCode} — Conferma di accettazione`
@@ -84,9 +72,7 @@ export async function sendClientSignatureConfirmation(params: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const attachments: any[] = [];
   if (isAccepted) {
-    console.log('[SEND-FN] Generating PDF attachment for quoteId:', params.quoteId);
     const pdfBuffer = await generateQuotePdfBuffer(params.quoteId, { includeIp: false });
-    console.log('[SEND-FN] PDF generated, size bytes:', pdfBuffer.length);
     attachments.push({
       filename: `${params.quoteCode}_preventivo_firmato.pdf`,
       content: pdfBuffer.toString("base64"),
@@ -109,12 +95,6 @@ export async function sendClientSignatureConfirmation(params: {
     })
   );
 
-  console.log('[SEND-FN] About to call resend.emails.send (client)', {
-    from: `${params.companyName} <${fromAddress}>`,
-    to: params.signerEmail,
-    attachmentsCount: attachments.length,
-  });
-
   const { data, error } = await getResend().emails.send({
     from: `${params.companyName} <${fromAddress}>`,
     to: params.signerEmail,
@@ -124,10 +104,9 @@ export async function sendClientSignatureConfirmation(params: {
   });
 
   if (error) {
-    console.error('[SEND-FN] Resend returned error (client):', JSON.stringify(error));
-    throw new Error(`Resend error: ${(error as { message?: string }).message ?? JSON.stringify(error)}`);
+    const msg = (error as { message?: string }).message ?? JSON.stringify(error);
+    throw new Error(`Resend error (client): ${msg}`);
   }
 
-  console.log('[SEND-FN] ✅ Resend success (client):', (data as { id?: string })?.id);
   return data;
 }
