@@ -110,52 +110,46 @@ export async function POST(
     })
     .where(eq(quotes.id, quote.id));
 
-  // Non-blocking emails — never fail the response if email fails
-  (async () => {
-    try {
-      const [settings] = await db.select().from(companySettings).limit(1);
-      const recipientEmail = settings?.email ?? "impresa.dieffe@gmail.com";
+  const [settings] = await db.select().from(companySettings).limit(1);
 
-      await sendSignatureNotification({
-        quoteCode: quote.code,
-        quoteTitle: quote.title,
-        quoteId: quote.id,
-        signerName,
-        action,
-        signedAt,
-        ipAddress,
-        recipientEmail,
-      });
-      console.log('[EMAIL] ✅ Admin email sent');
-    } catch (err: unknown) {
-      const error = err as Error;
-      console.error('[EMAIL] ❌ Admin email failed:', error.message, error.stack);
-    }
-  })();
+  try {
+    await sendClientSignatureConfirmation({
+      quoteId: quote.id,
+      quoteCode: quote.code,
+      quoteTitle: quote.title,
+      signerName,
+      signerEmail,
+      action,
+      signedAt,
+      fromEmail: settings?.emailFromAddress ?? "onboarding@resend.dev",
+      companyName: settings?.companyName ?? "Dieffe Ristrutturazioni",
+      companyEmail: settings?.email ?? null,
+      companyPhone: settings?.phone ?? null,
+      companyWebsite: settings?.website ?? null,
+    });
+    console.log('[EMAIL] ✅ Client email sent');
+  } catch (err: unknown) {
+    const error = err as Error;
+    console.error('[EMAIL] ❌ Client email failed:', error.message, error.stack);
+  }
 
-  (async () => {
-    try {
-      const [settings] = await db.select().from(companySettings).limit(1);
-      await sendClientSignatureConfirmation({
-        quoteId: quote.id,
-        quoteCode: quote.code,
-        quoteTitle: quote.title,
-        signerName,
-        signerEmail,
-        action,
-        signedAt,
-        fromEmail: settings?.emailFromAddress ?? "onboarding@resend.dev",
-        companyName: settings?.companyName ?? "Dieffe Ristrutturazioni",
-        companyEmail: settings?.email ?? null,
-        companyPhone: settings?.phone ?? null,
-        companyWebsite: settings?.website ?? null,
-      });
-      console.log('[EMAIL] ✅ Client email sent');
-    } catch (err: unknown) {
-      const error = err as Error;
-      console.error('[EMAIL] ❌ Client email failed:', error.message, error.stack);
-    }
-  })();
+  try {
+    const recipientEmail = settings?.email ?? "impresa.dieffe@gmail.com";
+    await sendSignatureNotification({
+      quoteCode: quote.code,
+      quoteTitle: quote.title,
+      quoteId: quote.id,
+      signerName,
+      action,
+      signedAt,
+      ipAddress,
+      recipientEmail,
+    });
+    console.log('[EMAIL] ✅ Admin email sent');
+  } catch (err: unknown) {
+    const error = err as Error;
+    console.error('[EMAIL] ❌ Admin email failed:', error.message, error.stack);
+  }
 
   return NextResponse.json({ success: true, action });
 }
