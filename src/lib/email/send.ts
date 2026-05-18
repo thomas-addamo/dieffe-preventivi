@@ -16,6 +16,12 @@ export async function sendSignatureNotification(params: {
   ipAddress: string | null;
   recipientEmail: string;
 }) {
+  console.log('[EMAIL DEBUG]', {
+    apiKeyPresent: !!process.env.RESEND_API_KEY,
+    apiKeyFirst8: process.env.RESEND_API_KEY?.slice(0, 8) ?? 'MISSING',
+    fromEmail: process.env.RESEND_FROM_EMAIL ?? 'MISSING',
+    appUrl: process.env.APP_URL ?? 'MISSING',
+  });
   const { action, quoteCode, signerName } = params;
   const subject =
     action === "accepted"
@@ -57,6 +63,12 @@ export async function sendClientSignatureConfirmation(params: {
   companyPhone: string | null;
   companyWebsite: string | null;
 }) {
+  console.log('[EMAIL DEBUG]', {
+    apiKeyPresent: !!process.env.RESEND_API_KEY,
+    apiKeyFirst8: process.env.RESEND_API_KEY?.slice(0, 8) ?? 'MISSING',
+    fromEmail: process.env.RESEND_FROM_EMAIL ?? 'MISSING',
+    appUrl: process.env.APP_URL ?? 'MISSING',
+  });
   const isAccepted = params.action === "accepted";
   const subject = isAccepted
     ? `Preventivo ${params.quoteCode} — Conferma di accettazione`

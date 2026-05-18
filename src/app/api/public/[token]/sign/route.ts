@@ -126,8 +126,10 @@ export async function POST(
         ipAddress,
         recipientEmail,
       });
-    } catch (err) {
-      console.error("Admin notification email failed (non-blocking):", err);
+      console.log('[EMAIL] ✅ Admin email sent');
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error('[EMAIL] ❌ Admin email failed:', error.message, error.stack);
     }
   })();
 
@@ -148,8 +150,10 @@ export async function POST(
         companyPhone: settings?.phone ?? null,
         companyWebsite: settings?.website ?? null,
       });
-    } catch (err) {
-      console.error("Client confirmation email failed (non-blocking):", err);
+      console.log('[EMAIL] ✅ Client email sent');
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error('[EMAIL] ❌ Client email failed:', error.message, error.stack);
     }
   })();
 
