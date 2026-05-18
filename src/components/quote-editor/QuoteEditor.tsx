@@ -55,82 +55,154 @@ const SectionsDragList = dynamic(
 
 // ─── Signature section (admin view) ──────────────────────────────────────────
 
-function SignatureSection({ signature }: { signature: QuoteWithRelations["signature"] }) {
+function SignatureSection({
+  signature,
+  quoteId,
+  quoteStatus,
+  canEdit,
+  onRevoked,
+}: {
+  signature: QuoteWithRelations["signature"];
+  quoteId: string;
+  quoteStatus: string;
+  canEdit: boolean;
+  onRevoked: () => void;
+}) {
   const [open, setOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [revoking, setRevoking] = useState(false);
+
+  const showRevokeButton = canEdit && (quoteStatus === "accepted" || quoteStatus === "rejected");
+
+  async function handleRevoke() {
+    setRevoking(true);
+    try {
+      const res = await fetch(`/api/quotes/${quoteId}/signature`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
+      setConfirmOpen(false);
+      toast.success("Accettazione annullata. Il preventivo è tornato in stato Inviato.");
+      onRevoked();
+    } catch {
+      toast.error("Errore durante l'annullamento dell'accettazione.");
+    } finally {
+      setRevoking(false);
+    }
+  }
 
   return (
-    <div className="border rounded-lg overflow-hidden">
-      <button
-        className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium bg-muted/30 hover:bg-muted/50 transition-colors"
-        onClick={() => setOpen((v) => !v)}
-      >
-        <span>Firma del cliente</span>
-        {open ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-      </button>
-      {open && (
-        <div className="p-4">
-          {!signature ? (
-            <p className="text-sm text-muted-foreground">Nessuna firma presente.</p>
-          ) : (
-            <div className="space-y-2 text-sm">
-              <div className="flex gap-2">
-                <span className="text-muted-foreground w-32 shrink-0">Nome firmatario:</span>
-                <span className="font-medium">{signature.signerName}</span>
-              </div>
-              <div className="flex gap-2">
-                <span className="text-muted-foreground w-32 shrink-0">Azione:</span>
-                <span className={`font-medium ${signature.action === "accepted" ? "text-green-600" : "text-red-600"}`}>
-                  {signature.action === "accepted" ? "✅ Accettato" : "❌ Rifiutato"}
-                </span>
-              </div>
-              <div className="flex gap-2">
-                <span className="text-muted-foreground w-32 shrink-0">Data e ora:</span>
-                <span>
-                  {signature.signedAt
-                    ? format(new Date(signature.signedAt as unknown as string), "dd/MM/yyyy HH:mm", { locale: it })
-                    : "—"}
-                </span>
-              </div>
-              {signature.signerEmail && (
+    <>
+      <div className="border rounded-lg overflow-hidden">
+        <button
+          className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium bg-muted/30 hover:bg-muted/50 transition-colors"
+          onClick={() => setOpen((v) => !v)}
+        >
+          <span>Firma del cliente</span>
+          {open ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+        </button>
+        {open && (
+          <div className="p-4">
+            {!signature ? (
+              <p className="text-sm text-muted-foreground">Nessuna firma presente.</p>
+            ) : (
+              <div className="space-y-2 text-sm">
                 <div className="flex gap-2">
-                  <span className="text-muted-foreground w-32 shrink-0">Email:</span>
-                  <span>{signature.signerEmail}</span>
+                  <span className="text-muted-foreground w-32 shrink-0">Nome firmatario:</span>
+                  <span className="font-medium">{signature.signerName}</span>
                 </div>
-              )}
-              {signature.ipAddress && (
                 <div className="flex gap-2">
-                  <span className="text-muted-foreground w-32 shrink-0">IP address:</span>
-                  <span className="font-mono text-xs">{signature.ipAddress}</span>
+                  <span className="text-muted-foreground w-32 shrink-0">Azione:</span>
+                  <span className={`font-medium ${signature.action === "accepted" ? "text-green-600" : "text-red-600"}`}>
+                    {signature.action === "accepted" ? "✅ Accettato" : "❌ Rifiutato"}
+                  </span>
                 </div>
-              )}
-              <div className="flex gap-2 items-center">
-                <span className="text-muted-foreground w-32 shrink-0">Consenso IP:</span>
-                {signature.ipConsent ? (
-                  <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded px-2 py-0.5">
-                    ✓ IP registrato con consenso esplicito
+                <div className="flex gap-2">
+                  <span className="text-muted-foreground w-32 shrink-0">Data e ora:</span>
+                  <span>
+                    {signature.signedAt
+                      ? format(new Date(signature.signedAt as unknown as string), "dd/MM/yyyy HH:mm", { locale: it })
+                      : "—"}
                   </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-xs font-medium text-zinc-500 bg-zinc-100 border border-zinc-200 rounded px-2 py-0.5">
-                    IP registrato senza consenso
-                  </span>
+                </div>
+                {signature.signerEmail && (
+                  <div className="flex gap-2">
+                    <span className="text-muted-foreground w-32 shrink-0">Email:</span>
+                    <span>{signature.signerEmail}</span>
+                  </div>
+                )}
+                {signature.ipAddress && (
+                  <div className="flex gap-2">
+                    <span className="text-muted-foreground w-32 shrink-0">IP address:</span>
+                    <span className="font-mono text-xs">{signature.ipAddress}</span>
+                  </div>
+                )}
+                <div className="flex gap-2 items-center">
+                  <span className="text-muted-foreground w-32 shrink-0">Consenso IP:</span>
+                  {signature.ipConsent ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded px-2 py-0.5">
+                      ✓ IP registrato con consenso esplicito
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-zinc-500 bg-zinc-100 border border-zinc-200 rounded px-2 py-0.5">
+                      IP registrato senza consenso
+                    </span>
+                  )}
+                </div>
+                {signature.action === "accepted" && signature.signatureDataUrl && (
+                  <div className="mt-3">
+                    <p className="text-xs text-muted-foreground mb-1">Firma:</p>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={signature.signatureDataUrl}
+                      alt="Firma"
+                      style={{ maxWidth: 300, border: "1px solid #e5e7eb", borderRadius: 4 }}
+                    />
+                  </div>
                 )}
               </div>
-              {signature.action === "accepted" && signature.signatureDataUrl && (
-                <div className="mt-3">
-                  <p className="text-xs text-muted-foreground mb-1">Firma:</p>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={signature.signatureDataUrl}
-                    alt="Firma"
-                    style={{ maxWidth: 300, border: "1px solid #e5e7eb", borderRadius: 4 }}
-                  />
-                </div>
-              )}
+            )}
+            {showRevokeButton && (
+              <div className="mt-4 pt-3 border-t">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full sm:w-auto border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-400"
+                  onClick={() => setConfirmOpen(true)}
+                >
+                  Annulla accettazione
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Confirmation modal */}
+      {confirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-background border rounded-lg shadow-lg w-full max-w-md p-6 space-y-4">
+            <h2 className="text-base font-semibold">Sei sicuro di voler annullare l&apos;accettazione?</h2>
+            <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+              <li>Riporterà il preventivo in stato &quot;Inviato&quot;</li>
+              <li>Eliminerà i dati della firma</li>
+              <li>Rigenererà un nuovo link pubblico (se era attivo)</li>
+            </ul>
+            <div className="flex gap-2 justify-end pt-2">
+              <Button variant="outline" size="sm" onClick={() => setConfirmOpen(false)} disabled={revoking}>
+                Annulla
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleRevoke}
+                disabled={revoking}
+              >
+                {revoking ? "In corso..." : "Conferma"}
+              </Button>
             </div>
-          )}
+          </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
@@ -775,7 +847,21 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
             />
 
             {/* Firma del cliente */}
-            <SignatureSection signature={quote.signature ?? null} />
+            <SignatureSection
+              signature={quote.signature ?? null}
+              quoteId={quote.id}
+              quoteStatus={quote.status}
+              canEdit={!isViewer}
+              onRevoked={() =>
+                setQuote((q) => ({
+                  ...q,
+                  status: "sent",
+                  publicToken: null,
+                  publicTokenExpiresAt: null,
+                  signature: null,
+                }))
+              }
+            />
           </div>
         </div>
 
