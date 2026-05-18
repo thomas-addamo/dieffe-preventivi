@@ -112,8 +112,10 @@ export async function POST(
 
   const [settings] = await db.select().from(companySettings).limit(1);
 
+  console.log('[SIGN-EMAIL] About to send client email to:', signerEmail);
+  console.log('[SIGN-EMAIL] From:', settings?.emailFromAddress ?? process.env.RESEND_FROM_EMAIL);
   try {
-    await sendClientSignatureConfirmation({
+    const result = await sendClientSignatureConfirmation({
       quoteId: quote.id,
       quoteCode: quote.code,
       quoteTitle: quote.title,
@@ -127,15 +129,18 @@ export async function POST(
       companyPhone: settings?.phone ?? null,
       companyWebsite: settings?.website ?? null,
     });
-    console.log('[EMAIL] ✅ Client email sent');
-  } catch (err: unknown) {
-    const error = err as Error;
-    console.error('[EMAIL] ❌ Client email failed:', error.message, error.stack);
+    console.log('[SIGN-EMAIL] ✅ Client OK:', JSON.stringify(result));
+  } catch (err) {
+    console.error('[SIGN-EMAIL] ❌ Client FAILED');
+    console.error('[SIGN-EMAIL] Error message:', err instanceof Error ? err.message : String(err));
+    console.error('[SIGN-EMAIL] Error stack:', err instanceof Error ? err.stack : 'no stack');
+    console.error('[SIGN-EMAIL] Error full:', JSON.stringify(err, Object.getOwnPropertyNames(err)));
   }
 
+  console.log('[SIGN-EMAIL] About to send admin notification');
   try {
     const recipientEmail = settings?.email ?? "impresa.dieffe@gmail.com";
-    await sendSignatureNotification({
+    const result = await sendSignatureNotification({
       quoteCode: quote.code,
       quoteTitle: quote.title,
       quoteId: quote.id,
@@ -145,10 +150,12 @@ export async function POST(
       ipAddress,
       recipientEmail,
     });
-    console.log('[EMAIL] ✅ Admin email sent');
-  } catch (err: unknown) {
-    const error = err as Error;
-    console.error('[EMAIL] ❌ Admin email failed:', error.message, error.stack);
+    console.log('[SIGN-EMAIL] ✅ Admin OK:', JSON.stringify(result));
+  } catch (err) {
+    console.error('[SIGN-EMAIL] ❌ Admin FAILED');
+    console.error('[SIGN-EMAIL] Error message:', err instanceof Error ? err.message : String(err));
+    console.error('[SIGN-EMAIL] Error stack:', err instanceof Error ? err.stack : 'no stack');
+    console.error('[SIGN-EMAIL] Error full:', JSON.stringify(err, Object.getOwnPropertyNames(err)));
   }
 
   return NextResponse.json({ success: true, action });
