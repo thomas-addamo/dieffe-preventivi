@@ -1,4 +1,5 @@
 import React from "react";
+import { render } from "@react-email/render";
 import { getResend } from "./client";
 import { QuoteSignedEmail } from "./templates/quote-signed";
 import { ClientSignatureConfirmationEmail } from "./templates/client-signature-confirmation";
@@ -21,11 +22,8 @@ export async function sendSignatureNotification(params: {
       ? `✅ Preventivo ${quoteCode} accettato da ${signerName}`
       : `❌ Preventivo ${quoteCode} rifiutato`;
 
-  await getResend().emails.send({
-    from: env.RESEND_FROM_EMAIL,
-    to: params.recipientEmail,
-    subject,
-    react: React.createElement(QuoteSignedEmail, {
+  const html = await render(
+    React.createElement(QuoteSignedEmail, {
       quoteCode: params.quoteCode,
       quoteTitle: params.quoteTitle,
       quoteId: params.quoteId,
@@ -34,7 +32,14 @@ export async function sendSignatureNotification(params: {
       signedAt: params.signedAt,
       ipAddress: params.ipAddress,
       appUrl: env.APP_URL,
-    }),
+    })
+  );
+
+  await getResend().emails.send({
+    from: env.RESEND_FROM_EMAIL,
+    to: params.recipientEmail,
+    subject,
+    html,
   });
 }
 
@@ -69,11 +74,8 @@ export async function sendClientSignatureConfirmation(params: {
 
   const fromAddress = params.fromEmail || env.RESEND_FROM_EMAIL;
 
-  await getResend().emails.send({
-    from: `${params.companyName} <${fromAddress}>`,
-    to: params.signerEmail,
-    subject,
-    react: React.createElement(ClientSignatureConfirmationEmail, {
+  const htmlCliente = await render(
+    React.createElement(ClientSignatureConfirmationEmail, {
       quoteCode: params.quoteCode,
       quoteTitle: params.quoteTitle,
       signerName: params.signerName,
@@ -83,7 +85,14 @@ export async function sendClientSignatureConfirmation(params: {
       companyPhone: params.companyPhone,
       companyWebsite: params.companyWebsite,
       companyName: params.companyName,
-    }),
+    })
+  );
+
+  await getResend().emails.send({
+    from: `${params.companyName} <${fromAddress}>`,
+    to: params.signerEmail,
+    subject,
+    html: htmlCliente,
     attachments,
   });
 }
