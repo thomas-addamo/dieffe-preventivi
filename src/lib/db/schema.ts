@@ -51,6 +51,8 @@ export const sessions = pgTable("sessions", {
   createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
     .notNull()
     .defaultNow(),
+  isImpersonated: boolean("is_impersonated").notNull().default(false),
+  impersonatedBy: text("impersonated_by").references(() => users.id, { onDelete: "set null" }),
 });
 
 // ─── Company Settings ─────────────────────────────────────────────────────────
@@ -74,6 +76,7 @@ export const companySettings = pgTable("company_settings", {
   primaryColor: text("primary_color").notNull().default("#1e40af"),
   accentColor: text("accent_color").notNull().default("#059669"),
   emailFromAddress: text("email_from_address").default("onboarding@resend.dev"),
+  quotePrefix: text("quote_prefix").notNull().default("PREV"),
   updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
     .notNull()
     .defaultNow(),
@@ -131,6 +134,11 @@ export const quotes = pgTable(
     publicTokenExpiresAt: timestamp("public_token_expires_at", { withTimezone: true }),
     publicTokenDays: integer("public_token_days").default(30),
     publicPin: text("public_pin"),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    deletedBy: text("deleted_by").references(() => users.id, { onDelete: "set null" }),
+    isLocked: boolean("is_locked").notNull().default(false),
+    lockedBy: text("locked_by").references(() => users.id, { onDelete: "set null" }),
+    lockedAt: timestamp("locked_at", { withTimezone: true }),
   },
   (t) => [
     uniqueIndex("quotes_code_idx").on(t.code),
@@ -228,6 +236,7 @@ export const quoteSignatures = pgTable("quote_signatures", {
   userAgent: text("user_agent"),
   signedAt: timestamp("signed_at", { withTimezone: true }).defaultNow().notNull(),
   action: text("action", { enum: ["accepted", "rejected"] }).notNull(),
+  privacyConsent: boolean("privacy_consent").notNull().default(false),
 });
 
 // ─── Audit Log ────────────────────────────────────────────────────────────────
@@ -242,6 +251,19 @@ export const auditLog = pgTable("audit_log", {
   createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
     .notNull()
     .defaultNow(),
+});
+
+// ─── User Access Log ──────────────────────────────────────────────────────────
+
+export const userAccessLog = pgTable("user_access_log", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  loginAt: timestamp("login_at", { withTimezone: true, mode: "string" }).defaultNow(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  success: boolean("success").notNull(),
 });
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -262,3 +284,4 @@ export type QuoteItemImage = typeof quoteItemImages.$inferSelect;
 export type QuoteTemplate = typeof quoteTemplates.$inferSelect;
 export type QuoteSignature = typeof quoteSignatures.$inferSelect;
 export type NewQuoteSignature = typeof quoteSignatures.$inferInsert;
+export type UserAccessLog = typeof userAccessLog.$inferSelect;

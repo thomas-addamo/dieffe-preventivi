@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Save, Upload, X } from "lucide-react";
+import { Loader2, Save, Upload, X, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import type { CompanySettings } from "@/lib/db/schema";
 
@@ -31,6 +31,7 @@ const schema = z.object({
   primaryColor: z.string(),
   accentColor: z.string(),
   emailFromAddress: z.string().email("Email non valida").optional().or(z.literal("")),
+  quotePrefix: z.string().max(6).regex(/^[A-Z0-9]*$/, "Solo lettere maiuscole e numeri").optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -45,11 +46,15 @@ export function ImpostazioniClient({
   );
   const [logoUploading, setLogoUploading] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const [resetConfirmText, setResetConfirmText] = useState("");
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   const {
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -66,8 +71,25 @@ export function ImpostazioniClient({
       primaryColor: initialSettings?.primaryColor ?? "#1e40af",
       accentColor: initialSettings?.accentColor ?? "#059669",
       emailFromAddress: initialSettings?.emailFromAddress ?? "",
+      quotePrefix: initialSettings?.quotePrefix ?? "PREV",
     },
   });
+
+  const watchedPrefix = watch("quotePrefix") ?? "PREV";
+
+  async function resetCounter() {
+    if (resetConfirmText !== "RESET") return;
+    setResetting(true);
+    const res = await fetch("/api/settings/reset-counter", { method: "POST" });
+    setResetting(false);
+    if (res.ok) {
+      toast.success("Contatore resettato.");
+      setShowResetConfirm(false);
+      setResetConfirmText("");
+    } else {
+      toast.error("Errore durante il reset.");
+    }
+  }
 
   async function onSubmit(data: FormData) {
     const res = await fetch("/api/settings", {
@@ -339,6 +361,69 @@ export function ImpostazioniClient({
             <p className="text-xs text-muted-foreground">
               Usato come mittente per le email di conferma firma inviate ai clienti. Deve essere un dominio verificato su Resend.
             </p>
+          </div>
+        </div>
+
+        {/* Numerazione preventivi */}
+        <div className="bg-card border rounded-lg p-5 space-y-4">
+          <h2 className="font-medium text-sm">Numerazione preventivi</h2>
+          <div className="space-y-1.5">
+            <Label>Prefisso codice (max 6 caratteri)</Label>
+            <Input
+              {...register("quotePrefix")}
+              placeholder="PREV"
+              className="font-mono uppercase max-w-32"
+              maxLength={6}
+              onChange={(e) => {
+                const v = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+                setValue("quotePrefix", v);
+              }}
+            />
+            {errors.quotePrefix && (
+              <p className="text-xs text-destructive">{errors.quotePrefix.message}</p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Anteprima: <span className="font-mono font-semibold">{watchedPrefix || "PREV"}-{new Date().getFullYear()}-001</span>
+            </p>
+          </div>
+          <div>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              onClick={() => setShowResetConfirm(true)}
+            >
+              Reset contatore anno corrente
+            </Button>
+            {showResetConfirm && (
+              <div className="mt-3 p-3 border border-destructive/50 rounded-lg bg-destructive/5 space-y-2">
+                <div className="flex items-start gap-2 text-sm text-destructive">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <p>Resettando il contatore, il prossimo preventivo avrà il numero 001. Questa operazione non può essere annullata.</p>
+                </div>
+                <p className="text-sm font-medium">Digita RESET per confermare:</p>
+                <div className="flex gap-2">
+                  <Input
+                    value={resetConfirmText}
+                    onChange={(e) => setResetConfirmText(e.target.value)}
+                    placeholder="RESET"
+                    className="font-mono max-w-32 h-8"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="destructive"
+                    disabled={resetConfirmText !== "RESET" || resetting}
+                    onClick={resetCounter}
+                  >
+                    {resetting ? <Loader2 className="w-3 h-3 animate-spin" /> : "Conferma"}
+                  </Button>
+                  <Button type="button" size="sm" variant="outline" onClick={() => { setShowResetConfirm(false); setResetConfirmText(""); }}>
+                    Annulla
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

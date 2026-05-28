@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db/client";
 import { quotes, clients, users } from "@/lib/db/schema";
-import { eq, desc, like, and, or, inArray } from "drizzle-orm";
+import { eq, desc, like, and, or, isNull } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 import { createQuote } from "@/lib/db/quotes";
 
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
   const clientId = searchParams.get("clientId");
   const search = searchParams.get("search");
 
-  const conditions = [];
+  const conditions = [isNull(quotes.deletedAt)];
   if (status) conditions.push(eq(quotes.status, status as never));
   if (clientId) conditions.push(eq(quotes.clientId, clientId));
   if (search)
@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
     .from(quotes)
     .leftJoin(clients, eq(quotes.clientId, clients.id))
     .innerJoin(users, eq(quotes.userId, users.id))
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .where(and(...conditions))
     .orderBy(desc(quotes.createdAt));
 
   return NextResponse.json(rows);

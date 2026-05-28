@@ -14,6 +14,7 @@ const bodySchema = z.object({
   ipConsent: z.boolean().refine((v) => v === true, {
     message: "Il consenso IP è obbligatorio",
   }),
+  privacyConsent: z.boolean().optional().default(false),
   clientIp: z.string().optional(),
 });
 
@@ -64,7 +65,7 @@ export async function POST(
   if (!parsed.success)
     return NextResponse.json({ error: "Dati non validi", details: parsed.error.flatten() }, { status: 400 });
 
-  const { signerName, signerEmail, signatureDataUrl, action, ipConsent, clientIp } = parsed.data;
+  const { signerName, signerEmail, signatureDataUrl, action, ipConsent, privacyConsent, clientIp } = parsed.data;
 
   if (action === "accepted" && !signatureDataUrl) {
     return NextResponse.json({ error: "Firma richiesta per accettare" }, { status: 400 });
@@ -100,6 +101,7 @@ export async function POST(
     userAgent,
     signedAt,
     action,
+    privacyConsent: privacyConsent ?? false,
   });
 
   await db

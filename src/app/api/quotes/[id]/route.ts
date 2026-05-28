@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db/client";
-import { quotes } from "@/lib/db/schema";
+import { quotes, auditLog } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 import { getQuoteWithRelations, updateQuoteField } from "@/lib/db/quotes";
-import { deleteCloudinaryFolder } from "@/lib/cloudinary";
+import { generateId } from "@/lib/utils";
 
 const patchSchema = z.object({
   title: z.string().min(1).optional(),
@@ -61,8 +61,19 @@ export async function DELETE(
   if (session.user.role === "viewer") return NextResponse.json({ error: "Permessi insufficienti" }, { status: 403 });
 
   const { id } = await params;
-  // Elimina immagini Cloudinary prima della cascade DB
-  await deleteCloudinaryFolder(`dieffe-preventivi/${id}`).catch(() => {});
-  await db.delete(quotes).where(eq(quotes.id, id));
+  // Soft delete: sposta nel cestino
+  await db.update(quotes)
+    .set({ deletedAt: new Date(), deletedBy: session.user.id })
+    .where(eq(quotes.id, id));
+
+  await db.insert(auditLog).values({
+    id: generateId(),
+    userId: session.user.id,
+    action: "quote.deleted",
+    entityType: "quote",
+    entityId: id,
+    changes: { deletedAt: new Date().toISOString() },
+  });
+
   return NextResponse.json({ ok: true });
 }

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Edit2, Trash2, Loader2, Shield, User, Eye } from "lucide-react";
+import { Plus, Edit2, Trash2, Loader2, Shield, User, Eye, Clock, UserCheck } from "lucide-react";
 import { ROLES } from "@/lib/permissions/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,6 +76,40 @@ const editSchema = z.object({
   password: z.string().min(8).optional().or(z.literal("")),
 });
 
+type AccessLogEntry = {
+  id: string;
+  loginAt: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  success: boolean;
+};
+
+function getBrowser(ua: string | null) {
+  if (!ua) return "—";
+  if (ua.includes("Chrome")) return "Chrome";
+  if (ua.includes("Firefox")) return "Firefox";
+  if (ua.includes("Safari")) return "Safari";
+  if (ua.includes("Edge")) return "Edge";
+  return ua.slice(0, 20);
+}
+
+function fmtDate(str: string | null) {
+  if (!str) return "—";
+  try {
+    return new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(str));
+  } catch {
+    return str;
+  }
+}
+
+function daysSince(str: string | null) {
+  if (!str) return null;
+  const days = Math.floor((Date.now() - new Date(str).getTime()) / 86400000);
+  if (days === 0) return "oggi";
+  if (days === 1) return "ieri";
+  return `${days} giorni fa`;
+}
+
 export function UtentiClient({
   initialUsers,
   currentUserId,
@@ -86,6 +120,34 @@ export function UtentiClient({
   const [users, setUsers] = useState(initialUsers);
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState<UserRow | null>(null);
+  const [accessLogUser, setAccessLogUser] = useState<UserRow | null>(null);
+  const [accessLog, setAccessLog] = useState<AccessLogEntry[]>([]);
+  const [accessLogLoading, setAccessLogLoading] = useState(false);
+  const [impersonating, setImpersonating] = useState<string | null>(null);
+
+  async function showAccessLog(user: UserRow) {
+    setAccessLogUser(user);
+    setAccessLogLoading(true);
+    const res = await fetch(`/api/admin/users/${user.id}/access-log`);
+    setAccessLogLoading(false);
+    if (res.ok) setAccessLog(await res.json());
+  }
+
+  async function impersonate(userId: string) {
+    setImpersonating(userId);
+    const res = await fetch("/api/admin/impersonate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    });
+    setImpersonating(null);
+    if (res.ok) {
+      window.location.href = "/dashboard";
+    } else {
+      const data = await res.json();
+      toast.error(data.error ?? "Errore durante l'impersonificazione");
+    }
+  }
 
   const createForm = useForm({ resolver: zodResolver(createSchema), defaultValues: { role: "editor" as const } });
   const editForm = useForm({ resolver: zodResolver(editSchema) });
@@ -209,6 +271,27 @@ export function UtentiClient({
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      title="Storico accessi"
+                      onClick={() => showAccessLog(u)}
+                    >
+                      <Clock className="w-3.5 h-3.5" />
+                    </Button>
+                    {u.role !== "admin" && u.id !== currentUserId && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-blue-600 hover:text-blue-700"
+                        title="Visualizza come"
+                        disabled={impersonating === u.id}
+                        onClick={() => impersonate(u.id)}
+                      >
+                        <UserCheck className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="icon"
@@ -353,6 +436,50 @@ export function UtentiClient({
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Access log modal */}
+      <Dialog open={!!accessLogUser} onOpenChange={(o) => !o && setAccessLogUser(null)}>
+        <DialogContent className="max-w-lg w-full">
+          <DialogHeader>
+            <DialogTitle>Storico accessi — {accessLogUser?.name}</DialogTitle>
+          </DialogHeader>
+          {accessLogUser && (
+            <>
+              {accessLogUser.lastLoginAt && (
+                <p className="text-sm text-muted-foreground -mt-2">
+                  Ultima connessione: {daysSince(accessLogUser.lastLoginAt)}
+                </p>
+              )}
+              {accessLogLoading ? (
+                <p className="text-sm text-center py-8 text-muted-foreground">Caricamento...</p>
+              ) : accessLog.length === 0 ? (
+                <p className="text-sm text-center py-8 text-muted-foreground">Nessun accesso registrato</p>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-muted-foreground text-xs">
+                      <th className="text-left py-1">Data/Ora</th>
+                      <th className="text-left py-1">IP</th>
+                      <th className="text-left py-1">Browser</th>
+                      <th className="text-center py-1">Esito</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {accessLog.map((entry) => (
+                      <tr key={entry.id}>
+                        <td className="py-1.5">{fmtDate(entry.loginAt)}</td>
+                        <td className="py-1.5 font-mono text-xs">{entry.ipAddress ?? "—"}</td>
+                        <td className="py-1.5 text-xs">{getBrowser(entry.userAgent)}</td>
+                        <td className="py-1.5 text-center">{entry.success ? "✅" : "❌"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </>
+          )}
         </DialogContent>
       </Dialog>
 

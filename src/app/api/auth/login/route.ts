@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db/client";
-import { users } from "@/lib/db/schema";
+import { users, userAccessLog } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import {
   verifyPassword,
@@ -58,6 +58,15 @@ export async function POST(req: NextRequest) {
     } else {
       loginAttempts.set(ip, { count: 1, resetAt: now + WINDOW_MS });
     }
+    // Log failed attempt if user exists
+    if (user) {
+      await db.insert(userAccessLog).values({
+        userId: user.id,
+        ipAddress: ip !== "unknown" ? ip : null,
+        userAgent: req.headers.get("user-agent"),
+        success: false,
+      }).catch(() => {});
+    }
     return NextResponse.json(
       { error: "Email o password non corretti" },
       { status: 401 }
@@ -65,6 +74,14 @@ export async function POST(req: NextRequest) {
   }
 
   loginAttempts.delete(ip);
+
+  // Log successful login
+  await db.insert(userAccessLog).values({
+    userId: user.id,
+    ipAddress: ip !== "unknown" ? ip : null,
+    userAgent: req.headers.get("user-agent"),
+    success: true,
+  }).catch(() => {});
 
   // update lastLoginAt
   await db

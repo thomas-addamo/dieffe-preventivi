@@ -6,6 +6,116 @@ import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { CheckCircle, XCircle, AlertCircle, Download, X } from "lucide-react";
 
+// ─── Privacy Modal ────────────────────────────────────────────────────────────
+
+function PrivacyModal({ settings, onClose }: { settings: Settings | null; onClose: () => void }) {
+  const today = new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date());
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div style={{ background: "#fff", borderRadius: 12, maxWidth: 600, width: "100%", maxHeight: "85vh", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid #e5e7eb" }}>
+          <h2 style={{ fontWeight: 700, fontSize: 16, margin: 0 }}>Informativa sul trattamento dei dati personali</h2>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}>
+            <X size={20} color="#6b7280" />
+          </button>
+        </div>
+        <div style={{ padding: "20px", overflowY: "auto", fontSize: 13, lineHeight: 1.8, color: "#374151" }}>
+          <p style={{ fontSize: 11, color: "#6b7280", marginBottom: 16 }}>
+            ai sensi dell&apos;art. 13 del Regolamento UE 2016/679 (GDPR)
+          </p>
+
+          <h3 style={{ fontWeight: 700, fontSize: 14, marginBottom: 8 }}>TITOLARE DEL TRATTAMENTO</h3>
+          <p style={{ marginBottom: 16 }}>
+            {settings?.companyName || "Dieffe Ristrutturazioni"}<br />
+            {settings?.address && <>{settings.address}<br /></>}
+            {settings?.vatNumber && <>P.IVA: {settings.vatNumber}<br /></>}
+            {settings?.email && <>Email: {settings.email}</>}
+          </p>
+
+          <h3 style={{ fontWeight: 700, fontSize: 14, marginBottom: 8 }}>DATI RACCOLTI E FINALITÀ</h3>
+          <p style={{ marginBottom: 8 }}>In occasione della visualizzazione e accettazione del preventivo, vengono raccolti i seguenti dati:</p>
+          <ul style={{ paddingLeft: 20, marginBottom: 16 }}>
+            <li><strong>Indirizzo IP:</strong> raccolto con il suo esplicito consenso ai fini della validazione legale della firma elettronica (art. 6.1.a GDPR)</li>
+            <li><strong>Nome e cognome:</strong> necessario per identificare il firmatario</li>
+            <li><strong>Indirizzo email:</strong> per l&apos;invio della copia del documento firmato</li>
+            <li><strong>Firma elettronica:</strong> per la validazione dell&apos;accettazione del preventivo</li>
+            <li><strong>Data e ora della firma:</strong> per la registrazione del momento dell&apos;accettazione</li>
+          </ul>
+
+          <h3 style={{ fontWeight: 700, fontSize: 14, marginBottom: 8 }}>COOKIE UTILIZZATI</h3>
+          <p style={{ marginBottom: 16 }}>
+            Questo sito utilizza esclusivamente cookie tecnici di sessione, necessari al funzionamento della pagina.
+            Non vengono utilizzati cookie di profilazione, tracciamento o analytics.
+          </p>
+
+          <h3 style={{ fontWeight: 700, fontSize: 14, marginBottom: 8 }}>CONSERVAZIONE DEI DATI</h3>
+          <p style={{ marginBottom: 16 }}>
+            I dati raccolti in fase di firma vengono conservati per il periodo necessario all&apos;esecuzione del contratto
+            e agli obblighi di legge (minimo 10 anni per documenti contabili).
+          </p>
+
+          <h3 style={{ fontWeight: 700, fontSize: 14, marginBottom: 8 }}>DIRITTI DELL&apos;INTERESSATO</h3>
+          <p style={{ marginBottom: 16 }}>
+            Ai sensi degli artt. 15-22 GDPR, ha il diritto di accedere, rettificare, cancellare i suoi dati o opporsi al trattamento.
+            Per esercitare i suoi diritti contatti:{" "}
+            <a href={`mailto:${settings?.email || "impresa.dieffe@gmail.com"}`} style={{ color: "#1e40af" }}>
+              {settings?.email || "impresa.dieffe@gmail.com"}
+            </a>
+          </p>
+
+          <p style={{ fontSize: 11, color: "#9ca3af" }}>Data ultimo aggiornamento: {today}</p>
+        </div>
+        <div style={{ padding: "12px 20px", borderTop: "1px solid #e5e7eb" }}>
+          <button
+            onClick={onClose}
+            style={{ width: "100%", padding: "10px", background: "#1e40af", color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer" }}
+          >
+            Chiudi
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Cookie Banner ────────────────────────────────────────────────────────────
+
+function CookieBanner({ settings, onAccept }: { settings: Settings | null; onAccept: () => void }) {
+  const [showPrivacy, setShowPrivacy] = useState(false);
+  return (
+    <>
+      <div style={{
+        position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 80,
+        background: "#fff", borderTop: "1px solid #e5e7eb",
+        padding: "16px",
+        boxShadow: "0 -4px 12px rgba(0,0,0,0.08)",
+      }}>
+        <div style={{ maxWidth: 900, margin: "0 auto", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12, justifyContent: "space-between" }}>
+          <p style={{ fontSize: 13, color: "#374151", margin: 0, flex: 1, minWidth: 200, lineHeight: 1.6 }}>
+            🍪 Questo sito utilizza cookie tecnici necessari al funzionamento della pagina (sessione e sicurezza).
+            Non vengono utilizzati cookie di profilazione o tracciamento di terze parti.
+          </p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button
+              onClick={() => setShowPrivacy(true)}
+              style={{ padding: "8px 14px", background: "none", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer", color: "#374151" }}
+            >
+              Informativa Privacy
+            </button>
+            <button
+              onClick={onAccept}
+              style={{ padding: "8px 16px", background: "#1e40af", color: "#fff", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+            >
+              Ho capito, continua →
+            </button>
+          </div>
+        </div>
+      </div>
+      {showPrivacy && <PrivacyModal settings={settings} onClose={() => setShowPrivacy(false)} />}
+    </>
+  );
+}
+
 // Dynamic import to avoid SSR issues with canvas
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const SignatureCanvas = dynamic(() => import("react-signature-canvas") as any, { ssr: false }) as any;
@@ -245,10 +355,12 @@ function SignatureBlock({
   const [signerName, setSignerName] = useState("");
   const [signerEmail, setSignerEmail] = useState("");
   const [confirmed, setConfirmed] = useState(false);
+  const [privacyConsent, setPrivacyConsent] = useState(false);
   const [ipConsent, setIpConsent] = useState(false);
   const [canvasEmpty, setCanvasEmpty] = useState(true);
   const [loading, setLoading] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // IP detection state
@@ -296,6 +408,7 @@ function SignatureBlock({
           signatureDataUrl,
           action,
           ipConsent,
+          privacyConsent,
           clientIp: detectedIp,
         }),
       });
@@ -318,11 +431,13 @@ function SignatureBlock({
     emailValid &&
     !canvasEmpty &&
     confirmed &&
+    privacyConsent &&
     !!detectedIp &&
     ipConsent;
   const canReject =
     signerName.trim().length >= 2 &&
     emailValid &&
+    privacyConsent &&
     !!detectedIp &&
     ipConsent;
 
@@ -432,7 +547,7 @@ function SignatureBlock({
       ) : null}
 
       {/* Accept terms checkbox */}
-      <div style={{ marginBottom: 20 }}>
+      <div style={{ marginBottom: 12 }}>
         <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer", fontSize: 14 }}>
           <input
             type="checkbox"
@@ -446,6 +561,30 @@ function SignatureBlock({
           </span>
         </label>
       </div>
+
+      {/* Privacy consent checkbox */}
+      <div style={{ marginBottom: 20 }}>
+        <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer", fontSize: 14 }}>
+          <input
+            type="checkbox"
+            checked={privacyConsent}
+            onChange={(e) => setPrivacyConsent(e.target.checked)}
+            style={{ marginTop: 2, width: 16, height: 16, flexShrink: 0 }}
+          />
+          <span>
+            Ho letto e accetto l&apos;informativa sul trattamento dei dati personali ai sensi del GDPR.{" "}
+            <button
+              type="button"
+              onClick={() => setShowPrivacyModal(true)}
+              style={{ background: "none", border: "none", color: "#1e40af", textDecoration: "underline", cursor: "pointer", fontSize: 14, padding: 0 }}
+            >
+              Leggi informativa
+            </button>
+          </span>
+        </label>
+      </div>
+
+      {showPrivacyModal && <PrivacyModal settings={settings} onClose={() => setShowPrivacyModal(false)} />}
 
       {error && (
         <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 6, padding: "10px 14px", color: "#dc2626", fontSize: 14, marginBottom: 16 }}>
@@ -585,6 +724,7 @@ function QuoteView({
     signerName: string;
     signedAt: Date;
   } | null>(null);
+  const [showPrivacy, setShowPrivacy] = useState(false);
 
   const totals = calcTotals(quote);
   const normalSections = quote.sections.filter((s) => !s.isOptional);
@@ -764,8 +904,20 @@ function QuoteView({
 
       {/* Footer */}
       <footer style={{ background: "#f4f4f5", borderTop: "1px solid #e5e7eb", padding: "16px", textAlign: "center", fontSize: 12, color: "#71717a" }}>
-        Documento generato da Dieffe Preventivi • impresadieffe.it
+        <button
+          type="button"
+          onClick={() => setShowPrivacy(true)}
+          style={{ background: "none", border: "none", color: "#1e40af", textDecoration: "underline", cursor: "pointer", fontSize: 12 }}
+        >
+          Informativa Privacy
+        </button>
+        {" • "}
+        {settings?.companyName || "Dieffe Ristrutturazioni Moncalieri"}
+        {settings?.vatNumber && ` • P.IVA ${settings.vatNumber}`}
+        {" • impresadieffe.it"}
       </footer>
+
+      {showPrivacy && <PrivacyModal settings={settings} onClose={() => setShowPrivacy(false)} />}
     </div>
   );
 }
@@ -1019,6 +1171,12 @@ export default function PublicQuotePage({ params }: { params: Promise<{ token: s
   const [errorType, setErrorType] = useState<string>("");
   const [quote, setQuote] = useState<PublicQuote | null>(null);
   const [settings, setSettings] = useState<Settings | null>(null);
+  const [showCookieBanner, setShowCookieBanner] = useState(false);
+
+  useEffect(() => {
+    const consent = typeof window !== "undefined" ? localStorage.getItem("cookie_consent_public") : null;
+    if (!consent) setShowCookieBanner(true);
+  }, []);
 
   useEffect(() => {
     fetch(`/api/public/${token}`)
@@ -1049,19 +1207,28 @@ export default function PublicQuotePage({ params }: { params: Promise<{ token: s
       });
   }, [token]);
 
-  if (state === "loading") return <Skeleton />;
-  if (state === "error") return <ErrorPage error={errorType} />;
-  if (state === "pin") return (
-    <PinScreen
-      token={token}
-      settings={settings}
-      onVerified={() => {
-        sessionStorage.setItem(`pin_verified_${token}`, "true");
-        setState("loaded");
-      }}
-    />
-  );
-  if (!quote) return <ErrorPage error="unknown" />;
+  function acceptCookies() {
+    localStorage.setItem("cookie_consent_public", "true");
+    setShowCookieBanner(false);
+  }
 
-  return <QuoteView quote={quote} settings={settings} token={token} />;
+  return (
+    <>
+      {state === "loading" && <Skeleton />}
+      {state === "error" && <ErrorPage error={errorType} />}
+      {state === "pin" && (
+        <PinScreen
+          token={token}
+          settings={settings}
+          onVerified={() => {
+            sessionStorage.setItem(`pin_verified_${token}`, "true");
+            setState("loaded");
+          }}
+        />
+      )}
+      {state === "loaded" && !quote && <ErrorPage error="unknown" />}
+      {state === "loaded" && quote && <QuoteView quote={quote} settings={settings} token={token} />}
+      {showCookieBanner && <CookieBanner settings={settings} onAccept={acceptCookies} />}
+    </>
+  );
 }

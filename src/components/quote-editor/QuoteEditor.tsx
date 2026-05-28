@@ -12,6 +12,8 @@ import {
   ArrowLeft,
   MoreVertical,
   Lock,
+  Unlock,
+  UserCog,
 } from "lucide-react";
 import { SharePopover } from "./SharePopover";
 import { Button } from "@/components/ui/button";
@@ -211,11 +213,12 @@ function SignatureSection({
 interface QuoteEditorProps {
   initialQuote: QuoteWithRelations;
   clients: { id: string; name: string }[];
+  users?: { id: string; name: string }[];
 }
 
 const SECTION_CODES = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
-export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
+export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorProps) {
   const router = useRouter();
   const { isViewer, isAdmin, can: perms } = usePermissions();
   const [quote, setQuote] = useState<QuoteWithRelations>(initialQuote);
@@ -628,11 +631,11 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
   }
 
   async function deleteQuote() {
-    if (!confirm("Eliminare questo preventivo? L'operazione non può essere annullata."))
+    if (!confirm("Spostare questo preventivo nel cestino?"))
       return;
     const res = await fetch(`/api/quotes/${quote.id}`, { method: "DELETE" });
     if (res.ok) {
-      toast.success("Preventivo eliminato");
+      toast.success("Preventivo spostato nel cestino");
       router.push("/dashboard");
     }
   }
@@ -647,6 +650,41 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
     a.href = url;
     a.download = "";
     a.click();
+  }
+
+  const [showReassignModal, setShowReassignModal] = useState(false);
+  const [reassignUserId, setReassignUserId] = useState("");
+  const [reassigning, setReassigning] = useState(false);
+  const [locking, setLocking] = useState(false);
+
+  async function toggleLock() {
+    setLocking(true);
+    const isCurrentlyLocked = quote.isLocked;
+    const res = await fetch(`/api/quotes/${quote.id}/${isCurrentlyLocked ? "unlock" : "lock"}`, { method: "PATCH" });
+    setLocking(false);
+    if (res.ok) {
+      setQuote((q) => ({ ...q, isLocked: !isCurrentlyLocked }));
+      toast.success(isCurrentlyLocked ? "Preventivo sbloccato." : "Preventivo bloccato.");
+    } else {
+      toast.error("Errore durante l'operazione.");
+    }
+  }
+
+  async function doReassign() {
+    if (!reassignUserId) return;
+    setReassigning(true);
+    const res = await fetch(`/api/quotes/${quote.id}/reassign`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: reassignUserId }),
+    });
+    setReassigning(false);
+    if (res.ok) {
+      setShowReassignModal(false);
+      toast.success("Preventivo riassegnato.");
+    } else {
+      toast.error("Errore durante la riassegnazione.");
+    }
   }
 
   const totals = calcQuoteTotals(
@@ -681,6 +719,14 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
           >
             Chiudi
           </button>
+        </div>
+      )}
+
+      {/* Lock banner for non-admin */}
+      {quote.isLocked && !isAdmin && (
+        <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-2 flex items-center gap-2 text-sm text-yellow-800">
+          <Lock className="w-3.5 h-3.5 shrink-0" />
+          <span>Questo preventivo è bloccato dall&apos;amministratore. Contatta l&apos;admin per sbloccare.</span>
         </div>
       )}
 
@@ -787,6 +833,32 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
             >
               <Trash2 className="w-4 h-4" />
             </Button>
+          )}
+
+          {isAdmin && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 h-8"
+                onClick={toggleLock}
+                disabled={locking}
+                title={quote.isLocked ? "Sblocca modifiche" : "Blocca modifiche"}
+              >
+                {quote.isLocked ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
+                <span className="hidden lg:inline">{quote.isLocked ? "Sblocca" : "Blocca"}</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 h-8"
+                onClick={() => setShowReassignModal(true)}
+                title="Riassegna preventivo"
+              >
+                <UserCog className="w-3.5 h-3.5" />
+                <span className="hidden lg:inline">Riassegna</span>
+              </Button>
+            </>
           )}
         </div>
 
@@ -932,6 +1004,48 @@ export function QuoteEditor({ initialQuote, clients }: QuoteEditorProps) {
           <ChevronUp className="w-5 h-5 text-muted-foreground" />
         </button>
       </div>
+
+      {/* Reassign modal */}
+      {showReassignModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-background rounded-xl p-6 max-w-sm w-full shadow-xl">
+            <h2 className="font-semibold text-lg mb-1">Riassegna preventivo</h2>
+            <p className="text-sm text-muted-foreground mb-4">Assegna questo preventivo a un altro utente.</p>
+            <div className="mb-4">
+              <p className="text-xs text-muted-foreground mb-1">Utente attuale</p>
+              <p className="text-sm font-medium">{quote.author.name}</p>
+            </div>
+            <div className="mb-5">
+              <label className="text-xs text-muted-foreground block mb-1">Nuovo utente</label>
+              <select
+                className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+                value={reassignUserId}
+                onChange={(e) => setReassignUserId(e.target.value)}
+              >
+                <option value="">Seleziona utente...</option>
+                {users.filter((u) => u.id !== quote.userId).map((u) => (
+                  <option key={u.id} value={u.id}>{u.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => { setShowReassignModal(false); setReassignUserId(""); }}
+                className="px-4 py-2 text-sm border rounded-md hover:bg-muted"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={doReassign}
+                disabled={!reassignUserId || reassigning}
+                className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md disabled:opacity-50"
+              >
+                {reassigning ? "..." : "Riassegna"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

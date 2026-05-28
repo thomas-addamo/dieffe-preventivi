@@ -11,6 +11,11 @@ import {
   UserCog,
   Building2,
   X,
+  Trash2,
+  Shield,
+  BarChart2,
+  Activity,
+  ScrollText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -22,16 +27,20 @@ const navItems = [
 ];
 
 const adminItems = [
-  { href: "/impostazioni", label: "Impostazioni", icon: Settings },
+  { href: "/admin/audit-log", label: "Audit Log", icon: ScrollText },
+  { href: "/admin/statistiche", label: "Statistiche", icon: BarChart2 },
+  { href: "/admin/sessioni", label: "Sessioni attive", icon: Activity },
   { href: "/utenti", label: "Utenti", icon: UserCog },
+  { href: "/impostazioni", label: "Impostazioni", icon: Settings },
 ];
 
 interface SidebarProps {
   userRole: string;
   onClose?: () => void;
+  trashCount?: number;
 }
 
-export function Sidebar({ userRole, onClose }: SidebarProps) {
+export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -78,11 +87,33 @@ export function Sidebar({ userRole, onClose }: SidebarProps) {
           );
         })}
 
+        {/* Cestino — editor e admin */}
+        {(userRole === "admin" || userRole === "editor") && (
+          <Link
+            href="/cestino"
+            onClick={onClose}
+            className={cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors min-h-[44px]",
+              pathname === "/cestino"
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground"
+            )}
+          >
+            <Trash2 className="w-4 h-4 shrink-0" />
+            <span className="flex-1">Cestino</span>
+            {trashCount > 0 && (
+              <span className="bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                {trashCount > 99 ? "99+" : trashCount}
+              </span>
+            )}
+          </Link>
+        )}
+
         {userRole === "admin" && (
           <>
             <div className="pt-3 pb-1 px-3">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Amministrazione
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                <Shield className="w-3 h-3" /> Amministrazione
               </span>
             </div>
             {adminItems.map(({ href, label, icon: Icon }) => {

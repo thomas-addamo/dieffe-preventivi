@@ -18,6 +18,7 @@ const schema = z.object({
   primaryColor: z.string().optional(),
   accentColor: z.string().optional(),
   emailFromAddress: z.string().nullable().optional(),
+  quotePrefix: z.string().max(6).optional(),
 });
 
 export async function GET() {

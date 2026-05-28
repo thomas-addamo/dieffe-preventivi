@@ -138,11 +138,11 @@ export function DashboardClient({
   }
 
   async function deleteQuote(id: string) {
-    if (!confirm("Eliminare questo preventivo?")) return;
+    if (!confirm("Spostare questo preventivo nel cestino?")) return;
     const res = await fetch(`/api/quotes/${id}`, { method: "DELETE" });
     if (res.ok) {
       setQuotes((prev) => prev.filter((q) => q.id !== id));
-      toast.success("Preventivo eliminato");
+      toast.success("Preventivo spostato nel cestino");
     } else {
       toast.error("Errore durante l'eliminazione");
     }

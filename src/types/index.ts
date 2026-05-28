@@ -45,5 +45,5 @@ export type TemplateData = {
 
 export type SessionUser = {
   user: Pick<User, "id" | "email" | "name" | "role" | "mustChangePassword">;
-  session: { id: string; token: string; expiresAt: string };
+  session: { id: string; token: string; expiresAt: string; isImpersonated: boolean; impersonatedBy: string | null };
 };

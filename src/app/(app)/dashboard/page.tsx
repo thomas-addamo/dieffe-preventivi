@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db/client";
 import { quotes, clients, users } from "@/lib/db/schema";
-import { eq, desc, count, sum, and, gte, lte } from "drizzle-orm";
+import { eq, desc, count, and, gte, lte, isNull } from "drizzle-orm";
 import { DashboardClient } from "./DashboardClient";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 
@@ -14,7 +14,7 @@ export default async function DashboardPage() {
   const monthStart = format(startOfMonth(now), "yyyy-MM-dd");
   const monthEnd = format(endOfMonth(now), "yyyy-MM-dd");
 
-  const [totalCount] = await db.select({ value: count() }).from(quotes);
+  const [totalCount] = await db.select({ value: count() }).from(quotes).where(isNull(quotes.deletedAt));
 
   const allQuotes = await db
     .select({
@@ -33,6 +33,7 @@ export default async function DashboardPage() {
     .from(quotes)
     .leftJoin(clients, eq(quotes.clientId, clients.id))
     .innerJoin(users, eq(quotes.userId, users.id))
+    .where(isNull(quotes.deletedAt))
     .orderBy(desc(quotes.createdAt));
 
   const acceptedThisMonth = allQuotes.filter(

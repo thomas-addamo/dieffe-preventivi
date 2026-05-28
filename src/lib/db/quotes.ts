@@ -6,16 +6,20 @@ import {
   quoteItemImages,
   quoteYearCounters,
   quoteSignatures,
+  companySettings,
   clients,
   users,
 } from "@/lib/db/schema";
-import { eq, asc, inArray } from "drizzle-orm";
+import { eq, asc, inArray, and, isNull } from "drizzle-orm";
 import { generateId } from "@/lib/utils";
 import { calcItemTotal } from "@/lib/calculations";
 import type { QuoteWithRelations } from "@/types";
 
 export async function generateQuoteCode(): Promise<string> {
   const year = new Date().getFullYear();
+
+  const [settings] = await db.select({ quotePrefix: companySettings.quotePrefix }).from(companySettings).limit(1);
+  const prefix = settings?.quotePrefix ?? "PREV";
 
   const [existing] = await db
     .select()
@@ -25,14 +29,14 @@ export async function generateQuoteCode(): Promise<string> {
 
   if (!existing) {
     await db.insert(quoteYearCounters).values({ year, counter: 1 });
-    return `PREV-${year}-001`;
+    return `${prefix}-${year}-001`;
   } else {
     const next = existing.counter + 1;
     await db
       .update(quoteYearCounters)
       .set({ counter: next })
       .where(eq(quoteYearCounters.year, year));
-    return `PREV-${year}-${String(next).padStart(3, "0")}`;
+    return `${prefix}-${year}-${String(next).padStart(3, "0")}`;
   }
 }
 
@@ -44,7 +48,7 @@ export async function getQuoteWithRelations(
     .from(quotes)
     .leftJoin(clients, eq(quotes.clientId, clients.id))
     .innerJoin(users, eq(quotes.userId, users.id))
-    .where(eq(quotes.id, id))
+    .where(and(eq(quotes.id, id), isNull(quotes.deletedAt)))
     .limit(1);
 
   if (!quote) return null;

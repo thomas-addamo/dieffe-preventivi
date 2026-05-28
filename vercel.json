@@ -11,5 +11,11 @@
     "src/app/api/import/route.ts": {
       "maxDuration": 60
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/cleanup-trash",
+      "schedule": "0 2 * * *"
+    }
+  ]
 }
