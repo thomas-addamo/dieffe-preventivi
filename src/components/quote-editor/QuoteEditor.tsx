@@ -16,6 +16,7 @@ import {
   UserCog,
 } from "lucide-react";
 import { SharePopover } from "./SharePopover";
+import { AiChatAssistant } from "./AiChatAssistant";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -228,6 +229,7 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
   const [readonlyBannerDismissed, setReadonlyBannerDismissed] = useState(false);
   const [priceListItems, setPriceListItems] = useState<PriceListItem[]>([]);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastLearnRef = useRef<number>(0);
 
   // Tracks section IDs currently being deleted, so performSave won't
   // re-insert them if a stale debounce fires concurrently with the DELETE.
@@ -324,6 +326,27 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
       }
 
       setSaveState("saved");
+
+      // Auto-learn complete items into the price list (max once per 60s, fire-and-forget)
+      const now = Date.now();
+      if (now - lastLearnRef.current > 60000) {
+        lastLearnRef.current = now;
+        const allItems = q.sections.flatMap((s) => s.items);
+        const learnableItems = allItems
+          .filter((i) => i.description.trim().length >= 15 && i.unitPrice > 0)
+          .map((i) => ({
+            description: i.description,
+            unitOfMeasure: i.unitOfMeasure,
+            unitPrice: i.unitPrice,
+          }));
+        if (learnableItems.length > 0) {
+          fetch("/api/ai/learn-items", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ items: learnableItems }),
+          }).catch(() => {});
+        }
+      }
     } catch {
       setSaveState("unsaved");
       toast.error("Errore durante il salvataggio");
@@ -1017,6 +1040,9 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
       </div>
 
       {/* Reassign modal */}
+      {/* AI Chat Assistant */}
+      {!isViewer && <AiChatAssistant />}
+
       {showReassignModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-background rounded-xl p-6 max-w-sm w-full shadow-xl">
