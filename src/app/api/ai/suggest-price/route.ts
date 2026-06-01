@@ -88,7 +88,8 @@ Rispondi SOLO con un JSON valido, nessun testo aggiuntivo:
 
     const suggestion = JSON.parse(jsonMatch[0]);
     return NextResponse.json({ suggestion, similarItems: similarItems.slice(0, 3) });
-  } catch {
+  } catch (err) {
+    console.error('[AI suggest-price] Gemini error:', err);
     return NextResponse.json({ error: 'Errore AI. Riprova.' }, { status: 500 });
   }
 }

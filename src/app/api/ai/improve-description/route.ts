@@ -50,7 +50,8 @@ Rispondi SOLO con la descrizione migliorata, nessun altro testo.`;
       .replace(/^["']|["']$/g, '');
 
     return NextResponse.json({ improvedDescription });
-  } catch {
+  } catch (err) {
+    console.error('[AI improve-description] Gemini error:', err);
     return NextResponse.json({ error: 'Errore AI. Riprova.' }, { status: 500 });
   }
 }
