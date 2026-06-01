@@ -16,6 +16,7 @@ import {
   BarChart2,
   Activity,
   ScrollText,
+  List,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +25,7 @@ const navItems = [
   { href: "/preventivi", label: "Preventivi", icon: FileText },
   { href: "/clienti", label: "Clienti", icon: Users },
   { href: "/template", label: "Template", icon: LayoutTemplate },
+  { href: "/listino", label: "Listino", icon: List },
 ];
 
 const adminItems = [

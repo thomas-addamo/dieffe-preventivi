@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Save, Upload, X, AlertTriangle } from "lucide-react";
+import { Loader2, Save, Upload, X, AlertTriangle, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import type { CompanySettings } from "@/lib/db/schema";
 
@@ -49,6 +49,13 @@ export function ImpostazioniClient({
   const [resetConfirmText, setResetConfirmText] = useState("");
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [aiSuggestEnabled, setAiSuggestEnabled] = useState(true);
+  const [aiAutoImprove, setAiAutoImprove] = useState(false);
+
+  useEffect(() => {
+    setAiSuggestEnabled(localStorage.getItem("ai_suggestions_enabled") !== "false");
+    setAiAutoImprove(localStorage.getItem("ai_auto_improve") === "true");
+  }, []);
 
   const {
     register,
@@ -424,6 +431,54 @@ export function ImpostazioniClient({
                 </div>
               </div>
             )}
+          </div>
+        </div>
+
+        {/* AI Settings */}
+        <div className="bg-card border rounded-lg p-5 space-y-4">
+          <h2 className="font-medium text-sm flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-violet-500" /> Intelligenza Artificiale
+          </h2>
+          <p className="text-xs text-muted-foreground -mt-2">
+            Preferenze AI salvate nel browser (per utente/dispositivo).
+          </p>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">Suggerimenti AI automatici</p>
+                <p className="text-xs text-muted-foreground">Suggerisce U.M. e prezzo mentre scrivi la descrizione</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !aiSuggestEnabled;
+                  setAiSuggestEnabled(next);
+                  localStorage.setItem("ai_suggestions_enabled", String(next));
+                  toast.success(next ? "Suggerimenti AI attivati" : "Suggerimenti AI disattivati");
+                }}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${aiSuggestEnabled ? "bg-primary" : "bg-muted"}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${aiSuggestEnabled ? "translate-x-6" : "translate-x-1"}`} />
+              </button>
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">Miglioramento automatico descrizione</p>
+                <p className="text-xs text-muted-foreground">Migliora automaticamente dopo 3s di inattività</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !aiAutoImprove;
+                  setAiAutoImprove(next);
+                  localStorage.setItem("ai_auto_improve", String(next));
+                  toast.success(next ? "Auto-miglioramento attivato" : "Auto-miglioramento disattivato");
+                }}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${aiAutoImprove ? "bg-primary" : "bg-muted"}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${aiAutoImprove ? "translate-x-6" : "translate-x-1"}`} />
+              </button>
+            </div>
           </div>
         </div>
 

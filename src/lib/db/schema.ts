@@ -4,6 +4,7 @@ import {
   integer,
   boolean,
   doublePrecision,
+  numeric,
   serial,
   jsonb,
   index,
@@ -266,6 +267,26 @@ export const userAccessLog = pgTable("user_access_log", {
   success: boolean("success").notNull(),
 });
 
+// ─── Price List Items ─────────────────────────────────────────────────────────
+
+export const priceListItems = pgTable(
+  "price_list_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    code: text("code"),
+    description: text("description").notNull(),
+    unitOfMeasure: text("unit_of_measure").notNull(),
+    unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).notNull(),
+    category: text("category"),
+    notes: text("notes"),
+    isActive: boolean("is_active").default(true).notNull(),
+    createdBy: text("created_by").references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+  },
+  (t) => [index("price_list_description_idx").on(t.description)]
+);
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type User = typeof users.$inferSelect;
@@ -285,3 +306,5 @@ export type QuoteTemplate = typeof quoteTemplates.$inferSelect;
 export type QuoteSignature = typeof quoteSignatures.$inferSelect;
 export type NewQuoteSignature = typeof quoteSignatures.$inferInsert;
 export type UserAccessLog = typeof userAccessLog.$inferSelect;
+export type PriceListItem = typeof priceListItems.$inferSelect;
+export type NewPriceListItem = typeof priceListItems.$inferInsert;

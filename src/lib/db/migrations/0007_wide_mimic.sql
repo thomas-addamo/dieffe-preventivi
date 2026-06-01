@@ -1,0 +1,1 @@
+ALTER TABLE "price_list_items" ALTER COLUMN "created_by" SET DATA TYPE text;

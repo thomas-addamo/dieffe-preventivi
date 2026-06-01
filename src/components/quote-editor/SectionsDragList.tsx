@@ -13,11 +13,13 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SectionBlock } from "./SectionBlock";
 import type { SectionWithItems, ItemWithImages } from "@/types";
+import type { PriceListItem } from "@/lib/db/schema";
 import { usePermissions } from "@/hooks/use-permissions";
 
 interface SectionsDragListProps {
   sections: SectionWithItems[];
   quoteId: string;
+  priceListItems?: PriceListItem[];
   onSectionsReordered: (reordered: SectionWithItems[]) => void;
   onUpdateSection: (sectionId: string, patch: Partial<SectionWithItems>) => void;
   onDeleteSection: (sectionId: string) => void;
@@ -32,6 +34,7 @@ interface SectionsDragListProps {
 export function SectionsDragList({
   sections,
   quoteId,
+  priceListItems = [],
   onSectionsReordered,
   onUpdateSection,
   onDeleteSection,
@@ -92,6 +95,7 @@ export function SectionsDragList({
                   section={section}
                   sectionIndex={sIdx}
                   quoteId={quoteId}
+                  priceListItems={priceListItems}
                   onUpdate={(patch) => onUpdateSection(section.id, patch)}
                   onDelete={() => onDeleteSection(section.id)}
                   onAddItem={() => onAddItem(section.id)}

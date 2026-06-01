@@ -28,6 +28,7 @@ import {
 import { TotalsPanel } from "./TotalsPanel";
 import { QuoteHeaderForm } from "./QuoteHeaderForm";
 import type { QuoteWithRelations, SectionWithItems, ItemWithImages } from "@/types";
+import type { PriceListItem } from "@/lib/db/schema";
 import { QUOTE_STATUS_LABELS, QUOTE_STATUS_COLORS, generateId, formatCurrency, formatDate } from "@/lib/utils";
 import { calcQuoteTotals } from "@/lib/calculations";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -225,6 +226,7 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
   const [saveState, setSaveState] = useState<"saved" | "saving" | "unsaved">("saved");
   const [mobileTotalsOpen, setMobileTotalsOpen] = useState(false);
   const [readonlyBannerDismissed, setReadonlyBannerDismissed] = useState(false);
+  const [priceListItems, setPriceListItems] = useState<PriceListItem[]>([]);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Tracks section IDs currently being deleted, so performSave won't
@@ -238,6 +240,14 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
   const pendingSectionIdsRef = useRef<Set<string>>(new Set());
   const itemAbortControllersRef = useRef<Map<string, AbortController>>(new Map());
   const sectionAbortControllersRef = useRef<Map<string, AbortController>>(new Map());
+
+  useEffect(() => {
+    if (isViewer) return;
+    fetch("/api/price-list?isActive=true")
+      .then((r) => r.ok ? r.json() : [])
+      .then(setPriceListItems)
+      .catch(() => {});
+  }, [isViewer]);
 
   const scheduleSave = useCallback(
     (updatedQuote: QuoteWithRelations) => {
@@ -907,6 +917,7 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
             <SectionsDragList
               sections={quote.sections}
               quoteId={quote.id}
+              priceListItems={priceListItems}
               onSectionsReordered={handleSectionsReordered}
               onUpdateSection={updateSection}
               onDeleteSection={deleteSection}

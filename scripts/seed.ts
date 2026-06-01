@@ -8,6 +8,7 @@ import {
   quoteItems,
   quoteYearCounters,
   quoteTemplates,
+  priceListItems,
 } from "../src/lib/db/schema";
 import { hashPassword } from "../src/lib/auth";
 import { generateId } from "../src/lib/utils";
@@ -350,6 +351,36 @@ async function seed() {
   ]);
 
   console.log("✓ Template");
+
+  // Price list seed
+  const priceListSeed = [
+    { code: 'ALL-001', description: 'Impianto di cantiere regolamentare con WC chimico, baracca e recinzione', unitOfMeasure: 'a corpo', unitPrice: '15300.00', category: 'Allestimento Cantiere' },
+    { code: 'ALL-002', description: 'Fornitura di energia elettrica per esecuzione delle opere', unitOfMeasure: 'vs.carico', unitPrice: '0.00', category: 'Allestimento Cantiere' },
+    { code: 'DEM-001', description: 'Rimozione totale della controsoffittatura con smaltimento materiale di risulta', unitOfMeasure: 'mq', unitPrice: '80.00', category: 'Demolizioni' },
+    { code: 'DEM-002', description: 'Demolizione intonaco esterno esistente a mano e con martello demolitore, carico e trasporto a discarica autorizzata', unitOfMeasure: 'mq', unitPrice: '12.50', category: 'Demolizioni' },
+    { code: 'CAP-001', description: 'Isolamento a cappotto con pannelli EPS Neopor con grafite 14cm con rasatura collante a due mani con interposizione di rete in fibra di vetro', unitOfMeasure: 'mq', unitPrice: '75.00', category: 'Cappotto Termico' },
+    { code: 'CAP-002', description: 'Fornitura e posa di intonachino Acril-silosanico colorato su pareti verticali isolate', unitOfMeasure: 'mq', unitPrice: '35.00', category: 'Cappotto Termico' },
+    { code: 'CAP-003', description: 'Profili di partenza in alluminio, profili angolari, giunti di dilatazione e accessori per cappotto', unitOfMeasure: 'ml', unitPrice: '8.50', category: 'Cappotto Termico' },
+    { code: 'TIN-001', description: 'Tinteggiatura interna a due mani con colori a scelta su pareti e soffitti', unitOfMeasure: 'mq', unitPrice: '12.00', category: 'Tinteggiature' },
+    { code: 'TIN-002', description: 'Rasatura e tinteggiatura esterna con vernice acril-silossanica idrorepellente', unitOfMeasure: 'mq', unitPrice: '22.00', category: 'Tinteggiature' },
+    { code: 'IMP-001', description: 'Impermeabilizzazione terrazza con membrana bituminosa armata doppio strato', unitOfMeasure: 'mq', unitPrice: '85.00', category: 'Impermeabilizzazioni' },
+    { code: 'IMP-002', description: 'Impermeabilizzazione balcone con resina poliuretanica a due componenti', unitOfMeasure: 'mq', unitPrice: '65.00', category: 'Impermeabilizzazioni' },
+    { code: 'PAV-001', description: 'Fornitura e posa di pavimento in gres porcellanato 60x60 con fughe', unitOfMeasure: 'mq', unitPrice: '65.00', category: 'Pavimenti' },
+    { code: 'PAV-002', description: 'Rasatura del sottofondo con massetto autolivellante', unitOfMeasure: 'mq', unitPrice: '18.00', category: 'Pavimenti' },
+    { code: 'IMP-ELE-001', description: 'Rifacimento impianto elettrico a norma CEI con quadro certificato', unitOfMeasure: 'a corpo', unitPrice: '3500.00', category: 'Impianti Elettrici' },
+    { code: 'IMP-IDR-001', description: 'Rifacimento impianto idraulico bagno completo con rubinetteria', unitOfMeasure: 'a corpo', unitPrice: '2800.00', category: 'Impianti Idraulici' },
+    { code: 'PON-001', description: 'Ponteggio metallico a telai prefabbricati tipo Plettac o similare, montaggio e smontaggio compreso', unitOfMeasure: 'mq', unitPrice: '6.50', category: 'Allestimento Cantiere' },
+    { code: 'PON-002', description: 'Nolo ponteggio mensile per la durata dei lavori, comprensivo di teli di protezione', unitOfMeasure: 'mq', unitPrice: '1.20', category: 'Allestimento Cantiere' },
+  ];
+
+  await db.insert(priceListItems).values(
+    priceListSeed.map((item) => ({
+      ...item,
+      isActive: true,
+    }))
+  );
+  console.log("✓ Listino prezzi esempio");
+
   console.log("\n✅ Seed completato!");
   console.log("   Login: admin@dieffe.it / admin123");
   process.exit(0);

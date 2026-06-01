@@ -33,6 +33,7 @@ import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } 
 import { CSS } from "@dnd-kit/utilities";
 import { LineItem } from "./LineItem";
 import type { SectionWithItems, ItemWithImages } from "@/types";
+import type { PriceListItem } from "@/lib/db/schema";
 import { cn } from "@/lib/utils";
 import { usePermissions } from "@/hooks/use-permissions";
 
@@ -40,6 +41,7 @@ interface SectionBlockProps {
   section: SectionWithItems;
   sectionIndex: number;
   quoteId: string;
+  priceListItems?: PriceListItem[];
   onUpdate: (patch: Partial<SectionWithItems>) => void;
   onDelete: () => void;
   onAddItem: () => void;
@@ -53,6 +55,7 @@ export function SectionBlock({
   section,
   sectionIndex,
   quoteId,
+  priceListItems = [],
   onUpdate,
   onDelete,
   onAddItem,
@@ -315,6 +318,7 @@ export function SectionBlock({
                     item={item}
                     itemNumber={`${section.code}.${idx + 1}`}
                     quoteId={quoteId}
+                    priceListItems={priceListItems}
                     onUpdate={(patch) => onUpdateItem(item.id, patch)}
                     onDelete={() => onDeleteItem(item.id)}
                     onDuplicate={() => onDuplicateItem(item.id)}
