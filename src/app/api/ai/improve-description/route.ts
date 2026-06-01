@@ -51,7 +51,8 @@ Rispondi SOLO con la descrizione migliorata, nessun altro testo.`;
 
     return NextResponse.json({ improvedDescription });
   } catch (err) {
-    console.error('[AI improve-description] Gemini error:', err);
+    const e = err as { message?: string; status?: number; statusText?: string };
+    console.error('[AI] status=' + (e.status ?? '?') + ' msg=' + (e.message ?? String(err)).slice(0, 200));
     return NextResponse.json({ error: 'Errore AI. Riprova.' }, { status: 500 });
   }
 }
