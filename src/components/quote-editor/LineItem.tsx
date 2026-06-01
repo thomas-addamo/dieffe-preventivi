@@ -230,6 +230,7 @@ export function LineItem({
   const [aiSuggestion, setAiSuggestion] = useState<AiSuggestion | null>(null);
   const [suggestionIgnored, setSuggestionIgnored] = useState(false);
   const aiDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastAiCallRef = useRef<number>(0);
 
   // Save to listino
   const [showSaveModal, setShowSaveModal] = useState(false);
@@ -317,10 +318,12 @@ export function LineItem({
     (description: string) => {
       if (aiDebounceRef.current) clearTimeout(aiDebounceRef.current);
       if (description.length < 10 || !getAiEnabled()) return;
-      // Don't trigger if U.M. and price already set
       if (item.unitPrice > 0 && item.unitOfMeasure !== "n°") return;
 
       aiDebounceRef.current = setTimeout(async () => {
+        // Skip if another AI call was made less than 4 seconds ago
+        if (Date.now() - lastAiCallRef.current < 4000) return;
+        lastAiCallRef.current = Date.now();
         setAiLoading(true);
         try {
           const res = await fetch("/api/ai/suggest-price", {
@@ -339,7 +342,7 @@ export function LineItem({
         } finally {
           setAiLoading(false);
         }
-      }, 1500);
+      }, 2000);
     },
     [item.unitPrice, item.unitOfMeasure]
   );
@@ -347,6 +350,7 @@ export function LineItem({
   async function handleAiImprove() {
     if (!item.description || item.description.length < 3) return;
     setAiImproving(true);
+    lastAiCallRef.current = Date.now();
     try {
       const res = await fetch("/api/ai/improve-description", {
         method: "POST",
@@ -354,14 +358,22 @@ export function LineItem({
         body: JSON.stringify({ description: item.description }),
         signal: AbortSignal.timeout(9000),
       });
-      if (!res.ok) return;
+      if (res.status === 429) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error ?? "Troppe richieste AI. Attendi qualche secondo e riprova.");
+        return;
+      }
+      if (!res.ok) {
+        toast.error("Errore AI. Riprova.");
+        return;
+      }
       const { improvedDescription } = await res.json();
       if (improvedDescription) {
         onUpdate({ description: improvedDescription });
         toast.success("Descrizione migliorata dall'AI ✨");
       }
     } catch {
-      // silent fallback
+      toast.error("Errore AI. Riprova.");
     } finally {
       setAiImproving(false);
     }

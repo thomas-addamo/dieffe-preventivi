@@ -53,6 +53,9 @@ Rispondi SOLO con la descrizione migliorata, nessun altro testo.`;
   } catch (err) {
     const e = err as { message?: string; status?: number; statusText?: string };
     console.error('[AI] status=' + (e.status ?? '?') + ' msg=' + (e.message ?? String(err)).slice(0, 200));
+    if (e.status === 429) {
+      return NextResponse.json({ error: 'Troppe richieste AI. Attendi qualche secondo e riprova.' }, { status: 429 });
+    }
     return NextResponse.json({ error: 'Errore AI. Riprova.' }, { status: 500 });
   }
 }
