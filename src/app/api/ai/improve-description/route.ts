@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/permissions/guard';
-import { geminiFlash } from '@/lib/ai/gemini';
+import { generateAI, isAiConfigured } from '@/lib/ai/client';
 import { z } from 'zod';
-import { env } from '@/lib/env';
 
 const schema = z.object({
   description: z.string().min(3).max(500),
@@ -12,7 +11,7 @@ export async function POST(req: NextRequest) {
   const { error } = await requireRole('admin', 'editor');
   if (error) return error;
 
-  if (!env.GEMINI_API_KEY) {
+  if (!isAiConfigured()) {
     return NextResponse.json({ error: 'AI non configurata' }, { status: 503 });
   }
 
@@ -37,29 +36,14 @@ Descrizione originale: "${description}"
 Rispondi SOLO con la descrizione migliorata, nessun altro testo.`;
 
   try {
-    const result = await Promise.race([
-      geminiFlash.generateContent(prompt),
-      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
-    ]);
-
-    const improvedDescription = (
-      result as Awaited<ReturnType<typeof geminiFlash.generateContent>>
-    ).response
-      .text()
+    const improvedDescription = (await generateAI(prompt))
       .trim()
       .replace(/^["']|["']$/g, '');
 
     return NextResponse.json({ improvedDescription });
   } catch (err) {
-    const e = err as { message?: string; status?: number; statusText?: string };
+    const e = err as { message?: string; status?: number };
     console.error('[AI] status=' + (e.status ?? '?') + ' msg=' + (e.message ?? String(err)).slice(0, 200));
-    if (e.status === 429) {
-      const isZeroQuota = (e.message ?? '').includes('limit: 0');
-      const msg = isZeroQuota
-        ? 'AI non attiva: attiva la fatturazione su console.cloud.google.com per sbloccare il piano gratuito Gemini.'
-        : 'Troppe richieste AI. Attendi qualche secondo e riprova.';
-      return NextResponse.json({ error: msg }, { status: 429 });
-    }
     return NextResponse.json({ error: 'Errore AI. Riprova.' }, { status: 500 });
   }
 }

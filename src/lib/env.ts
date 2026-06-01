@@ -5,6 +5,7 @@ const envSchema = z.object({
   RESEND_FROM_EMAIL: z.string().default("onboarding@resend.dev"),
   APP_URL: z.string().default("http://localhost:3847"),
   GEMINI_API_KEY: z.string().default(""),
+  GROQ_API_KEY: z.string().default(""),
 });
 
 export const env = envSchema.parse(process.env);
