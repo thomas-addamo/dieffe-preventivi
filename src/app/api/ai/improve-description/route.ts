@@ -54,7 +54,11 @@ Rispondi SOLO con la descrizione migliorata, nessun altro testo.`;
     const e = err as { message?: string; status?: number; statusText?: string };
     console.error('[AI] status=' + (e.status ?? '?') + ' msg=' + (e.message ?? String(err)).slice(0, 200));
     if (e.status === 429) {
-      return NextResponse.json({ error: 'Troppe richieste AI. Attendi qualche secondo e riprova.' }, { status: 429 });
+      const isZeroQuota = (e.message ?? '').includes('limit: 0');
+      const msg = isZeroQuota
+        ? 'AI non attiva: attiva la fatturazione su console.cloud.google.com per sbloccare il piano gratuito Gemini.'
+        : 'Troppe richieste AI. Attendi qualche secondo e riprova.';
+      return NextResponse.json({ error: msg }, { status: 429 });
     }
     return NextResponse.json({ error: 'Errore AI. Riprova.' }, { status: 500 });
   }
