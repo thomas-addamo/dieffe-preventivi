@@ -167,7 +167,7 @@ export function AuditLogClient({ initialRows }: { initialRows: AuditRow[] }) {
             ) : paged.map((row) => (
               <tr
                 key={row.id}
-                className="bg-white hover:bg-muted/20 cursor-pointer"
+                className="bg-card hover:bg-muted/20 cursor-pointer"
                 onClick={() => setDetailRow(row)}
               >
                 <td className="px-4 py-3 whitespace-nowrap">{fmtDate(row.createdAt)}</td>

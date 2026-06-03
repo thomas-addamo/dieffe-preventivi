@@ -107,7 +107,7 @@ export default function CestinoPage() {
             </thead>
             <tbody className="divide-y">
               {quotes.map((q) => (
-                <tr key={q.id} className="bg-white hover:bg-muted/20">
+                <tr key={q.id} className="bg-card hover:bg-muted/20">
                   <td className="px-4 py-3 font-mono font-semibold text-primary">{q.code}</td>
                   <td className="px-4 py-3 font-medium">{q.title}</td>
                   <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{q.clientName ?? "—"}</td>

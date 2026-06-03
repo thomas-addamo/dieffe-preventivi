@@ -84,7 +84,7 @@ export function AiChatAssistant() {
       {/* Floating button */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className="fixed bottom-[68px] md:bottom-6 right-4 md:right-6 z-40 w-12 h-12 rounded-full bg-violet-600 hover:bg-violet-700 text-white shadow-lg flex items-center justify-center transition-all"
+        className="fixed bottom-[68px] md:bottom-6 right-4 md:right-6 z-50 w-12 h-12 rounded-full bg-violet-600 hover:bg-violet-700 active:scale-95 text-white shadow-lg flex items-center justify-center transition-all"
         title="Assistente AI edilizia"
       >
         {open ? (
@@ -96,7 +96,9 @@ export function AiChatAssistant() {
 
       {/* Chat panel */}
       {open && (
-        <div className="fixed bottom-[120px] md:bottom-20 right-4 md:right-6 z-40 w-[min(360px,calc(100vw-2rem))] h-[min(500px,calc(100vh-160px))] bg-background border rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+        <div className="fixed z-40 flex flex-col overflow-hidden bg-background border shadow-2xl rounded-2xl
+          left-2 right-2 bottom-[72px] top-[72px]
+          md:top-auto md:left-auto md:right-6 md:bottom-20 md:w-[390px] md:h-[min(540px,calc(100vh-160px))]">
           {/* Header */}
           <div className="flex items-center gap-2 px-4 py-3 border-b bg-violet-600 text-white rounded-t-2xl shrink-0">
             <Bot className="w-4 h-4" />
@@ -210,8 +212,8 @@ export function AiChatAssistant() {
           </div>
 
           {/* Input */}
-          <div className="border-t p-2 shrink-0">
-            <div className="flex gap-1.5 items-end">
+          <div className="border-t p-2 md:p-2 shrink-0">
+            <div className="flex gap-2 items-end">
               <textarea
                 ref={inputRef}
                 value={input}
@@ -219,24 +221,24 @@ export function AiChatAssistant() {
                 onKeyDown={handleKeyDown}
                 placeholder="Chiedi qualcosa sull'edilizia..."
                 rows={1}
-                className="flex-1 resize-none text-xs border rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-400 bg-background max-h-24 overflow-auto"
+                className="flex-1 resize-none text-sm md:text-xs border rounded-xl px-3 py-2.5 md:py-2 focus:outline-none focus:ring-2 focus:ring-violet-400 bg-background max-h-32 overflow-auto"
                 style={{ height: "auto" }}
                 onInput={(e) => {
                   const t = e.target as HTMLTextAreaElement;
                   t.style.height = "auto";
-                  t.style.height = Math.min(t.scrollHeight, 96) + "px";
+                  t.style.height = Math.min(t.scrollHeight, 128) + "px";
                 }}
               />
               <Button
                 size="icon"
-                className="h-8 w-8 shrink-0 bg-violet-600 hover:bg-violet-700 rounded-xl"
+                className="h-10 w-10 md:h-8 md:w-8 shrink-0 bg-violet-600 hover:bg-violet-700 active:scale-95 rounded-xl"
                 onClick={() => sendMessage()}
                 disabled={!input.trim() || loading}
               >
-                <Send className="w-3.5 h-3.5" />
+                <Send className="w-4 h-4 md:w-3.5 md:h-3.5" />
               </Button>
             </div>
-            <p className="text-[9px] text-muted-foreground mt-1 text-center">
+            <p className="hidden md:block text-[9px] text-muted-foreground mt-1 text-center">
               Enter per inviare · Shift+Enter per andare a capo
             </p>
           </div>

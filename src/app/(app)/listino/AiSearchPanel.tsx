@@ -84,7 +84,7 @@ export function AiSearchPanel() {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Es: cappotto termico, posa piastrelle, tinteggiatura..."
-            className="pl-8 h-9 text-sm bg-white"
+            className="pl-8 h-9 text-sm bg-card"
           />
         </div>
         <Button
@@ -103,7 +103,7 @@ export function AiSearchPanel() {
 
       {/* AI Summary */}
       {results?.summary && (
-        <div className="mt-3 bg-white border border-violet-200 rounded-lg px-3 py-2.5 text-xs text-violet-900 flex gap-2">
+        <div className="mt-3 bg-card border border-violet-200 rounded-lg px-3 py-2.5 text-xs text-violet-900 flex gap-2">
           <Sparkles className="w-3.5 h-3.5 text-violet-500 shrink-0 mt-0.5" />
           <p className="whitespace-pre-wrap">{results.summary}</p>
         </div>
@@ -130,7 +130,7 @@ export function AiSearchPanel() {
                 {results.listinoItems.map((item, i) => (
                   <div
                     key={i}
-                    className="bg-white border rounded-lg px-3 py-2 text-xs flex items-center justify-between gap-2"
+                    className="bg-card border rounded-lg px-3 py-2 text-xs flex items-center justify-between gap-2"
                   >
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{item.description}</p>
@@ -161,7 +161,7 @@ export function AiSearchPanel() {
                 {results.quoteItems.map((item, i) => (
                   <div
                     key={i}
-                    className="bg-white border rounded-lg px-3 py-2 text-xs"
+                    className="bg-card border rounded-lg px-3 py-2 text-xs"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <p className="font-medium flex-1 min-w-0 truncate">

@@ -26,7 +26,7 @@ function ImpersonationBanner({ userName, userRole }: { userName: string; userRol
       <button
         onClick={stopImpersonation}
         disabled={loading}
-        className="text-sm bg-white text-orange-600 font-semibold px-3 py-1 rounded hover:bg-orange-50 shrink-0"
+        className="text-sm bg-background text-orange-600 font-semibold px-3 py-1 rounded hover:bg-muted shrink-0"
       >
         {loading ? "..." : "Torna al tuo account"}
       </button>

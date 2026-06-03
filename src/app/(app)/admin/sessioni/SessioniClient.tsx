@@ -78,7 +78,7 @@ export function SessioniClient({ rows: initialRows, currentToken }: { rows: Sess
             ) : rows.map((row) => {
               const isCurrent = row.token === currentToken;
               return (
-                <tr key={row.id} className={`bg-white ${isCurrent ? "bg-blue-50" : "hover:bg-muted/20"}`}>
+                <tr key={row.id} className={`bg-card ${isCurrent ? "bg-blue-500/10 dark:bg-blue-500/20" : "hover:bg-muted/20"}`}>
                   <td className="px-4 py-3">
                     <div className="font-medium">{row.userName}</div>
                     <div className="text-xs text-muted-foreground">{row.userEmail}</div>
