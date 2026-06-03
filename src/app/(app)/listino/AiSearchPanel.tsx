@@ -67,10 +67,10 @@ export function AiSearchPanel() {
     results && (results.quoteItems.length > 0 || results.listinoItems.length > 0);
 
   return (
-    <div className="mb-5 border rounded-xl bg-violet-50/40 p-3 md:p-4">
+    <div className="mb-5 border border-violet-200 dark:border-violet-800 rounded-xl bg-violet-50/60 dark:bg-violet-950/20 p-3 md:p-4">
       <div className="flex items-center gap-2 mb-2.5">
         <Sparkles className="w-4 h-4 text-violet-500 shrink-0" />
-        <span className="text-sm font-medium text-violet-700">
+        <span className="text-sm font-medium text-violet-700 dark:text-violet-400">
           Ricerca AI — cerca nel listino e nella storia dei preventivi
         </span>
       </div>
@@ -103,7 +103,7 @@ export function AiSearchPanel() {
 
       {/* AI Summary */}
       {results?.summary && (
-        <div className="mt-3 bg-card border border-violet-200 rounded-lg px-3 py-2.5 text-xs text-violet-900 flex gap-2">
+        <div className="mt-3 bg-card border border-violet-200 dark:border-violet-800 rounded-lg px-3 py-2.5 text-xs text-violet-900 dark:text-violet-300 flex gap-2">
           <Sparkles className="w-3.5 h-3.5 text-violet-500 shrink-0 mt-0.5" />
           <p className="whitespace-pre-wrap">{results.summary}</p>
         </div>
