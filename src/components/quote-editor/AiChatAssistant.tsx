@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import { MessageCircle, X, Send, Bot, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface Message {
   role: "user" | "assistant";
@@ -143,13 +145,52 @@ export function AiChatAssistant() {
                   </div>
                 )}
                 <div
-                  className={`rounded-2xl px-3 py-2 text-xs max-w-[85%] whitespace-pre-wrap ${
+                  className={`rounded-2xl px-3 py-2 text-xs max-w-[85%] ${
                     msg.role === "user"
-                      ? "bg-violet-600 text-white rounded-tr-sm"
+                      ? "bg-violet-600 text-white rounded-tr-sm whitespace-pre-wrap"
                       : "bg-muted/60 text-foreground rounded-tl-sm"
                   }`}
                 >
-                  {msg.content}
+                  {msg.role === "user" ? (
+                    msg.content
+                  ) : (
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        p: ({ children }) => <p className="mb-1.5 last:mb-0">{children}</p>,
+                        strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
+                        em: ({ children }) => <em className="italic">{children}</em>,
+                        ul: ({ children }) => <ul className="list-disc pl-4 mb-1.5 space-y-0.5">{children}</ul>,
+                        ol: ({ children }) => <ol className="list-decimal pl-4 mb-1.5 space-y-0.5">{children}</ol>,
+                        li: ({ children }) => <li className="leading-snug">{children}</li>,
+                        h1: ({ children }) => <h1 className="font-bold text-sm mb-1 mt-2 first:mt-0">{children}</h1>,
+                        h2: ({ children }) => <h2 className="font-semibold text-xs mb-1 mt-2 first:mt-0 text-violet-700">{children}</h2>,
+                        h3: ({ children }) => <h3 className="font-semibold mb-0.5 mt-1.5 first:mt-0">{children}</h3>,
+                        code: ({ children }) => (
+                          <code className="bg-black/10 rounded px-1 py-0.5 font-mono text-[10px]">{children}</code>
+                        ),
+                        blockquote: ({ children }) => (
+                          <blockquote className="border-l-2 border-violet-300 pl-2 my-1 text-muted-foreground">{children}</blockquote>
+                        ),
+                        table: ({ children }) => (
+                          <div className="overflow-x-auto my-2">
+                            <table className="w-full border-collapse text-[11px]">{children}</table>
+                          </div>
+                        ),
+                        thead: ({ children }) => <thead className="bg-violet-100">{children}</thead>,
+                        th: ({ children }) => (
+                          <th className="border border-violet-200 px-2 py-1 text-left font-semibold">{children}</th>
+                        ),
+                        td: ({ children }) => (
+                          <td className="border border-violet-200 px-2 py-1">{children}</td>
+                        ),
+                        tr: ({ children }) => <tr className="even:bg-violet-50/50">{children}</tr>,
+                        hr: () => <hr className="my-2 border-muted-foreground/20" />,
+                      }}
+                    >
+                      {msg.content}
+                    </ReactMarkdown>
+                  )}
                 </div>
               </div>
             ))}
