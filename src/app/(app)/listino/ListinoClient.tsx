@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { AiSearchPanel } from "./AiSearchPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -254,6 +255,9 @@ export function ListinoClient({ userRole }: ListinoClientProps) {
           </Button>
         </div>
       </div>
+
+      {/* AI Search */}
+      <AiSearchPanel />
 
       {/* Filters */}
       <div className="flex flex-wrap gap-2 mb-4">

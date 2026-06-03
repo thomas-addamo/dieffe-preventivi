@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/permissions/guard';
 import { generateAIChat, isAiConfigured } from '@/lib/ai/client';
+import { buildSearchContext } from '@/lib/ai/rag';
 import { z } from 'zod';
 
 const schema = z.object({
   messages: z.array(
     z.object({
       role: z.enum(['user', 'assistant']),
-      content: z.string().max(2000),
+      content: z.string().max(3000),
     })
   ).min(1).max(30),
 });
@@ -24,8 +25,16 @@ export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: 'Input non valido' }, { status: 400 });
 
+  const { messages } = parsed.data;
+
+  // Build DB context from the last user message
+  const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user');
+  const dbContext = lastUserMsg
+    ? await buildSearchContext(lastUserMsg.content).catch(() => '')
+    : '';
+
   try {
-    const reply = await generateAIChat(parsed.data.messages);
+    const reply = await generateAIChat(messages, dbContext);
     return NextResponse.json({ reply });
   } catch (err) {
     const e = err as { message?: string; status?: number };

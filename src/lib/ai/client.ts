@@ -7,12 +7,13 @@ export function isAiConfigured() {
   return !!env.GROQ_API_KEY;
 }
 
-const MODEL = 'llama-3.3-70b-versatile';
+const MODEL_FAST = 'llama-3.3-70b-versatile';
+const MODEL_CHAT = 'compound-beta'; // agentic model with web search
 
 export async function generateAI(prompt: string, timeoutMs = 8000): Promise<string> {
   const response = await Promise.race([
     groq.chat.completions.create({
-      model: MODEL,
+      model: MODEL_FAST,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
       max_tokens: 1024,
@@ -26,28 +27,38 @@ export async function generateAI(prompt: string, timeoutMs = 8000): Promise<stri
   return response.choices[0]?.message?.content ?? '';
 }
 
-const CONSTRUCTION_SYSTEM_PROMPT = `Sei un assistente AI specializzato nell'edilizia italiana, consulente per imprese di ristrutturazione.
+const CONSTRUCTION_SYSTEM_PROMPT = `Sei un assistente AI specializzato nell'edilizia italiana, consulente esperto per Dieffe Ristrutturazioni (Moncalieri, Torino).
 
-Competenze:
-- Prezzi indicativi di materiali da costruzione (dati 2024, variabili per zona/fornitore)
-- Tecniche costruttive: ristrutturazioni, cappotto termico, impermeabilizzazioni, impianti idrotermici ed elettrici
-- Normative edilizie italiane: DM, UNI, CEI, Superbonus, Ecobonus, bonus facciate
-- Preventivi: calcolo quantità materiali, rendimenti, manodopera, prezzari regionali
-- Materiali: calcestruzzo, laterizi, isolanti, impermeabilizzanti, rivestimenti, serramenti
+HAI ACCESSO AI DATI REALI AZIENDALI: preventivi storici, clienti, prezzi applicati, listino prezzi.
+Quando ti vengono forniti dati dei preventivi o del listino, usali come fonte primaria e cita i valori esatti.
+Se l'utente chiede "quanto ho fatto pagare X?" o "l'ultima volta che ho fatto Y?", rispondi con i dati reali forniti nel contesto.
 
-Rispondi sempre in italiano, in modo professionale e conciso.
-Quando citi prezzi, aggiungi sempre "(prezzo indicativo 2024, verifica con fornitori locali)".
-Usa elenchi puntati quando appropriato. Sii diretto e pratico.`;
+Competenze aggiuntive:
+- Prezzi correnti di materiali da costruzione (puoi cercare online se necessario)
+- Tecniche costruttive: ristrutturazioni, cappotto termico, impermeabilizzazioni, impianti
+- Normative italiane: DM, UNI, CEI, Superbonus, Ecobonus, CILA, SCIA
+- Prezzari regionali Piemonte, calcolo materiali, manodopera
+
+Regole:
+- Rispondi sempre in italiano, conciso e diretto
+- Quando usi dati aziendali reali, dì "nei tuoi preventivi..." o "nel tuo listino..."
+- Quando citi prezzi di mercato generici (non tuoi), aggiungi "(indicativo, verifica con fornitori)"
+- Usa elenchi puntati quando appropriato`;
 
 export async function generateAIChat(
   messages: { role: 'user' | 'assistant'; content: string }[],
-  timeoutMs = 15000
+  dbContext: string,
+  timeoutMs = 20000
 ): Promise<string> {
+  const systemWithContext = dbContext
+    ? `${CONSTRUCTION_SYSTEM_PROMPT}\n\n${dbContext}`
+    : CONSTRUCTION_SYSTEM_PROMPT;
+
   const response = await Promise.race([
     groq.chat.completions.create({
-      model: MODEL,
+      model: MODEL_CHAT,
       messages: [
-        { role: 'system', content: CONSTRUCTION_SYSTEM_PROMPT },
+        { role: 'system', content: systemWithContext },
         ...messages,
       ],
       temperature: 0.7,

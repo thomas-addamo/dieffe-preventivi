@@ -10,10 +10,10 @@ interface Message {
 }
 
 const SUGGESTIONS = [
-  "Quanto costa mettere il cappotto termico al mq?",
-  "Prezzi cartongesso per pareti divisorie",
-  "Come calcolo la quantità di piastrelle per un bagno?",
-  "Costo manodopera per posa pavimento laminato",
+  "Quanto ho fatto pagare l'ultimo cappotto termico?",
+  "Che prezzi ho usato per la tinteggiatura?",
+  "Come calcolo il fabbisogno di piastrelle per un bagno?",
+  "Qual è il costo medio della posa parquet?",
 ];
 
 export function AiChatAssistant() {
@@ -113,9 +113,9 @@ export function AiChatAssistant() {
                     <Bot className="w-3.5 h-3.5 text-violet-600" />
                   </div>
                   <div className="bg-muted/60 rounded-2xl rounded-tl-sm px-3 py-2 text-xs text-foreground max-w-[85%]">
-                    Ciao! Sono il tuo assistente specializzato in edilizia. Posso aiutarti con prezzi di materiali, tecniche costruttive, calcoli per i preventivi e normative italiane.
+                    Ciao! Sono il tuo assistente specializzato in edilizia. Ho accesso ai tuoi <strong>preventivi storici</strong> e al <strong>listino prezzi aziendale</strong>.
                     <br /><br />
-                    <span className="text-muted-foreground">I prezzi che fornisco sono indicativi (dati 2024).</span>
+                    Puoi chiedermi: &quot;quanto hai fatto pagare l&apos;ultimo cappotto termico?&quot;, &quot;che prezzo hai usato per la posa del parquet?&quot;, o qualsiasi domanda tecnica sull&apos;edilizia.
                   </div>
                 </div>
 
