@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect, useCallback, useLayoutEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   GripVertical,
   Copy,
@@ -11,6 +12,8 @@ import {
   BookmarkPlus,
   X,
   CheckCircle2,
+  ChevronDown,
+  Info,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,11 +37,21 @@ import { toast } from "sonner";
 interface AiSuggestion {
   unitOfMeasure: string;
   unitPrice: number;
+  shortLabel: string;
   improvedDescription: string;
+  suggestedQuantity: number | null;
   confidence: "high" | "medium" | "low";
+  priceSource: "listino" | "storico" | "mercato";
+  priceRange: { min: number; max: number } | null;
+  reasoning: string;
   matchedFromPriceList: boolean;
-  notes?: string;
 }
+
+const SOURCE_LABELS: Record<AiSuggestion["priceSource"], string> = {
+  listino: "dal listino",
+  storico: "dallo storico",
+  mercato: "prezzo di mercato",
+};
 
 interface SaveToListinoModalProps {
   item: ItemWithImages;
@@ -196,6 +209,89 @@ function SaveToListinoModal({ item, categories, onClose, onSaved }: SaveToListin
   );
 }
 
+/**
+ * Dropdown autocomplete del listino reso via portal su <body>, con
+ * posizionamento fixed che si ribalta verso l'alto quando non c'è spazio sotto.
+ * Così non viene MAI tagliato dall'overflow della sezione/card contenitrice.
+ */
+function ListinoAutocomplete({
+  anchorRef,
+  items,
+  onPick,
+}: {
+  anchorRef: React.RefObject<HTMLTextAreaElement | null>;
+  items: PriceListItem[];
+  onPick: (p: PriceListItem) => void;
+}) {
+  const [pos, setPos] = useState<{ left: number; top: number; width: number; flipUp: boolean } | null>(null);
+
+  useLayoutEffect(() => {
+    function update() {
+      const el = anchorRef.current;
+      // offsetParent === null ⇒ elemento nascosto (display:none del layout
+      // desktop/mobile non attivo): non renderizzare il suo portale.
+      if (!el || el.offsetParent === null) {
+        setPos(null);
+        return;
+      }
+      const r = el.getBoundingClientRect();
+      const estHeight = Math.min(items.length * 36 + 30, 240);
+      const spaceBelow = window.innerHeight - r.bottom;
+      const flipUp = spaceBelow < estHeight && r.top > spaceBelow;
+      setPos({
+        left: r.left,
+        top: flipUp ? r.top : r.bottom,
+        width: Math.max(r.width, 220),
+        flipUp,
+      });
+    }
+    update();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [anchorRef, items.length]);
+
+  if (!pos || typeof document === "undefined") return null;
+
+  return createPortal(
+    <div
+      className="fixed z-[60] bg-background border rounded-lg shadow-lg divide-y text-xs max-h-60 overflow-y-auto"
+      style={{
+        left: pos.left,
+        width: pos.width,
+        ...(pos.flipUp
+          ? { bottom: window.innerHeight - pos.top + 4 }
+          : { top: pos.top + 4 }),
+      }}
+    >
+      <div className="px-3 py-1.5 text-muted-foreground font-medium bg-muted/30 sticky top-0">
+        Dal listino:
+      </div>
+      {items.map((p) => (
+        <button
+          key={p.id}
+          type="button"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            onPick(p);
+          }}
+          className="w-full text-left px-3 py-2 hover:bg-muted/40 flex items-center justify-between gap-2"
+        >
+          <span className="flex-1 truncate">
+            {p.code && <span className="font-mono text-violet-500 mr-1">{p.code}</span>}
+            {p.description}
+          </span>
+          <span className="shrink-0 text-muted-foreground">{p.unitOfMeasure} €{p.unitPrice}</span>
+        </button>
+      ))}
+    </div>,
+    document.body
+  );
+}
+
 interface LineItemProps {
   item: ItemWithImages;
   itemNumber: string;
@@ -229,6 +325,7 @@ export function LineItem({
   const [aiImproving, setAiImproving] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState<AiSuggestion | null>(null);
   const [suggestionIgnored, setSuggestionIgnored] = useState(false);
+  const [suggestionExpanded, setSuggestionExpanded] = useState(false);
   const aiDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastAiCallRef = useRef<number>(0);
 
@@ -276,6 +373,7 @@ export function LineItem({
     onUpdate({ description: value });
     setSuggestionIgnored(false);
     setAiSuggestion(null);
+    setSuggestionExpanded(false);
 
     if (value.length >= 3 && priceListItems.length > 0) {
       const lower = value.toLowerCase();
@@ -379,14 +477,27 @@ export function LineItem({
     }
   }
 
-  function applySuggestion() {
+  function applySuggestion(useFullDescription = false) {
     if (!aiSuggestion) return;
-    onUpdate({
-      description: aiSuggestion.improvedDescription || item.description,
+    const patch: Partial<ItemWithImages> = {
+      description: useFullDescription
+        ? aiSuggestion.improvedDescription || item.description
+        : aiSuggestion.shortLabel || item.description,
       unitOfMeasure: aiSuggestion.unitOfMeasure,
       unitPrice: aiSuggestion.unitPrice,
-    });
+    };
+    // Applica anche la quantità suggerita (es. da "3x3" → 9), così non resta
+    // solo il prezzo: l'utente voleva che inserisse "quello che dice".
+    if (
+      aiSuggestion.suggestedQuantity != null &&
+      aiSuggestion.suggestedQuantity > 0 &&
+      (item.quantity === 0 || item.quantity === 1)
+    ) {
+      patch.quantity = aiSuggestion.suggestedQuantity;
+    }
+    onUpdate(patch);
     setAiSuggestion(null);
+    setSuggestionExpanded(false);
   }
 
   async function openSaveToListino() {
@@ -446,24 +557,13 @@ export function LineItem({
         )}
       </div>
 
-      {/* Autocomplete dropdown */}
+      {/* Autocomplete dropdown (portal: non viene tagliato dalla card) */}
       {showAutocomplete && autocompleteItems.length > 0 && (
-        <div className="absolute left-0 right-0 top-full z-40 bg-background border rounded-lg shadow-lg mt-1 divide-y text-xs max-h-48 overflow-y-auto">
-          <div className="px-3 py-1.5 text-muted-foreground font-medium bg-muted/30">
-            Dal listino:
-          </div>
-          {autocompleteItems.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              onMouseDown={() => applyFromListino(p)}
-              className="w-full text-left px-3 py-2 hover:bg-muted/40 flex items-center justify-between gap-2"
-            >
-              <span className="flex-1 truncate">{p.description}</span>
-              <span className="shrink-0 text-muted-foreground">{p.unitOfMeasure} €{p.unitPrice}</span>
-            </button>
-          ))}
-        </div>
+        <ListinoAutocomplete
+          anchorRef={ref}
+          items={autocompleteItems}
+          onPick={applyFromListino}
+        />
       )}
 
       {item.notes !== null && item.notes !== undefined && (
@@ -705,33 +805,86 @@ export function LineItem({
 
       {/* ── AI Suggestion Banner ── */}
       {showAiBanner && (
-        <div className="mx-4 mb-2 border border-violet-200 bg-violet-50/80 rounded-lg px-3 py-2 text-xs flex flex-wrap items-center gap-2">
-          <Sparkles className="w-3.5 h-3.5 text-violet-500 shrink-0" />
-          <span className="text-violet-700 font-medium">Suggerimento AI:</span>
-          <span className="text-violet-600">
-            U.M.: <strong>{aiSuggestion!.unitOfMeasure}</strong> &bull; Prezzo: <strong>€{aiSuggestion!.unitPrice.toFixed(2)}/{aiSuggestion!.unitOfMeasure}</strong>
-            {aiSuggestion!.matchedFromPriceList && (
-              <span className="ml-1 text-green-600">• dal listino</span>
-            )}
-          </span>
-          <div className="flex gap-1 ml-auto">
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-6 text-xs px-2 border-violet-300 text-violet-700 hover:bg-violet-100"
-              onClick={applySuggestion}
+        <div className="mx-4 mb-2 border border-violet-200 dark:border-violet-800 bg-violet-50/80 dark:bg-violet-950/30 rounded-lg px-3 py-2 text-xs">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <Sparkles className="w-3.5 h-3.5 text-violet-500 shrink-0" />
+            <span className="text-violet-700 dark:text-violet-300 font-medium">Suggerimento AI:</span>
+            <span className="text-violet-600 dark:text-violet-300 font-medium truncate max-w-[40%]" title={aiSuggestion!.shortLabel}>
+              {aiSuggestion!.shortLabel}
+            </span>
+            <span className="text-violet-600 dark:text-violet-300">
+              <strong>€{aiSuggestion!.unitPrice.toFixed(2)}</strong>/{aiSuggestion!.unitOfMeasure}
+              {aiSuggestion!.suggestedQuantity != null && (
+                <span className="text-violet-500"> × {aiSuggestion!.suggestedQuantity}</span>
+              )}
+            </span>
+            <span
+              className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                aiSuggestion!.priceSource === "listino"
+                  ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
+                  : aiSuggestion!.priceSource === "storico"
+                  ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+                  : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+              }`}
             >
-              <CheckCircle2 className="w-3 h-3 mr-1" /> Applica
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-6 text-xs px-2 text-muted-foreground"
-              onClick={() => { setSuggestionIgnored(true); setAiSuggestion(null); }}
+              {SOURCE_LABELS[aiSuggestion!.priceSource]}
+            </span>
+
+            <button
+              type="button"
+              onClick={() => setSuggestionExpanded((v) => !v)}
+              className="flex items-center gap-0.5 text-violet-500 hover:text-violet-700 dark:hover:text-violet-300"
+              title="Perché questo prezzo?"
             >
-              Ignora
-            </Button>
+              <Info className="w-3 h-3" /> Perché?
+              <ChevronDown className={`w-3 h-3 transition-transform ${suggestionExpanded ? "rotate-180" : ""}`} />
+            </button>
+
+            <div className="flex gap-1 ml-auto">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-6 text-xs px-2 border-violet-300 text-violet-700 hover:bg-violet-100 dark:border-violet-700 dark:text-violet-300 dark:hover:bg-violet-900/40"
+                onClick={() => applySuggestion(false)}
+              >
+                <CheckCircle2 className="w-3 h-3 mr-1" /> Applica
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 text-xs px-2 text-muted-foreground"
+                onClick={() => { setSuggestionIgnored(true); setAiSuggestion(null); setSuggestionExpanded(false); }}
+              >
+                Ignora
+              </Button>
+            </div>
           </div>
+
+          {/* Tendina spiegazione */}
+          {suggestionExpanded && (
+            <div className="mt-2 pt-2 border-t border-violet-200/70 dark:border-violet-800/70 space-y-1.5 text-violet-700 dark:text-violet-300">
+              <p className="leading-snug">{aiSuggestion!.reasoning}</p>
+              {aiSuggestion!.priceRange && (
+                <p className="text-[11px] text-violet-500">
+                  Intervallo prezzi: €{aiSuggestion!.priceRange.min.toFixed(2)} – €{aiSuggestion!.priceRange.max.toFixed(2)} · affidabilità{" "}
+                  <strong>
+                    {aiSuggestion!.confidence === "high" ? "alta" : aiSuggestion!.confidence === "medium" ? "media" : "bassa"}
+                  </strong>
+                </p>
+              )}
+              <div className="flex items-center gap-2 pt-0.5">
+                <span className="text-[11px] text-violet-500">Descrizione estesa disponibile:</span>
+                <button
+                  type="button"
+                  onClick={() => applySuggestion(true)}
+                  className="text-[11px] underline text-violet-600 dark:text-violet-300 hover:text-violet-800"
+                  title={aiSuggestion!.improvedDescription}
+                >
+                  applica versione completa
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

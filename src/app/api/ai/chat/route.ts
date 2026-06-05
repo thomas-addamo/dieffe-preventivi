@@ -33,8 +33,15 @@ export async function POST(req: NextRequest) {
     ? await buildSearchContext(lastUserMsg.content).catch(() => '')
     : '';
 
+  // Attiva la ricerca web solo quando l'utente la chiede esplicitamente:
+  // così le richieste normali usano il modello stabile (niente errori a catena).
+  const lastText = (lastUserMsg?.content ?? '').toLowerCase();
+  const web = /\b(online|internet|web|oggi|attuale|aggiornat|ultim[oi] prezz|quanto costa adesso|prezzo di mercato)\b/.test(
+    lastText
+  );
+
   try {
-    const reply = await generateAIChat(messages, dbContext);
+    const reply = await generateAIChat(messages, dbContext, { web });
     return NextResponse.json({ reply });
   } catch (err) {
     const e = err as { message?: string; status?: number };
