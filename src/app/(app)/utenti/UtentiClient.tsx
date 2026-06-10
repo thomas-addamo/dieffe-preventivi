@@ -4,11 +4,13 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Edit2, Trash2, Loader2, Shield, User, Eye, Clock, UserCheck } from "lucide-react";
+import { Plus, Edit2, Trash2, Loader2, Shield, User, Eye, EyeOff, Clock, UserCheck, Wand2, Copy, Check, Info } from "lucide-react";
 import { ROLES } from "@/lib/permissions/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordStrengthMeter } from "@/components/shared/PasswordStrengthMeter";
+import { passwordSchema, generateStrongPassword } from "@/lib/password-policy";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -66,14 +68,14 @@ type UserRow = {
 const createSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
-  password: z.string().min(8),
+  password: passwordSchema,
   role: z.enum(["admin", "editor", "viewer"]),
 });
 
 const editSchema = z.object({
   name: z.string().min(2),
   role: z.enum(["admin", "editor", "viewer"]),
-  password: z.string().min(8).optional().or(z.literal("")),
+  password: passwordSchema.optional().or(z.literal("")),
 });
 
 type AccessLogEntry = {
@@ -124,6 +126,8 @@ export function UtentiClient({
   const [accessLog, setAccessLog] = useState<AccessLogEntry[]>([]);
   const [accessLogLoading, setAccessLogLoading] = useState(false);
   const [impersonating, setImpersonating] = useState<string | null>(null);
+  const [showPw, setShowPw] = useState(false);
+  const [copiedPw, setCopiedPw] = useState(false);
 
   async function showAccessLog(user: UserRow) {
     setAccessLogUser(user);
@@ -151,6 +155,39 @@ export function UtentiClient({
 
   const createForm = useForm({ resolver: zodResolver(createSchema), defaultValues: { role: "editor" as const } });
   const editForm = useForm({ resolver: zodResolver(editSchema) });
+
+  const createPassword = createForm.watch("password") ?? "";
+  const editPassword = editForm.watch("password") ?? "";
+
+  // Genera una password sicura, la inserisce nel campo indicato, la mostra in
+  // chiaro (così l'admin può comunicarla) e la copia negli appunti.
+  async function generateAndFill(target: "create" | "edit") {
+    const pw = generateStrongPassword(16);
+    if (target === "create") createForm.setValue("password", pw, { shouldValidate: true });
+    else editForm.setValue("password", pw, { shouldValidate: true });
+    setShowPw(true);
+    try {
+      await navigator.clipboard.writeText(pw);
+      setCopiedPw(true);
+      toast.success("Password generata e copiata negli appunti");
+      setTimeout(() => setCopiedPw(false), 2000);
+    } catch {
+      toast.success("Password generata");
+    }
+  }
+
+  async function copyPassword(target: "create" | "edit") {
+    const pw = target === "create" ? createPassword : editPassword;
+    if (!pw) return;
+    try {
+      await navigator.clipboard.writeText(pw);
+      setCopiedPw(true);
+      toast.success("Password copiata");
+      setTimeout(() => setCopiedPw(false), 2000);
+    } catch {
+      toast.error("Impossibile copiare");
+    }
+  }
 
   async function onCreate(data: z.infer<typeof createSchema>) {
     const res = await fetch("/api/users", {
@@ -387,7 +424,7 @@ export function UtentiClient({
       </button>
 
       {/* Create dialog */}
-      <Dialog open={showCreate} onOpenChange={(o) => !o && setShowCreate(false)}>
+      <Dialog open={showCreate} onOpenChange={(o) => { if (!o) { setShowCreate(false); setShowPw(false); setCopiedPw(false); } }}>
         <DialogContent className="max-w-sm w-full">
           <DialogHeader>
             <DialogTitle>Nuovo utente</DialogTitle>
@@ -402,8 +439,54 @@ export function UtentiClient({
               <Input {...createForm.register("email")} type="email" className="h-11 md:h-9 text-base md:text-sm" />
             </div>
             <div className="space-y-1.5">
-              <Label>Password temporanea</Label>
-              <Input {...createForm.register("password")} type="password" placeholder="Minimo 8 caratteri" className="h-11 md:h-9 text-base md:text-sm" />
+              <div className="flex items-center justify-between">
+                <Label>Password temporanea</Label>
+                <button
+                  type="button"
+                  onClick={() => generateAndFill("create")}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                >
+                  <Wand2 className="w-3 h-3" /> Genera sicura
+                </button>
+              </div>
+              <div className="relative">
+                <Input
+                  {...createForm.register("password")}
+                  type={showPw ? "text" : "password"}
+                  placeholder="Minimo 8 caratteri"
+                  className="pr-16 h-11 md:h-9 text-base md:text-sm font-mono"
+                />
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                  {createPassword && (
+                    <button
+                      type="button"
+                      onClick={() => copyPassword("create")}
+                      className="text-muted-foreground hover:text-foreground p-0.5"
+                      tabIndex={-1}
+                      aria-label="Copia"
+                    >
+                      {copiedPw ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowPw((v) => !v)}
+                    className="text-muted-foreground hover:text-foreground p-0.5"
+                    tabIndex={-1}
+                    aria-label={showPw ? "Nascondi" : "Mostra"}
+                  >
+                    {showPw ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  </button>
+                </div>
+              </div>
+              {createForm.formState.errors.password && (
+                <p className="text-xs text-destructive">{createForm.formState.errors.password.message}</p>
+              )}
+              <PasswordStrengthMeter password={createPassword} />
+              <p className="text-[11px] text-muted-foreground flex items-start gap-1">
+                <Info className="w-3 h-3 mt-0.5 shrink-0" />
+                L&apos;utente dovrà cambiarla al primo accesso.
+              </p>
             </div>
             <div className="space-y-1.5">
               <Label>Ruolo</Label>
@@ -484,7 +567,7 @@ export function UtentiClient({
       </Dialog>
 
       {/* Edit dialog */}
-      <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
+      <Dialog open={!!editing} onOpenChange={(o) => { if (!o) { setEditing(null); setShowPw(false); setCopiedPw(false); } }}>
         <DialogContent className="max-w-sm w-full">
           <DialogHeader>
             <DialogTitle>Modifica utente</DialogTitle>
@@ -516,8 +599,56 @@ export function UtentiClient({
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>Nuova password (lascia vuoto per non cambiare)</Label>
-              <Input {...editForm.register("password")} type="password" placeholder="Minimo 8 caratteri" className="h-11 md:h-9 text-base md:text-sm" />
+              <div className="flex items-center justify-between">
+                <Label>Reimposta password</Label>
+                <button
+                  type="button"
+                  onClick={() => generateAndFill("edit")}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                >
+                  <Wand2 className="w-3 h-3" /> Genera sicura
+                </button>
+              </div>
+              <div className="relative">
+                <Input
+                  {...editForm.register("password")}
+                  type={showPw ? "text" : "password"}
+                  placeholder="Lascia vuoto per non cambiare"
+                  className="pr-16 h-11 md:h-9 text-base md:text-sm font-mono"
+                />
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                  {editPassword && (
+                    <button
+                      type="button"
+                      onClick={() => copyPassword("edit")}
+                      className="text-muted-foreground hover:text-foreground p-0.5"
+                      tabIndex={-1}
+                      aria-label="Copia"
+                    >
+                      {copiedPw ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowPw((v) => !v)}
+                    className="text-muted-foreground hover:text-foreground p-0.5"
+                    tabIndex={-1}
+                    aria-label={showPw ? "Nascondi" : "Mostra"}
+                  >
+                    {showPw ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  </button>
+                </div>
+              </div>
+              {editForm.formState.errors.password && (
+                <p className="text-xs text-destructive">{editForm.formState.errors.password.message}</p>
+              )}
+              <PasswordStrengthMeter password={editPassword} />
+              {editPassword && (
+                <p className="text-[11px] text-muted-foreground flex items-start gap-1">
+                  <Info className="w-3 h-3 mt-0.5 shrink-0" />
+                  L&apos;utente verrà disconnesso e dovrà cambiarla al prossimo accesso.
+                </p>
+              )}
             </div>
             <DialogFooter className="flex-col sm:flex-row gap-2">
               <Button type="button" variant="outline" onClick={() => setEditing(null)} className="w-full sm:w-auto">

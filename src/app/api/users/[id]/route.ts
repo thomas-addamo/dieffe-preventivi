@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db/client";
-import { users, sessions } from "@/lib/db/schema";
+import { users, sessions, auditLog } from "@/lib/db/schema";
 import { eq, and, ne } from "drizzle-orm";
 import { getCurrentUser, hashPassword } from "@/lib/auth";
+import { passwordSchema } from "@/lib/password-policy";
+import { generateId } from "@/lib/utils";
 
 const patchSchema = z.object({
   role: z.enum(["admin", "editor", "viewer"]).optional(),
   disabled: z.boolean().optional(),
-  password: z.string().min(8).optional(),
+  password: passwordSchema.optional(),
   name: z.string().min(2).optional(),
 });
 
@@ -24,7 +26,11 @@ export async function PATCH(
   const { id } = await params;
   const body = await req.json().catch(() => ({}));
   const parsed = patchSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
+  if (!parsed.success)
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? "Dati non validi" },
+      { status: 400 }
+    );
 
   // Un admin non può auto-disattivarsi o auto-declassarsi: rischierebbe di
   // lasciare il sistema senza amministratori.
@@ -54,6 +60,21 @@ export async function PATCH(
     await db
       .delete(sessions)
       .where(and(eq(sessions.userId, id), ne(sessions.id, session.session.id)));
+  }
+
+  // Traccia il reset password come evento di sicurezza (chi → su chi).
+  if (parsed.data.password) {
+    await db
+      .insert(auditLog)
+      .values({
+        id: generateId(),
+        userId: session.user.id,
+        action: "user.password_reset",
+        entityType: "user",
+        entityId: id,
+        changes: { byAdmin: true, mustChangePassword: true },
+      })
+      .catch(() => {});
   }
 
   return NextResponse.json({ ok: true });

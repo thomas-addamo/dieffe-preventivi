@@ -6,11 +6,12 @@ import { getCurrentUser } from "@/lib/auth";
 import { hashPassword } from "@/lib/auth";
 import { generateId } from "@/lib/utils";
 import { desc } from "drizzle-orm";
+import { passwordSchema } from "@/lib/password-policy";
 
 const createSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
-  password: z.string().min(8),
+  password: passwordSchema,
   role: z.enum(["admin", "editor", "viewer"]).default("editor"),
 });
 

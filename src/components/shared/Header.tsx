@@ -1,8 +1,10 @@
 "use client";
 
-import { Moon, Sun, Monitor, LogOut, User, ChevronDown, Menu } from "lucide-react";
+import { useState } from "react";
+import { Moon, Sun, Monitor, LogOut, User, ChevronDown, Menu, KeyRound } from "lucide-react";
 import { useTheme } from "@/components/shared/ThemeProvider";
 import { NotificationBell } from "@/components/shared/NotificationBell";
+import { ChangePasswordDialog } from "@/components/shared/ChangePasswordDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +26,7 @@ interface HeaderProps {
 export function Header({ userName, userEmail, title, onMenuClick }: HeaderProps) {
   const { theme, setTheme } = useTheme();
   const router = useRouter();
+  const [showChangePassword, setShowChangePassword] = useState(false);
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -95,6 +98,10 @@ export function Header({ userName, userEmail, title, onMenuClick }: HeaderProps)
               </p>
             </div>
             <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setShowChangePassword(true)}>
+              <KeyRound className="mr-2 h-4 w-4" /> Cambia password
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={handleLogout}
               className="text-destructive focus:text-destructive"
@@ -104,6 +111,11 @@ export function Header({ userName, userEmail, title, onMenuClick }: HeaderProps)
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      <ChangePasswordDialog
+        open={showChangePassword}
+        onOpenChange={setShowChangePassword}
+      />
     </header>
   );
 }

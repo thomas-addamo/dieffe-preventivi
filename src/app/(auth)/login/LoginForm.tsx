@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { PasswordStrengthMeter } from "@/components/shared/PasswordStrengthMeter";
+import { passwordSchema } from "@/lib/password-policy";
 
 const loginSchema = z.object({
   email: z.string().email("Email non valida"),
@@ -19,12 +21,12 @@ const loginSchema = z.object({
 const registerSchema = z.object({
   name: z.string().min(2, "Nome troppo corto"),
   email: z.string().email("Email non valida"),
-  password: z.string().min(8, "Minimo 8 caratteri"),
+  password: passwordSchema,
 });
 
 const changePasswordSchema = z
   .object({
-    newPassword: z.string().min(8, "Minimo 8 caratteri"),
+    newPassword: passwordSchema,
     confirmPassword: z.string().min(1, "Conferma la password"),
   })
   .refine((d) => d.newPassword === d.confirmPassword, {
@@ -115,7 +117,7 @@ export function LoginForm({ isFirstRun }: { isFirstRun: boolean }) {
   }
 
   if (mode === "changePassword") {
-    const { register, handleSubmit, formState: { errors, isSubmitting } } = changePasswordForm;
+    const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = changePasswordForm;
     return (
       <form onSubmit={handleSubmit(onChangePassword)} className="space-y-4">
         <div>
@@ -133,6 +135,7 @@ export function LoginForm({ isFirstRun }: { isFirstRun: boolean }) {
               type={showPass ? "text" : "password"}
               placeholder="Minimo 8 caratteri"
               className="pr-10"
+              autoComplete="new-password"
               {...register("newPassword")}
             />
             <button
@@ -146,6 +149,7 @@ export function LoginForm({ isFirstRun }: { isFirstRun: boolean }) {
           {errors.newPassword && (
             <p className="text-xs text-destructive">{errors.newPassword.message}</p>
           )}
+          <PasswordStrengthMeter password={watch("newPassword") ?? ""} />
         </div>
 
         <div className="space-y-1.5">
