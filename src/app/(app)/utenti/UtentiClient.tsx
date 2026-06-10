@@ -236,7 +236,7 @@ export function UtentiClient({
       </div>
 
       {/* Desktop table */}
-      <div className="hidden lg:block border rounded-lg overflow-hidden bg-card">
+      <div className="hidden lg:block border rounded-xl overflow-hidden bg-card">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40 hover:bg-muted/40">
@@ -324,7 +324,7 @@ export function UtentiClient({
       {/* Mobile card list */}
       <div className="lg:hidden space-y-3">
         {users.map((u) => (
-          <div key={u.id} className="bg-card border rounded-lg p-4 space-y-2">
+          <div key={u.id} className="bg-card border rounded-xl p-4 space-y-2">
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">

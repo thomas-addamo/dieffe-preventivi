@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
 import { quotes, quoteSections, quoteItems, quoteItemImages, clients, companySettings } from "@/lib/db/schema";
 import { eq, asc, inArray } from "drizzle-orm";
-import { isTokenValid } from "@/lib/public-token";
+import { isTokenValid, verifyPin } from "@/lib/public-token";
 
 // Simple in-memory rate limiter: 60 req per token per hour
 const rateMap = new Map<string, { count: number; resetAt: number }>();
@@ -52,6 +52,35 @@ export async function GET(
     return NextResponse.json({ error: "quote_closed", status: quote.quotes.status }, { status });
   }
 
+  // Il PIN è verificato LATO SERVER: senza PIN valido la risposta non contiene
+  // i dati del preventivo, solo le info minime per mostrare la schermata PIN.
+  if (quote.quotes.publicPin) {
+    const providedPin =
+      req.headers.get("x-public-pin") ??
+      new URL(req.url).searchParams.get("pin") ??
+      "";
+    if (!providedPin || !verifyPin(providedPin, quote.quotes.publicPin)) {
+      const [settingsRow] = await db.select().from(companySettings).limit(1);
+      return NextResponse.json({
+        requiresPin: true,
+        quote: null,
+        settings: settingsRow
+          ? {
+              companyName: settingsRow.companyName,
+              logoPath: settingsRow.logoPath,
+              address: settingsRow.address,
+              email: settingsRow.email,
+              phone: settingsRow.phone,
+              website: settingsRow.website,
+              vatNumber: settingsRow.vatNumber,
+              primaryColor: settingsRow.primaryColor,
+              accentColor: settingsRow.accentColor,
+            }
+          : null,
+      });
+    }
+  }
+
   const sections = await db
     .select()
     .from(quoteSections)
@@ -88,8 +117,9 @@ export async function GET(
       })),
   }));
 
+  // Se siamo arrivati qui il PIN è assente o già verificato.
   return NextResponse.json({
-    requiresPin: !!quote.quotes.publicPin,
+    requiresPin: false,
     quote: {
       id: quote.quotes.id,
       code: quote.quotes.code,

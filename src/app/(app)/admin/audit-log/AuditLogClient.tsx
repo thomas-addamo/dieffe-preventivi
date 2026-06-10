@@ -148,7 +148,7 @@ export function AuditLogClient({ initialRows }: { initialRows: AuditRow[] }) {
 
       <div className="text-sm text-muted-foreground mb-3">{filtered.length} eventi</div>
 
-      <div className="rounded-lg border overflow-hidden">
+      <div className="rounded-xl border overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-muted/50 text-muted-foreground">
             <tr>
@@ -206,7 +206,7 @@ export function AuditLogClient({ initialRows }: { initialRows: AuditRow[] }) {
               <div><span className="font-semibold">Entità:</span> {detailRow.entityType} / {detailRow.entityId ?? "—"}</div>
               <div>
                 <span className="font-semibold">Dati:</span>
-                <pre className="mt-2 bg-muted rounded p-3 text-xs overflow-auto max-h-64">
+                <pre className="mt-2 bg-muted rounded-lg p-3 text-xs overflow-auto max-h-64">
                   {JSON.stringify(detailRow.changes, null, 2)}
                 </pre>
               </div>

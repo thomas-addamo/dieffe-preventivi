@@ -31,7 +31,7 @@ export function QuoteHeaderForm({
   const { isViewer } = usePermissions();
 
   return (
-    <div className="bg-card border rounded-lg overflow-hidden">
+    <div className="bg-card border rounded-xl overflow-hidden">
       <button
         type="button"
         className="flex items-center justify-between w-full px-5 py-3.5 hover:bg-muted/40 transition-colors"

@@ -57,6 +57,13 @@
       "when": 1780311715599,
       "tag": "0007_wide_mimic",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1781077103381,
+      "tag": "0008_quiet_electro",
+      "breakpoints": true
     }
   ]
 }

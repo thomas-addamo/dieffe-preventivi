@@ -287,6 +287,43 @@ export const priceListItems = pgTable(
   (t) => [index("price_list_description_idx").on(t.description)]
 );
 
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: text("type", {
+      enum: [
+        "quote_signed",
+        "quote_rejected",
+        "quote_status",
+        "quote_assigned",
+        "quote_locked",
+        "quote_unlocked",
+        "quote_deleted",
+        "system",
+      ],
+    })
+      .notNull()
+      .default("system"),
+    title: text("title").notNull(),
+    body: text("body"),
+    link: text("link"),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("notifications_user_id_idx").on(t.userId),
+    index("notifications_user_read_idx").on(t.userId, t.readAt),
+  ]
+);
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type User = typeof users.$inferSelect;
@@ -308,3 +345,5 @@ export type NewQuoteSignature = typeof quoteSignatures.$inferInsert;
 export type UserAccessLog = typeof userAccessLog.$inferSelect;
 export type PriceListItem = typeof priceListItems.$inferSelect;
 export type NewPriceListItem = typeof priceListItems.$inferInsert;
+export type Notification = typeof notifications.$inferSelect;
+export type NewNotification = typeof notifications.$inferInsert;

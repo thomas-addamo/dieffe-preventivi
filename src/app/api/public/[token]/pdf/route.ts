@@ -4,13 +4,13 @@ import React from "react";
 import { db } from "@/lib/db/client";
 import { quotes, quoteSections, quoteItems, quoteItemImages, clients, companySettings, quoteSignatures } from "@/lib/db/schema";
 import { eq, asc, inArray } from "drizzle-orm";
-import { isTokenValid } from "@/lib/public-token";
+import { isTokenValid, verifyPin } from "@/lib/public-token";
 import { ClassicTemplate } from "@/components/pdf-templates/ClassicTemplate";
 import { generateExportFilename } from "@/lib/utils";
 import { cloudinary } from "@/lib/cloudinary";
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
   const { token } = await params;
@@ -27,6 +27,17 @@ export async function GET(
   const validity = isTokenValid(row.quotes.publicToken, row.quotes.publicTokenExpiresAt, row.quotes.status);
   if (!validity.valid && validity.reason !== "closed") {
     return NextResponse.json({ error: "link_expired" }, { status: 410 });
+  }
+
+  // Stesso gate PIN della pagina: il PDF non deve essere scaricabile senza PIN.
+  if (row.quotes.publicPin) {
+    const providedPin =
+      req.headers.get("x-public-pin") ??
+      new URL(req.url).searchParams.get("pin") ??
+      "";
+    if (!providedPin || !verifyPin(providedPin, row.quotes.publicPin)) {
+      return NextResponse.json({ error: "pin_required" }, { status: 401 });
+    }
   }
 
   const sections = await db

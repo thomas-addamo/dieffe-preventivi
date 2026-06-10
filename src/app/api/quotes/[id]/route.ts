@@ -4,8 +4,9 @@ import { db } from "@/lib/db/client";
 import { quotes, auditLog } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
-import { getQuoteWithRelations, updateQuoteField } from "@/lib/db/quotes";
+import { getQuoteWithRelations, updateQuoteField, checkQuoteEditable } from "@/lib/db/quotes";
 import { generateId } from "@/lib/utils";
+import { notifyQuoteDeleted } from "@/lib/notifications";
 
 const patchSchema = z.object({
   title: z.string().min(1).optional(),
@@ -42,6 +43,9 @@ export async function PATCH(
   if (session.user.role === "viewer") return NextResponse.json({ error: "Permessi insufficienti" }, { status: 403 });
 
   const { id } = await params;
+  const guard = await checkQuoteEditable(id, session.user.role);
+  if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: guard.status });
+
   const body = await req.json().catch(() => ({}));
   const parsed = patchSchema.safeParse(body);
   if (!parsed.success) {
@@ -61,6 +65,9 @@ export async function DELETE(
   if (session.user.role === "viewer") return NextResponse.json({ error: "Permessi insufficienti" }, { status: 403 });
 
   const { id } = await params;
+  const guard = await checkQuoteEditable(id, session.user.role);
+  if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: guard.status });
+
   // Soft delete: sposta nel cestino
   await db.update(quotes)
     .set({ deletedAt: new Date(), deletedBy: session.user.id })
@@ -73,6 +80,14 @@ export async function DELETE(
     entityType: "quote",
     entityId: id,
     changes: { deletedAt: new Date().toISOString() },
+  });
+
+  await notifyQuoteDeleted({
+    quoteCode: guard.quote.code,
+    quoteTitle: guard.quote.title,
+    ownerUserId: guard.quote.userId,
+    actorUserId: session.user.id,
+    actorName: session.user.name,
   });
 
   return NextResponse.json({ ok: true });

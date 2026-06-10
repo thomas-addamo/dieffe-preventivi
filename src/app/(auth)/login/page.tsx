@@ -15,10 +15,16 @@ export default async function LoginPage() {
     .from(users);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
-      <div className="w-full max-w-sm">
+    <div className="relative min-h-screen flex items-center justify-center bg-background p-4 overflow-hidden">
+      {/* Glow decorativo */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 w-[640px] h-[420px] rounded-full bg-primary/10 blur-3xl"
+      />
+
+      <div className="relative w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary mb-4">
+          <div className="inline-flex items-center justify-center w-13 h-13 p-3 rounded-2xl bg-gradient-to-br from-primary to-blue-950 dark:to-blue-500 mb-4 shadow-md">
             <Building2 className="w-6 h-6 text-white" />
           </div>
           <h1 className="text-2xl font-semibold tracking-tight">
@@ -29,7 +35,7 @@ export default async function LoginPage() {
           </p>
         </div>
 
-        <div className="bg-card border rounded-lg p-6 shadow-sm">
+        <div className="bg-card border rounded-2xl p-6 shadow-md">
           <LoginForm isFirstRun={userCount === 0} />
         </div>
       </div>

@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import {
   verifyPassword,
   createSession,
+  sessionCookieOptions,
   SESSION_COOKIE,
 } from "@/lib/auth";
 
@@ -95,12 +96,10 @@ export async function POST(req: NextRequest) {
     req.headers.get("user-agent") ?? undefined
   );
 
-  const res = NextResponse.json({ ok: true });
-  res.cookies.set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    sameSite: "lax",
-    maxAge: 30 * 24 * 60 * 60,
-    path: "/",
+  const res = NextResponse.json({
+    ok: true,
+    mustChangePassword: user.mustChangePassword,
   });
+  res.cookies.set(SESSION_COOKIE, token, sessionCookieOptions());
   return res;
 }

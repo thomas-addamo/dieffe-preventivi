@@ -8,13 +8,13 @@ import { conciseLabel, extractMeasure, codePrefix, nextCode } from '@/lib/ai/par
 import { z } from 'zod';
 
 const itemSchema = z.object({
-  description: z.string(),
-  unitOfMeasure: z.string(),
-  unitPrice: z.number(),
+  description: z.string().max(2000),
+  unitOfMeasure: z.string().max(20),
+  unitPrice: z.number().finite(),
 });
 
 const schema = z.object({
-  items: z.array(itemSchema),
+  items: z.array(itemSchema).max(100),
 });
 
 interface AiCondensed {
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   const { error, session } = await requireRole('admin', 'editor');
   if (error) return error;
 
-  const body = await req.json();
+  const body = await req.json().catch(() => ({}));
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ added: 0 });
 

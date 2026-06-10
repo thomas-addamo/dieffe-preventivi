@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
-import { upsertSection } from "@/lib/db/quotes";
+import { upsertSection, checkQuoteEditable } from "@/lib/db/quotes";
 import { logger } from "@/lib/logger";
 
 const sectionSchema = z.object({
@@ -24,6 +24,9 @@ export async function POST(
   if (session.user.role === "viewer") return NextResponse.json({ error: "Permessi insufficienti" }, { status: 403 });
 
   const { id: quoteId } = await params;
+  const guard = await checkQuoteEditable(quoteId, session.user.role);
+  if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: guard.status });
+
   const body = await req.json().catch(() => ({}));
   const parsed = sectionSchema.safeParse(body);
   if (!parsed.success) {
@@ -44,10 +47,13 @@ export async function PUT(
   if (session.user.role === "viewer") return NextResponse.json({ error: "Permessi insufficienti" }, { status: 403 });
 
   const { id: quoteId } = await params;
+  const guard = await checkQuoteEditable(quoteId, session.user.role);
+  if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: guard.status });
+
   const body = await req.json().catch(() => ({}));
 
   // bulk replace all sections
-  const sectionsSchema = z.array(sectionSchema);
+  const sectionsSchema = z.array(sectionSchema).max(200);
   const parsed = sectionsSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "Dati non validi" }, { status: 400 });

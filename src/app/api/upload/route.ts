@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
+import { checkQuoteEditable } from "@/lib/db/quotes";
 import { db } from "@/lib/db/client";
-import { quoteItemImages } from "@/lib/db/schema";
+import { quoteItemImages, quoteItems, quoteSections } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { generateId } from "@/lib/utils";
 import { uploadToCloudinary } from "@/lib/cloudinary";
@@ -39,6 +40,20 @@ export async function POST(req: NextRequest) {
 
   if (!quoteId || !itemId || !file) {
     return NextResponse.json({ error: "Parametri mancanti" }, { status: 400 });
+  }
+
+  const guard = await checkQuoteEditable(quoteId, session.user.role);
+  if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: guard.status });
+
+  // La voce deve esistere e appartenere al preventivo indicato.
+  const [item] = await db
+    .select({ id: quoteItems.id, quoteId: quoteSections.quoteId })
+    .from(quoteItems)
+    .innerJoin(quoteSections, eq(quoteItems.sectionId, quoteSections.id))
+    .where(eq(quoteItems.id, itemId))
+    .limit(1);
+  if (!item || item.quoteId !== quoteId) {
+    return NextResponse.json({ error: "Voce non trovata" }, { status: 404 });
   }
 
   if (!ALLOWED_MIME.includes(file.type)) {

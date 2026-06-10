@@ -153,7 +153,7 @@ export function ClientiClient({
       </div>
 
       {/* Desktop table */}
-      <div className="hidden lg:block border rounded-lg overflow-hidden bg-card">
+      <div className="hidden lg:block border rounded-xl overflow-hidden bg-card">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40 hover:bg-muted/40">
@@ -216,7 +216,7 @@ export function ClientiClient({
           </div>
         ) : (
           filtered.map((c) => (
-            <div key={c.id} className="bg-card border rounded-lg p-4 space-y-2">
+            <div key={c.id} className="bg-card border rounded-xl p-4 space-y-2">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold truncate">{c.name}</p>

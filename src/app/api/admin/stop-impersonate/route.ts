@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
 import { sessions } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { getCurrentUser, getSessionUser, SESSION_COOKIE } from "@/lib/auth";
+import { getCurrentUser, getSessionUser, sessionCookieOptions, SESSION_COOKIE } from "@/lib/auth";
 import { cookies } from "next/headers";
 
 export async function POST(req: NextRequest) {
@@ -23,12 +23,7 @@ export async function POST(req: NextRequest) {
   if (adminToken) {
     const adminSession = await getSessionUser(adminToken);
     if (adminSession) {
-      res.cookies.set(SESSION_COOKIE, adminToken, {
-        httpOnly: true,
-        sameSite: "lax",
-        maxAge: 30 * 24 * 60 * 60,
-        path: "/",
-      });
+      res.cookies.set(SESSION_COOKIE, adminToken, sessionCookieOptions());
     }
   }
 

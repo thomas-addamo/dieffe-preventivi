@@ -3,57 +3,90 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   DESIGN TOKENS — Dieffe Preventivi
+   Sistema di radius "nested-friendly": ogni livello della scala differisce dal
+   successivo di uno step di spacing (4px). Regola d'oro del nesting:
+
+     radius-figlio = radius-genitore − padding-genitore
+
+   Coppie canoniche:
+     contenitore rounded-2xl (20px) + p-1 (4px)  → figlio rounded-xl (16px)
+     contenitore rounded-xl  (16px) + p-1 (4px)  → figlio rounded-lg (12px)
+     contenitore rounded-xl  (16px) + p-1.5 (6px)→ figlio rounded-md (10px)
+     contenitore rounded-lg  (12px) + p-1 (4px)  → figlio rounded-sm (8px)
+     contenitore rounded-md  (10px) + p-1 (4px)  → figlio rounded-xs (6px)
+   ───────────────────────────────────────────────────────────────────────────── */
+
 :root {
-  --background: #ffffff;
-  --foreground: #18181b;
+  /* Superfici */
+  --background: #f7f8fa;
+  --foreground: #16181d;
   --card: #ffffff;
-  --card-foreground: #18181b;
+  --card-foreground: #16181d;
   --popover: #ffffff;
-  --popover-foreground: #18181b;
+  --popover-foreground: #16181d;
+
+  /* Brand */
   --primary: #1e40af;
   --primary-foreground: #ffffff;
-  --secondary: #f4f4f5;
-  --secondary-foreground: #18181b;
-  --muted: #f4f4f5;
-  --muted-foreground: #71717a;
-  --accent: #f4f4f5;
-  --accent-foreground: #18181b;
+
+  /* Neutri */
+  --secondary: #eef0f4;
+  --secondary-foreground: #16181d;
+  --muted: #eef0f4;
+  --muted-foreground: #6b7280;
+  --accent: #eef0f4;
+  --accent-foreground: #16181d;
+
+  /* Semantici */
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  --border: #e4e4e7;
-  --input: #e4e4e7;
-  --ring: #1e40af;
-  --radius: 0.375rem;
   --success: #059669;
   --success-foreground: #ffffff;
-  --sidebar-bg: #fafafa;
-  --sidebar-border: #e4e4e7;
+
+  /* Bordi e focus */
+  --border: #e4e6eb;
+  --input: #dde0e6;
+  --ring: #1e40af;
+
+  /* Radius base (scala completa in @theme) */
+  --radius: 0.75rem;
+
+  /* Sidebar */
+  --sidebar-bg: #fcfcfd;
+  --sidebar-border: #e9eaef;
 }
 
 .dark {
-  --background: #09090b;
-  --foreground: #fafafa;
-  --card: #18181b;
-  --card-foreground: #fafafa;
-  --popover: #18181b;
-  --popover-foreground: #fafafa;
+  --background: #0b0c0f;
+  --foreground: #f4f5f7;
+  --card: #15161a;
+  --card-foreground: #f4f5f7;
+  --popover: #191a1f;
+  --popover-foreground: #f4f5f7;
+
   --primary: #3b82f6;
   --primary-foreground: #ffffff;
-  --secondary: #27272a;
-  --secondary-foreground: #fafafa;
-  --muted: #27272a;
-  --muted-foreground: #a1a1aa;
-  --accent: #27272a;
-  --accent-foreground: #fafafa;
+
+  --secondary: #25262c;
+  --secondary-foreground: #f4f5f7;
+  --muted: #25262c;
+  --muted-foreground: #9ca1ab;
+  --accent: #25262c;
+  --accent-foreground: #f4f5f7;
+
   --destructive: #f87171;
   --destructive-foreground: #ffffff;
-  --border: #27272a;
-  --input: #27272a;
-  --ring: #3b82f6;
   --success: #34d399;
   --success-foreground: #ffffff;
-  --sidebar-bg: #18181b;
-  --sidebar-border: #27272a;
+
+  --border: #292a31;
+  --input: #34353d;
+  --ring: #3b82f6;
+
+  --sidebar-bg: #101114;
+  --sidebar-border: #232429;
 }
 
 @theme inline {
@@ -77,9 +110,24 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-success: var(--success);
-  --radius-sm: calc(var(--radius) - 2px);
-  --radius-md: var(--radius);
-  --radius-lg: calc(var(--radius) + 2px);
+
+  /* ── Scala radius coerente (step di 4px per il nesting) ─────────────────── */
+  --radius-xs: 0.375rem;  /*  6px — chip, mini-elementi          */
+  --radius-sm: 0.5rem;    /*  8px — elementi compatti            */
+  --radius-md: 0.625rem;  /* 10px — voci menu, item interni      */
+  --radius-lg: 0.75rem;   /* 12px — bottoni, input               */
+  --radius-xl: 1rem;      /* 16px — card, popover, pannelli      */
+  --radius-2xl: 1.25rem;  /* 20px — dialog, contenitori grandi   */
+  --radius-3xl: 1.5rem;   /* 24px — hero, sezioni speciali       */
+
+  /* ── Ombre morbide stratificate ─────────────────────────────────────────── */
+  --shadow-2xs: 0 1px 2px rgb(16 24 40 / 0.04);
+  --shadow-xs: 0 1px 2px rgb(16 24 40 / 0.05), 0 1px 3px rgb(16 24 40 / 0.04);
+  --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.05), 0 2px 6px rgb(16 24 40 / 0.05);
+  --shadow-md: 0 2px 4px rgb(16 24 40 / 0.04), 0 6px 16px rgb(16 24 40 / 0.08);
+  --shadow-lg: 0 4px 8px rgb(16 24 40 / 0.05), 0 14px 36px rgb(16 24 40 / 0.12);
+  --shadow-xl: 0 8px 16px rgb(16 24 40 / 0.06), 0 24px 56px rgb(16 24 40 / 0.16);
+
   --font-sans: var(--font-inter);
   --font-mono: var(--font-jetbrains-mono);
 }
@@ -94,6 +142,16 @@ body {
   font-family: var(--font-inter, system-ui, sans-serif);
   font-feature-settings: "cv11", "ss01";
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Utility per casi custom di nesting: imposta --nest-radius e --nest-pad sul
+   genitore e usa .rounded-nested sul figlio. Mai sotto il radius minimo. */
+.rounded-nested {
+  border-radius: max(
+    var(--radius-xs),
+    calc(var(--nest-radius, var(--radius-xl)) - var(--nest-pad, 0.25rem))
+  );
 }
 
 /* Scrollbar styling */
@@ -110,6 +168,11 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--muted-foreground);
+}
+
+/* Selezione testo nel colore brand */
+::selection {
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
 }
 
 /* Mono numbers */

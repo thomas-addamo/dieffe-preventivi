@@ -119,7 +119,7 @@ export function SharePopover({
           </p>
         ) : publicToken && !isExpired ? (
           <div className="space-y-3">
-            <div className="bg-muted/40 rounded-md px-3 py-2 text-xs font-mono break-all">
+            <div className="bg-muted/40 rounded-lg px-3 py-2 text-xs font-mono break-all">
               {linkUrl}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -141,10 +141,10 @@ export function SharePopover({
 
             {/* PIN — mostrato solo subito dopo la generazione */}
             {generatedPin ? (
-              <div className="rounded-md border border-amber-200 bg-amber-50 p-3 space-y-2">
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
                 <p className="text-xs font-semibold text-amber-800">PIN di accesso cliente:</p>
                 <div className="flex items-center gap-2">
-                  <span className="flex-1 text-center text-2xl font-mono font-bold tracking-widest text-amber-900 bg-white rounded border border-amber-200 px-3 py-1">
+                  <span className="flex-1 text-center text-2xl font-mono font-bold tracking-widest text-amber-900 bg-white rounded-md border border-amber-200 px-3 py-1">
                     {generatedPin}
                   </span>
                   <Button size="sm" variant="outline" className="shrink-0 gap-1" onClick={copyPin}>
@@ -172,7 +172,7 @@ export function SharePopover({
         ) : (
           <div className="space-y-3">
             {isExpired && (
-              <p className="text-xs text-amber-600 bg-amber-50 rounded px-2 py-1">
+              <p className="text-xs text-amber-600 bg-amber-50 rounded-md px-2 py-1">
                 Il link precedente è scaduto.
               </p>
             )}
@@ -185,7 +185,7 @@ export function SharePopover({
                   max={365}
                   value={days}
                   onChange={(e) => setDays(Math.min(365, Math.max(1, Number(e.target.value))))}
-                  className="w-20 border rounded px-2 py-1.5 text-sm"
+                  className="w-20 border rounded-md px-2 py-1.5 text-sm"
                 />
                 <span className="text-sm text-muted-foreground">giorni</span>
               </div>

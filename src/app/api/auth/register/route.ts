@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "@/lib/db/client";
 import { users } from "@/lib/db/schema";
 import { count, eq } from "drizzle-orm";
-import { hashPassword, createSession, SESSION_COOKIE } from "@/lib/auth";
+import { hashPassword, createSession, sessionCookieOptions, SESSION_COOKIE } from "@/lib/auth";
 import { generateId } from "@/lib/utils";
 
 const schema = z.object({
@@ -65,11 +65,6 @@ export async function POST(req: NextRequest) {
   );
 
   const res = NextResponse.json({ ok: true });
-  res.cookies.set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    sameSite: "lax",
-    maxAge: 30 * 24 * 60 * 60,
-    path: "/",
-  });
+  res.cookies.set(SESSION_COOKIE, token, sessionCookieOptions());
   return res;
 }

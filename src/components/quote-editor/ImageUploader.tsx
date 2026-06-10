@@ -100,7 +100,7 @@ export function ImageUploader({
 
         {/* Desktop drop zone */}
         <div
-          className="hidden md:flex border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors flex-col items-center justify-center"
+          className="hidden md:flex border-2 border-dashed rounded-xl p-8 text-center cursor-pointer hover:border-primary transition-colors flex-col items-center justify-center"
           onDrop={handleDrop}
           onDragOver={(e) => e.preventDefault()}
           onClick={() => galleryInputRef.current?.click()}

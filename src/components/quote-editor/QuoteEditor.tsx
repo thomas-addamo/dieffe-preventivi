@@ -95,7 +95,7 @@ function SignatureSection({
 
   return (
     <>
-      <div className="border rounded-lg overflow-hidden">
+      <div className="border rounded-xl overflow-hidden">
         <button
           className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium bg-muted/30 hover:bg-muted/50 transition-colors"
           onClick={() => setOpen((v) => !v)}
@@ -142,11 +142,11 @@ function SignatureSection({
                 <div className="flex gap-2 items-center">
                   <span className="text-muted-foreground w-32 shrink-0">Consenso IP:</span>
                   {signature.ipConsent ? (
-                    <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded px-2 py-0.5">
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-sm px-2 py-0.5">
                       ✓ IP registrato con consenso esplicito
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-xs font-medium text-zinc-500 bg-zinc-100 border border-zinc-200 rounded px-2 py-0.5">
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-zinc-500 bg-zinc-100 border border-zinc-200 rounded-sm px-2 py-0.5">
                       IP registrato senza consenso
                     </span>
                   )}
@@ -183,7 +183,7 @@ function SignatureSection({
       {/* Confirmation modal */}
       {confirmOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-background border rounded-lg shadow-lg w-full max-w-md p-6 space-y-4">
+          <div className="bg-background border rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
             <h2 className="text-base font-semibold">Sei sicuro di voler annullare l&apos;accettazione?</h2>
             <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
               <li>Riporterà il preventivo in stato &quot;Inviato&quot;</li>
@@ -1045,7 +1045,7 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
 
       {showReassignModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-background rounded-xl p-6 max-w-sm w-full shadow-xl">
+          <div className="bg-background rounded-2xl p-6 max-w-sm w-full shadow-xl">
             <h2 className="font-semibold text-lg mb-1">Riassegna preventivo</h2>
             <p className="text-sm text-muted-foreground mb-4">Assegna questo preventivo a un altro utente.</p>
             <div className="mb-4">
@@ -1055,7 +1055,7 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
             <div className="mb-5">
               <label className="text-xs text-muted-foreground block mb-1">Nuovo utente</label>
               <select
-                className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+                className="w-full border rounded-lg px-3 py-2 text-sm bg-background"
                 value={reassignUserId}
                 onChange={(e) => setReassignUserId(e.target.value)}
               >
@@ -1068,14 +1068,14 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
             <div className="flex gap-2 justify-end">
               <button
                 onClick={() => { setShowReassignModal(false); setReassignUserId(""); }}
-                className="px-4 py-2 text-sm border rounded-md hover:bg-muted"
+                className="px-4 py-2 text-sm border rounded-lg hover:bg-muted"
               >
                 Annulla
               </button>
               <button
                 onClick={doReassign}
                 disabled={!reassignUserId || reassigning}
-                className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md disabled:opacity-50"
+                className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg disabled:opacity-50"
               >
                 {reassigning ? "..." : "Riassegna"}
               </button>

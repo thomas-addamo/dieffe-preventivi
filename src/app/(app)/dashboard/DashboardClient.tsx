@@ -82,7 +82,7 @@ function StatCard({
   color: string;
 }) {
   return (
-    <div className="bg-card border rounded-lg p-4 flex items-start gap-3">
+    <div className="bg-card border rounded-xl p-4 flex items-start gap-3">
       <div className={`p-2 rounded-lg shrink-0 ${color}`}>
         <Icon className="w-4 h-4" />
       </div>
@@ -317,7 +317,7 @@ export function DashboardClient({
       )}
 
       {/* Desktop table */}
-      <div className="hidden lg:block border rounded-lg overflow-hidden bg-card">
+      <div className="hidden lg:block border rounded-xl overflow-hidden bg-card">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40 hover:bg-muted/40">
@@ -440,7 +440,7 @@ export function DashboardClient({
         ) : (
           filtered.map((q) => (
             <Link key={q.id} href={`/preventivi/${q.id}`}>
-              <div className="bg-card border rounded-lg p-4 space-y-2 active:bg-muted/40 transition-colors">
+              <div className="bg-card border rounded-xl p-4 space-y-2 active:bg-muted/40 transition-colors">
                 <div className="flex items-start justify-between gap-2">
                   <span className="font-mono text-xs font-medium text-primary">
                     {q.code}

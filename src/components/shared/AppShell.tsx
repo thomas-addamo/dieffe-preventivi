@@ -26,7 +26,7 @@ function ImpersonationBanner({ userName, userRole }: { userName: string; userRol
       <button
         onClick={stopImpersonation}
         disabled={loading}
-        className="text-sm bg-background text-orange-600 font-semibold px-3 py-1 rounded hover:bg-muted shrink-0"
+        className="text-sm bg-background text-orange-600 font-semibold px-3 py-1 rounded-md hover:bg-muted shrink-0"
       >
         {loading ? "..." : "Torna al tuo account"}
       </button>
@@ -61,7 +61,7 @@ export function AppShell({ children, userRole, userName, userEmail, trashCount =
             className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={() => setSidebarOpen(false)}
           />
-          <div className="absolute left-0 top-0 h-full w-64 shadow-xl">
+          <div className="absolute left-0 top-0 h-full w-64 shadow-xl overflow-hidden rounded-r-2xl">
             <Sidebar userRole={userRole} trashCount={trashCount} onClose={() => setSidebarOpen(false)} />
           </div>
         </div>

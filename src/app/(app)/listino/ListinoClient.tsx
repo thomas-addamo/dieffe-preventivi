@@ -309,7 +309,7 @@ export function ListinoClient({ userRole }: ListinoClientProps) {
       ) : (
         <>
           {/* Desktop */}
-          <div className="hidden md:block border rounded-lg overflow-hidden">
+          <div className="hidden md:block border rounded-xl overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-muted/50">
                 <tr>
@@ -370,12 +370,12 @@ export function ListinoClient({ userRole }: ListinoClientProps) {
           {/* Mobile cards */}
           <div className="md:hidden space-y-2">
             {items.map((item) => (
-              <div key={item.id} className={`border rounded-lg p-3 ${!item.isActive ? "opacity-50" : ""}`}>
+              <div key={item.id} className={`border rounded-xl p-3 ${!item.isActive ? "opacity-50" : ""}`}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-sm leading-snug">{item.description}</div>
                     {item.category && (
-                      <span className="inline-block mt-1 text-xs bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
+                      <span className="inline-block mt-1 text-xs bg-muted px-1.5 py-0.5 rounded-sm text-muted-foreground">
                         {item.category}
                       </span>
                     )}
@@ -430,7 +430,7 @@ export function ListinoClient({ userRole }: ListinoClientProps) {
       {/* Create/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-background border rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+          <div className="bg-background border rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between px-5 py-4 border-b">
               <h2 className="font-semibold">{editingItem ? "Modifica voce" : "Nuova voce listino"}</h2>
               <Button variant="ghost" size="icon" onClick={() => setShowModal(false)}>
@@ -445,7 +445,7 @@ export function ListinoClient({ userRole }: ListinoClientProps) {
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   placeholder="Fornitura e posa..."
                   rows={3}
-                  className="w-full border rounded-md px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="w-full border rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -551,7 +551,7 @@ export function ListinoClient({ userRole }: ListinoClientProps) {
       {/* Delete Confirm */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-background border rounded-xl shadow-xl w-full max-w-sm p-6 space-y-4">
+          <div className="bg-background border rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
             <div className="flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
               <div>
@@ -575,7 +575,7 @@ export function ListinoClient({ userRole }: ListinoClientProps) {
       {/* Import Modal */}
       {showImport && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-background border rounded-xl shadow-xl w-full max-w-lg">
+          <div className="bg-background border rounded-2xl shadow-xl w-full max-w-lg">
             <div className="flex items-center justify-between px-5 py-4 border-b">
               <h2 className="font-semibold">Importa listino</h2>
               <Button variant="ghost" size="icon" onClick={() => { setShowImport(false); setImportFile(null); setImportPreview(null); }}>
@@ -587,7 +587,7 @@ export function ListinoClient({ userRole }: ListinoClientProps) {
                 Carica un file Excel (.xlsx) o CSV con colonne: <strong>descrizione</strong>, <strong>prezzo</strong>, u.m. (opzionale), codice (opzionale), categoria (opzionale).
               </p>
               <div
-                className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:bg-muted/20"
+                className="border-2 border-dashed rounded-xl p-6 text-center cursor-pointer hover:bg-muted/20"
                 onClick={() => fileInputRef.current?.click()}
               >
                 <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />

@@ -93,7 +93,7 @@ export default function CestinoPage() {
           <p className="text-lg font-medium">Il cestino è vuoto.</p>
         </div>
       ) : (
-        <div className="rounded-lg border overflow-hidden">
+        <div className="rounded-xl border overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-muted-foreground">
               <tr>

@@ -146,7 +146,7 @@ export function SectionBlock({
   );
 
   return (
-    <div ref={setNodeRef} style={sectionStyle} className="bg-card border rounded-lg overflow-hidden">
+    <div ref={setNodeRef} style={sectionStyle} className="bg-card border rounded-xl overflow-hidden">
       {/* Section header */}
       <div className={cn("flex items-center gap-2 px-3 md:px-4 py-3 border-b", headerBg)}>
         <GripVertical
@@ -170,7 +170,7 @@ export function SectionBlock({
         />
 
         {isOptional && (
-          <span className="hidden sm:inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-xs font-medium bg-violet-100 text-violet-600">
+          <span className="hidden sm:inline-flex shrink-0 items-center rounded-sm px-1.5 py-0.5 text-xs font-medium bg-violet-100 text-violet-600">
             OPZIONALE
           </span>
         )}

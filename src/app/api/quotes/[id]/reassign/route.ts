@@ -5,6 +5,7 @@ import { quotes, auditLog } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 import { generateId } from "@/lib/utils";
+import { notifyQuoteAssigned } from "@/lib/notifications";
 
 const schema = z.object({ userId: z.string() });
 
@@ -21,10 +22,23 @@ export async function PATCH(
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
 
-  const [prev] = await db.select({ userId: quotes.userId }).from(quotes).where(eq(quotes.id, id)).limit(1);
+  const [prev] = await db
+    .select({ userId: quotes.userId, code: quotes.code, title: quotes.title })
+    .from(quotes)
+    .where(eq(quotes.id, id))
+    .limit(1);
   if (!prev) return NextResponse.json({ error: "Non trovato" }, { status: 404 });
 
   await db.update(quotes).set({ userId: parsed.data.userId }).where(eq(quotes.id, id));
+
+  await notifyQuoteAssigned({
+    quoteId: id,
+    quoteCode: prev.code,
+    quoteTitle: prev.title,
+    newOwnerUserId: parsed.data.userId,
+    actorUserId: session.user.id,
+    actorName: session.user.name,
+  });
 
   await db.insert(auditLog).values({
     id: generateId(),

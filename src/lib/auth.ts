@@ -9,6 +9,17 @@ import { cookies } from "next/headers";
 const SESSION_COOKIE = "dieffe_session";
 const SESSION_DURATION_DAYS = 30;
 
+/** Opzioni standard per i cookie di sessione (secure in produzione). */
+export function sessionCookieOptions(maxAgeSeconds = SESSION_DURATION_DAYS * 24 * 60 * 60) {
+  return {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: maxAgeSeconds,
+    path: "/",
+  } as const;
+}
+
 export async function hashPassword(password: string): Promise<string> {
   return argon2.hash(password);
 }
@@ -47,7 +58,15 @@ export async function getSessionUser(token: string) {
     .select({ user: users, session: sessions })
     .from(sessions)
     .innerJoin(users, eq(sessions.userId, users.id))
-    .where(and(eq(sessions.token, token), sql`${sessions.expiresAt} > now()`))
+    .where(
+      and(
+        eq(sessions.token, token),
+        sql`${sessions.expiresAt} > now()`,
+        // Un utente disabilitato non deve poter continuare a usare sessioni
+        // create prima della disattivazione.
+        eq(users.disabled, false)
+      )
+    )
     .limit(1);
 
   return result[0] ?? null;

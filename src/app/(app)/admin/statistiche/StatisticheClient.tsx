@@ -202,7 +202,7 @@ export function StatisticheClient({ quotes }: { quotes: QuoteData[] }) {
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <div className="border rounded-lg p-4">
+        <div className="border rounded-xl p-4">
           <h2 className="font-semibold mb-4">Preventivi per mese (ultimi 12 mesi)</h2>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={monthlyData}>
@@ -218,7 +218,7 @@ export function StatisticheClient({ quotes }: { quotes: QuoteData[] }) {
           </ResponsiveContainer>
         </div>
 
-        <div className="border rounded-lg p-4">
+        <div className="border rounded-xl p-4">
           <h2 className="font-semibold mb-4">Valore mensile preventivi accettati</h2>
           <ResponsiveContainer width="100%" height={240}>
             <LineChart data={monthlyValueData}>
@@ -231,7 +231,7 @@ export function StatisticheClient({ quotes }: { quotes: QuoteData[] }) {
           </ResponsiveContainer>
         </div>
 
-        <div className="border rounded-lg p-4">
+        <div className="border rounded-xl p-4">
           <h2 className="font-semibold mb-4">Distribuzione stati</h2>
           <ResponsiveContainer width="100%" height={240}>
             <PieChart>
@@ -248,7 +248,7 @@ export function StatisticheClient({ quotes }: { quotes: QuoteData[] }) {
 
       {/* Tables */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="border rounded-lg p-4">
+        <div className="border rounded-xl p-4">
           <h2 className="font-semibold mb-3">Top 5 clienti (per valore accettato)</h2>
           {topClients.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nessun dato</p>
@@ -267,7 +267,7 @@ export function StatisticheClient({ quotes }: { quotes: QuoteData[] }) {
           )}
         </div>
 
-        <div className="border rounded-lg p-4">
+        <div className="border rounded-xl p-4">
           <h2 className="font-semibold mb-3">Top 5 utenti (per numero preventivi)</h2>
           {topUsers.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nessun dato</p>
@@ -292,7 +292,7 @@ export function StatisticheClient({ quotes }: { quotes: QuoteData[] }) {
 
 function KpiCard({ label, value, sub, subColor }: { label: string; value: string; sub?: string; subColor?: string }) {
   return (
-    <div className="border rounded-lg p-4">
+    <div className="border rounded-xl p-4">
       <p className="text-xs text-muted-foreground mb-1">{label}</p>
       <p className="text-xl font-bold">{value}</p>
       {sub && <p className={`text-xs mt-1 ${subColor ?? "text-muted-foreground"}`}>{sub}</p>}

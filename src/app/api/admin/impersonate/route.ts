@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "@/lib/db/client";
 import { sessions, users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { getCurrentUser, SESSION_COOKIE } from "@/lib/auth";
+import { getCurrentUser, sessionCookieOptions, SESSION_COOKIE } from "@/lib/auth";
 import { generateId } from "@/lib/utils";
 
 const schema = z.object({ userId: z.string() });
@@ -40,17 +40,7 @@ export async function POST(req: NextRequest) {
 
   const res = NextResponse.json({ ok: true });
   // Save current admin token in a separate cookie to restore later
-  res.cookies.set("dieffe_admin_token", session.session.token, {
-    httpOnly: true,
-    sameSite: "lax",
-    maxAge: 4 * 60 * 60,
-    path: "/",
-  });
-  res.cookies.set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    sameSite: "lax",
-    maxAge: 4 * 60 * 60,
-    path: "/",
-  });
+  res.cookies.set("dieffe_admin_token", session.session.token, sessionCookieOptions(4 * 60 * 60));
+  res.cookies.set(SESSION_COOKIE, token, sessionCookieOptions(4 * 60 * 60));
   return res;
 }

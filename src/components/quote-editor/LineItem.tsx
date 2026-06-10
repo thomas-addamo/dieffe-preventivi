@@ -109,7 +109,7 @@ function SaveToListinoModal({ item, categories, onClose, onSaved }: SaveToListin
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-background border rounded-xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+      <div className="bg-background border rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-5 py-4 border-b">
           <h2 className="font-semibold text-sm">Salva nel listino prezzi</h2>
           <Button variant="ghost" size="icon" onClick={onClose}>
@@ -133,7 +133,7 @@ function SaveToListinoModal({ item, categories, onClose, onSaved }: SaveToListin
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               rows={2}
-              className="w-full border rounded-md px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full border rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -258,7 +258,7 @@ function ListinoAutocomplete({
 
   return createPortal(
     <div
-      className="fixed z-[60] bg-background border rounded-lg shadow-lg divide-y text-xs max-h-60 overflow-y-auto"
+      className="fixed z-[60] bg-background border rounded-xl shadow-lg divide-y text-xs max-h-60 overflow-y-auto"
       style={{
         left: pos.left,
         width: pos.width,
@@ -546,7 +546,7 @@ export function LineItem({
             onClick={handleAiImprove}
             disabled={aiImproving || !item.description || item.description.length < 3}
             title={item.description.length < 3 ? "Scrivi prima una descrizione" : "Migliora con AI"}
-            className="shrink-0 mt-1 p-0.5 rounded text-violet-400 hover:text-violet-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            className="shrink-0 mt-1 p-0.5 rounded-sm text-violet-400 hover:text-violet-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
             {aiImproving ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -819,7 +819,7 @@ export function LineItem({
               )}
             </span>
             <span
-              className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+              className={`px-1.5 py-0.5 rounded-sm text-[10px] font-medium ${
                 aiSuggestion!.priceSource === "listino"
                   ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
                   : aiSuggestion!.priceSource === "storico"

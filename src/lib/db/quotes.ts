@@ -10,7 +10,7 @@ import {
   clients,
   users,
 } from "@/lib/db/schema";
-import { eq, asc, inArray, and, isNull } from "drizzle-orm";
+import { eq, asc, inArray, and, isNull, sql } from "drizzle-orm";
 import { generateId } from "@/lib/utils";
 import { calcItemTotal } from "@/lib/calculations";
 import type { QuoteWithRelations } from "@/types";
@@ -21,23 +21,43 @@ export async function generateQuoteCode(): Promise<string> {
   const [settings] = await db.select({ quotePrefix: companySettings.quotePrefix }).from(companySettings).limit(1);
   const prefix = settings?.quotePrefix ?? "PREV";
 
-  const [existing] = await db
-    .select()
-    .from(quoteYearCounters)
-    .where(eq(quoteYearCounters.year, year))
-    .limit(1);
+  // Incremento atomico: due richieste simultanee non possono ottenere lo
+  // stesso numero (il vecchio select+update aveva una race condition che
+  // generava codici duplicati e violava l'indice univoco).
+  const [row] = await db
+    .insert(quoteYearCounters)
+    .values({ year, counter: 1 })
+    .onConflictDoUpdate({
+      target: quoteYearCounters.year,
+      set: { counter: sql`${quoteYearCounters.counter} + 1` },
+    })
+    .returning({ counter: quoteYearCounters.counter });
 
-  if (!existing) {
-    await db.insert(quoteYearCounters).values({ year, counter: 1 });
-    return `${prefix}-${year}-001`;
-  } else {
-    const next = existing.counter + 1;
-    await db
-      .update(quoteYearCounters)
-      .set({ counter: next })
-      .where(eq(quoteYearCounters.year, year));
-    return `${prefix}-${year}-${String(next).padStart(3, "0")}`;
-  }
+  return `${prefix}-${year}-${String(row.counter).padStart(3, "0")}`;
+}
+
+// ─── Guardia modifiche ────────────────────────────────────────────────────────
+
+export type QuoteEditGuard =
+  | { ok: true; quote: typeof quotes.$inferSelect }
+  | { ok: false; status: number; error: string };
+
+/**
+ * Verifica che un preventivo esista e sia modificabile: non nel cestino e non
+ * bloccato (il lock è bypassabile solo dagli admin, che possono sbloccarlo).
+ * Prima di questo controllo il lock era applicato solo nella UI.
+ */
+export async function checkQuoteEditable(
+  quoteId: string,
+  role: string
+): Promise<QuoteEditGuard> {
+  const [q] = await db.select().from(quotes).where(eq(quotes.id, quoteId)).limit(1);
+  if (!q) return { ok: false, status: 404, error: "Preventivo non trovato" };
+  if (q.deletedAt)
+    return { ok: false, status: 409, error: "Il preventivo è nel cestino" };
+  if (q.isLocked && role !== "admin")
+    return { ok: false, status: 423, error: "Preventivo bloccato dall'amministratore" };
+  return { ok: true, quote: q };
 }
 
 export async function getQuoteWithRelations(

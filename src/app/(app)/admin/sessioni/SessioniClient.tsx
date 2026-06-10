@@ -60,7 +60,7 @@ export function SessioniClient({ rows: initialRows, currentToken }: { rows: Sess
         <Badge variant="secondary">{rows.length}</Badge>
       </div>
 
-      <div className="rounded-lg border overflow-hidden">
+      <div className="rounded-xl border overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-muted/50 text-muted-foreground">
             <tr>

@@ -5,6 +5,7 @@ import { quotes, quoteSignatures, companySettings } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { isTokenValid } from "@/lib/public-token";
 import { sendSignatureNotification, sendClientSignatureConfirmation } from "@/lib/email/send";
+import { notifyQuoteSigned } from "@/lib/notifications";
 
 const bodySchema = z.object({
   signerName: z.string().min(2).max(100),
@@ -111,6 +112,16 @@ export async function POST(
       publicTokenExpiresAt: new Date(), // expire immediately after signing
     })
     .where(eq(quotes.id, quote.id));
+
+  // Notifica in-app per titolare del preventivo e admin.
+  await notifyQuoteSigned({
+    quoteId: quote.id,
+    quoteCode: quote.code,
+    quoteTitle: quote.title,
+    ownerUserId: quote.userId,
+    signerName,
+    action,
+  });
 
   const [settings] = await db.select().from(companySettings).limit(1);
 

@@ -116,7 +116,7 @@ export function AiChatAssistant() {
                   <div className="w-6 h-6 rounded-full bg-violet-100 flex items-center justify-center shrink-0 mt-0.5">
                     <Bot className="w-3.5 h-3.5 text-violet-600" />
                   </div>
-                  <div className="bg-muted/60 rounded-2xl rounded-tl-sm px-3 py-2 text-xs text-foreground max-w-[85%]">
+                  <div className="bg-muted/60 rounded-2xl rounded-tl-xs px-3 py-2 text-xs text-foreground max-w-[85%]">
                     Ciao! Sono il tuo assistente specializzato in edilizia. Ho accesso ai tuoi <strong>preventivi storici</strong> e al <strong>listino prezzi aziendale</strong>.
                     <br /><br />
                     Puoi chiedermi: &quot;quanto hai fatto pagare l&apos;ultimo cappotto termico?&quot;, &quot;che prezzo hai usato per la posa del parquet?&quot;, o qualsiasi domanda tecnica sull&apos;edilizia.
@@ -129,7 +129,7 @@ export function AiChatAssistant() {
                     <button
                       key={s}
                       onClick={() => sendMessage(s)}
-                      className="w-full text-left text-xs px-3 py-2 rounded-xl border border-violet-200 text-violet-700 hover:bg-violet-50 transition-colors"
+                      className="w-full text-left text-xs px-3 py-2 rounded-lg border border-violet-200 text-violet-700 hover:bg-violet-50 transition-colors"
                     >
                       <Sparkles className="w-3 h-3 inline mr-1.5 opacity-60" />
                       {s}
@@ -149,7 +149,7 @@ export function AiChatAssistant() {
                 <div
                   className={`rounded-2xl px-3 py-2 text-xs max-w-[85%] ${
                     msg.role === "user"
-                      ? "bg-violet-600 text-white rounded-tr-sm whitespace-pre-wrap"
+                      ? "bg-violet-600 text-white rounded-tr-xs whitespace-pre-wrap"
                       : "bg-muted/60 text-foreground rounded-tl-sm"
                   }`}
                 >
@@ -169,7 +169,7 @@ export function AiChatAssistant() {
                         h2: ({ children }) => <h2 className="font-semibold text-xs mb-1 mt-2 first:mt-0 text-violet-700">{children}</h2>,
                         h3: ({ children }) => <h3 className="font-semibold mb-0.5 mt-1.5 first:mt-0">{children}</h3>,
                         code: ({ children }) => (
-                          <code className="bg-black/10 rounded px-1 py-0.5 font-mono text-[10px]">{children}</code>
+                          <code className="bg-black/10 rounded-xs px-1 py-0.5 font-mono text-[10px]">{children}</code>
                         ),
                         blockquote: ({ children }) => (
                           <blockquote className="border-l-2 border-violet-300 pl-2 my-1 text-muted-foreground">{children}</blockquote>
@@ -202,7 +202,7 @@ export function AiChatAssistant() {
                 <div className="w-6 h-6 rounded-full bg-violet-100 flex items-center justify-center shrink-0">
                   <Bot className="w-3.5 h-3.5 text-violet-600" />
                 </div>
-                <div className="bg-muted/60 rounded-2xl rounded-tl-sm px-3 py-3">
+                <div className="bg-muted/60 rounded-2xl rounded-tl-xs px-3 py-3">
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-violet-500" />
                 </div>
               </div>

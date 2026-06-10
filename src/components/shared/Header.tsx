@@ -2,6 +2,7 @@
 
 import { Moon, Sun, Monitor, LogOut, User, ChevronDown, Menu } from "lucide-react";
 import { useTheme } from "@/components/shared/ThemeProvider";
+import { NotificationBell } from "@/components/shared/NotificationBell";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,7 +35,7 @@ export function Header({ userName, userEmail, title, onMenuClick }: HeaderProps)
     theme === "dark" ? Moon : theme === "light" ? Sun : Monitor;
 
   return (
-    <header className="flex items-center justify-between h-14 px-4 md:px-6 border-b bg-background sticky top-0 z-20 shrink-0">
+    <header className="flex items-center justify-between h-14 px-4 md:px-6 border-b bg-background/80 backdrop-blur-md sticky top-0 z-20 shrink-0">
       <div className="flex items-center gap-3">
         {/* Hamburger — visible only on mobile */}
         <Button
@@ -53,6 +54,8 @@ export function Header({ userName, userEmail, title, onMenuClick }: HeaderProps)
       </div>
 
       <div className="flex items-center gap-2">
+        <NotificationBell />
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-9 w-9">

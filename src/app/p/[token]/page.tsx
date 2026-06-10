@@ -12,7 +12,7 @@ function PrivacyModal({ settings, onClose }: { settings: Settings | null; onClos
   const today = new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date());
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div style={{ background: "#fff", borderRadius: 12, maxWidth: 600, width: "100%", maxHeight: "85vh", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+      <div style={{ background: "#fff", borderRadius: 16, maxWidth: 600, width: "100%", maxHeight: "85vh", overflow: "hidden", display: "flex", flexDirection: "column" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid #e5e7eb" }}>
           <h2 style={{ fontWeight: 700, fontSize: 16, margin: 0 }}>Informativa sul trattamento dei dati personali</h2>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}>
@@ -68,7 +68,7 @@ function PrivacyModal({ settings, onClose }: { settings: Settings | null; onClos
         <div style={{ padding: "12px 20px", borderTop: "1px solid #e5e7eb" }}>
           <button
             onClick={onClose}
-            style={{ width: "100%", padding: "10px", background: "#1e40af", color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer" }}
+            style={{ width: "100%", padding: "10px", background: "#1e40af", color: "#fff", border: "none", borderRadius: 12, fontWeight: 600, cursor: "pointer" }}
           >
             Chiudi
           </button>
@@ -98,13 +98,13 @@ function CookieBanner({ settings, onAccept }: { settings: Settings | null; onAcc
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button
               onClick={() => setShowPrivacy(true)}
-              style={{ padding: "8px 14px", background: "none", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer", color: "#374151" }}
+              style={{ padding: "8px 14px", background: "none", border: "1px solid #d1d5db", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: "pointer", color: "#374151" }}
             >
               Informativa Privacy
             </button>
             <button
               onClick={onAccept}
-              style={{ padding: "8px 16px", background: "#1e40af", color: "#fff", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+              style={{ padding: "8px 16px", background: "#1e40af", color: "#fff", border: "none", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: "pointer" }}
             >
               Ho capito, continua →
             </button>
@@ -256,10 +256,10 @@ const STATUS_LABELS: Record<string, string> = {
 function Skeleton() {
   return (
     <div style={{ maxWidth: 900, margin: "0 auto", padding: "24px 16px" }}>
-      <div style={{ height: 60, background: "#e5e7eb", borderRadius: 8, marginBottom: 16 }} className="animate-pulse" />
-      <div style={{ height: 100, background: "#e5e7eb", borderRadius: 8, marginBottom: 16 }} className="animate-pulse" />
-      <div style={{ height: 200, background: "#e5e7eb", borderRadius: 8, marginBottom: 16 }} className="animate-pulse" />
-      <div style={{ height: 150, background: "#e5e7eb", borderRadius: 8 }} className="animate-pulse" />
+      <div style={{ height: 60, background: "#e5e7eb", borderRadius: 12, marginBottom: 16 }} className="animate-pulse" />
+      <div style={{ height: 100, background: "#e5e7eb", borderRadius: 12, marginBottom: 16 }} className="animate-pulse" />
+      <div style={{ height: 200, background: "#e5e7eb", borderRadius: 12, marginBottom: 16 }} className="animate-pulse" />
+      <div style={{ height: 150, background: "#e5e7eb", borderRadius: 12 }} className="animate-pulse" />
     </div>
   );
 }
@@ -309,7 +309,7 @@ type SigRef = any;
 
 function IpBlockedMessage({ settings }: { settings: Settings | null }) {
   return (
-    <div style={{ border: "1px solid #fbbf24", borderRadius: 12, padding: 24, background: "#fffbeb", marginTop: 32 }}>
+    <div style={{ border: "1px solid #fbbf24", borderRadius: 16, padding: 24, background: "#fffbeb", marginTop: 32 }}>
       <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: "#92400e" }}>
         ⚠️ Impossibile completare la firma
       </h3>
@@ -447,7 +447,7 @@ function SignatureBlock({
   }
 
   return (
-    <div style={{ border: "1px solid #e5e7eb", borderRadius: 12, padding: "24px", background: "#fff", marginTop: 32 }}>
+    <div style={{ border: "1px solid #e5e7eb", borderRadius: 16, padding: "24px", background: "#fff", marginTop: 32 }}>
       <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4, letterSpacing: 1, textTransform: "uppercase" }}>
         Accettazione del preventivo
       </h3>
@@ -466,7 +466,7 @@ function SignatureBlock({
           placeholder="Mario Rossi"
           value={signerName}
           onChange={(e) => setSignerName(e.target.value)}
-          style={{ width: "100%", border: "1px solid #d1d5db", borderRadius: 6, padding: "10px 12px", fontSize: 15, boxSizing: "border-box" }}
+          style={{ width: "100%", border: "1px solid #d1d5db", borderRadius: 10, padding: "10px 12px", fontSize: 15, boxSizing: "border-box" }}
         />
       </div>
 
@@ -483,7 +483,7 @@ function SignatureBlock({
           style={{
             width: "100%",
             border: `1px solid ${signerEmail && !emailValid ? "#ef4444" : "#d1d5db"}`,
-            borderRadius: 6,
+            borderRadius: 10,
             padding: "10px 12px",
             fontSize: 15,
             boxSizing: "border-box",
@@ -502,7 +502,7 @@ function SignatureBlock({
         <label style={{ display: "block", fontSize: 14, fontWeight: 600, marginBottom: 6 }}>
           Firma *
         </label>
-        <div style={{ border: "1px solid #d1d5db", borderRadius: 6, background: "#fff", overflow: "hidden", touchAction: "none" }}>
+        <div style={{ border: "1px solid #d1d5db", borderRadius: 10, background: "#fff", overflow: "hidden", touchAction: "none" }}>
           <SignatureCanvas
             ref={sigRef}
             penColor="#18181b"
@@ -520,11 +520,11 @@ function SignatureBlock({
 
       {/* IP consent box */}
       {ipLoading ? (
-        <div style={{ background: "#f4f4f5", borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 13, color: "#6b7280" }}>
+        <div style={{ background: "#f4f4f5", borderRadius: 12, padding: 12, marginBottom: 16, fontSize: 13, color: "#6b7280" }}>
           Verifica connessione in corso...
         </div>
       ) : detectedIp ? (
-        <div style={{ background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: 8, padding: "14px 16px", marginBottom: 16 }}>
+        <div style={{ background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
           <p style={{ fontWeight: 600, fontSize: 13, marginBottom: 8, color: "#0369a1" }}>
             🔒 Raccolta dati per validità legale
           </p>
@@ -587,7 +587,7 @@ function SignatureBlock({
       {showPrivacyModal && <PrivacyModal settings={settings} onClose={() => setShowPrivacyModal(false)} />}
 
       {error && (
-        <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 6, padding: "10px 14px", color: "#dc2626", fontSize: 14, marginBottom: 16 }}>
+        <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 10, padding: "10px 14px", color: "#dc2626", fontSize: 14, marginBottom: 16 }}>
           {error}
         </div>
       )}
@@ -600,7 +600,7 @@ function SignatureBlock({
             background: "none",
             border: "1px solid #ef4444",
             color: "#ef4444",
-            borderRadius: 8,
+            borderRadius: 12,
             padding: "12px 20px",
             fontWeight: 600,
             fontSize: 14,
@@ -619,7 +619,7 @@ function SignatureBlock({
             background: canAccept && !loading ? "#059669" : "#d1d5db",
             color: "white",
             border: "none",
-            borderRadius: 8,
+            borderRadius: 12,
             padding: "12px 20px",
             fontWeight: 700,
             fontSize: 15,
@@ -634,7 +634,7 @@ function SignatureBlock({
       {/* Reject modal */}
       {showRejectModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-          <div style={{ background: "#fff", borderRadius: 12, padding: 24, maxWidth: 420, width: "100%" }}>
+          <div style={{ background: "#fff", borderRadius: 16, padding: 24, maxWidth: 420, width: "100%" }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
               <h3 style={{ fontWeight: 700, fontSize: 16, margin: 0 }}>Rifiuta preventivo</h3>
               <button onClick={() => setShowRejectModal(false)} style={{ background: "none", border: "none", cursor: "pointer" }}>
@@ -647,14 +647,14 @@ function SignatureBlock({
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
               <button
                 onClick={() => setShowRejectModal(false)}
-                style={{ background: "#f4f4f5", border: "none", borderRadius: 6, padding: "10px 16px", fontWeight: 600, cursor: "pointer" }}
+                style={{ background: "#f4f4f5", border: "none", borderRadius: 10, padding: "10px 16px", fontWeight: 600, cursor: "pointer" }}
               >
                 Annulla
               </button>
               <button
                 onClick={() => { setShowRejectModal(false); submit("rejected"); }}
                 disabled={loading}
-                style={{ background: "#ef4444", color: "white", border: "none", borderRadius: 6, padding: "10px 16px", fontWeight: 600, cursor: "pointer" }}
+                style={{ background: "#ef4444", color: "white", border: "none", borderRadius: 10, padding: "10px 16px", fontWeight: 600, cursor: "pointer" }}
               >
                 Sì, rifiuta
               </button>
@@ -681,7 +681,7 @@ function SignedConfirmation({
     <div
       style={{
         border: `1px solid ${action === "accepted" ? "#86efac" : "#fca5a5"}`,
-        borderRadius: 12,
+        borderRadius: 16,
         padding: 24,
         background: action === "accepted" ? "#f0fdf4" : "#fef2f2",
         textAlign: "center",
@@ -736,6 +736,10 @@ function QuoteView({
     ? `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/f_auto,q_auto,w_200/${settings.logoPath}`
     : null;
 
+  // PIN salvato in sessione (se richiesto): serve anche per scaricare il PDF.
+  const storedPin = typeof window !== "undefined" ? sessionStorage.getItem(`pin_${token}`) : null;
+  const pdfUrl = `/api/public/${token}/pdf${storedPin ? `?pin=${encodeURIComponent(storedPin)}` : ""}`;
+
   return (
     <div style={{ minHeight: "100vh", background: "#F9FAFB" }}>
       {/* Header */}
@@ -757,7 +761,7 @@ function QuoteView({
           <div style={{
             background: "#fffbeb",
             border: "1px solid #fbbf24",
-            borderRadius: 8,
+            borderRadius: 12,
             padding: "10px 14px",
             marginBottom: 16,
             fontSize: 13,
@@ -768,7 +772,7 @@ function QuoteView({
         )}
 
         {/* Quote header */}
-        <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: 20, marginBottom: 16 }}>
+        <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 16, padding: 20, marginBottom: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
             <span style={{ fontFamily: "monospace", fontWeight: 700, color: primary, fontSize: 15 }}>
               {quote.code}
@@ -794,7 +798,7 @@ function QuoteView({
 
         {/* Client block */}
         {quote.client && (
-          <div style={{ background: "#f4f4f5", border: "1px solid #e5e7eb", borderRadius: 8, padding: "12px 16px", marginBottom: 16 }}>
+          <div style={{ background: "#f4f4f5", border: "1px solid #e5e7eb", borderRadius: 12, padding: "12px 16px", marginBottom: 16 }}>
             <div style={{ fontSize: 11, color: "#71717a", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Destinatario</div>
             <div style={{ fontWeight: 600 }}>{quote.client.name}</div>
             {quote.client.address && <div style={{ fontSize: 13, color: "#6b7280" }}>{quote.client.address}</div>}
@@ -802,7 +806,7 @@ function QuoteView({
         )}
 
         {/* Table */}
-        <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, overflow: "hidden", marginBottom: 16 }}>
+        <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 16, overflow: "hidden", marginBottom: 16 }}>
           {/* Table header */}
           <div style={{ display: "grid", gridTemplateColumns: "40px 1fr 50px 60px 70px 40px 80px", background: primary, padding: "8px 12px", gap: 4 }}>
             {["N.", "Descrizione", "U.M.", "Qtà", "Prezzo", "Sc.", "Totale"].map((h, i) => (
@@ -828,7 +832,7 @@ function QuoteView({
 
         {/* Totals */}
         <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
-          <div style={{ width: "100%", maxWidth: 280, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, overflow: "hidden" }}>
+          <div style={{ width: "100%", maxWidth: 280, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 16, overflow: "hidden" }}>
             {totals.optIncludedSubtotal > 0 && (
               <TotalRow label="+ Opzionali incluse" value={fmtCurrency(totals.optIncludedSubtotal)} />
             )}
@@ -849,7 +853,7 @@ function QuoteView({
 
         {/* Payment terms */}
         {quote.paymentTerms && (
-          <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: 16, marginBottom: 12 }}>
+          <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: 16, marginBottom: 12 }}>
             <div style={{ fontSize: 11, color: "#71717a", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Condizioni di pagamento</div>
             <p style={{ fontSize: 14, margin: 0, lineHeight: 1.6 }}>{quote.paymentTerms}</p>
           </div>
@@ -857,7 +861,7 @@ function QuoteView({
 
         {/* Notes */}
         {quote.notes && (
-          <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, padding: 16, marginBottom: 12 }}>
+          <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 12, padding: 16, marginBottom: 12 }}>
             <div style={{ fontSize: 11, color: "#71717a", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Note</div>
             <p style={{ fontSize: 14, margin: 0, lineHeight: 1.6 }}>{quote.notes}</p>
           </div>
@@ -866,7 +870,7 @@ function QuoteView({
         {/* PDF download */}
         <div style={{ textAlign: "right", marginBottom: 16 }}>
           <a
-            href={`/api/public/${token}/pdf`}
+            href={pdfUrl}
             target="_blank"
             rel="noopener noreferrer"
             style={{
@@ -875,7 +879,7 @@ function QuoteView({
               gap: 8,
               background: "#f4f4f5",
               border: "1px solid #e5e7eb",
-              borderRadius: 8,
+              borderRadius: 12,
               padding: "10px 16px",
               color: "#18181b",
               fontWeight: 600,
@@ -891,7 +895,7 @@ function QuoteView({
         {signedInfo ? (
           <SignedConfirmation {...signedInfo} />
         ) : isClosed ? (
-          <div style={{ background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 12, padding: 20, textAlign: "center", marginTop: 32 }}>
+          <div style={{ background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 16, padding: 20, textAlign: "center", marginTop: 32 }}>
             <CheckCircle size={40} color="#059669" style={{ marginBottom: 8 }} />
             <p style={{ fontWeight: 600, fontSize: 16 }}>
               {quote.status === "accepted" ? "Preventivo già accettato" : "Preventivo già rifiutato"}
@@ -968,7 +972,7 @@ function SectionBlock({ section, isOptional, primary }: { section: QuoteSection;
                   src={img.cloudinaryUrl.replace("/upload/", "/upload/f_auto,q_auto,w_300/")}
                   alt={img.caption ?? ""}
                   loading="lazy"
-                  style={{ width: 120, height: 80, objectFit: "cover", borderRadius: 4, border: "1px solid #e5e7eb" }}
+                  style={{ width: 120, height: 80, objectFit: "cover", borderRadius: 8, border: "1px solid #e5e7eb" }}
                 />
               ))}
             </div>
@@ -997,7 +1001,7 @@ function PinScreen({
 }: {
   token: string;
   settings: Settings | null;
-  onVerified: () => void;
+  onVerified: (pin: string) => void;
 }) {
   const [digits, setDigits] = useState<string[]>(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
@@ -1022,7 +1026,7 @@ function PinScreen({
       });
       const data = await res.json();
       if (data.success) {
-        onVerified();
+        onVerified(pin);
       } else if (res.status === 429 || data.attemptsLeft === 0) {
         setBlocked(true);
         setError("Troppi tentativi. Riprova tra un'ora.");
@@ -1090,7 +1094,7 @@ function PinScreen({
       </header>
 
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "32px 16px" }}>
-        <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: "32px 24px", width: "100%", maxWidth: 400, textAlign: "center" }}>
+        <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 16, padding: "32px 24px", width: "100%", maxWidth: 400, textAlign: "center" }}>
           <div style={{ fontSize: 36, marginBottom: 16 }}>🔒</div>
           <h2 style={{ fontSize: 20, fontWeight: 700, margin: "0 0 8px" }}>Preventivo riservato</h2>
           <p style={{ fontSize: 14, color: "#6b7280", margin: "0 0 24px", lineHeight: 1.6 }}>
@@ -1118,7 +1122,7 @@ function PinScreen({
                   fontSize: 22,
                   fontWeight: 700,
                   border: `2px solid ${error ? "#ef4444" : d ? primary : "#e5e7eb"}`,
-                  borderRadius: 8,
+                  borderRadius: 12,
                   outline: "none",
                   fontFamily: "monospace",
                   background: blocked ? "#f9fafb" : "#fff",
@@ -1140,7 +1144,7 @@ function PinScreen({
               background: primary,
               color: "#fff",
               border: "none",
-              borderRadius: 8,
+              borderRadius: 12,
               fontSize: 15,
               fontWeight: 700,
               cursor: loading || digits.join("").length < 6 || blocked ? "not-allowed" : "pointer",
@@ -1178,8 +1182,14 @@ export default function PublicQuotePage({ params }: { params: Promise<{ token: s
     if (!consent) setShowCookieBanner(true);
   }, []);
 
+  // Il PIN viene verificato lato server: senza PIN valido l'API non restituisce
+  // i dati del preventivo. Il PIN inserito è conservato in sessionStorage e
+  // inviato come header a ogni richiesta.
   useEffect(() => {
-    fetch(`/api/public/${token}`)
+    const storedPin = sessionStorage.getItem(`pin_${token}`) ?? "";
+    fetch(`/api/public/${token}`, {
+      headers: storedPin ? { "x-public-pin": storedPin } : undefined,
+    })
       .then(async (res) => {
         const data = await res.json();
         if (!res.ok) {
@@ -1191,15 +1201,15 @@ export default function PublicQuotePage({ params }: { params: Promise<{ token: s
           setState("error");
           return;
         }
-        setQuote(data.quote);
         setSettings(data.settings);
 
         if (data.requiresPin) {
-          const verified = sessionStorage.getItem(`pin_verified_${token}`);
-          setState(verified === "true" ? "loaded" : "pin");
-        } else {
-          setState("loaded");
+          sessionStorage.removeItem(`pin_${token}`);
+          setState("pin");
+          return;
         }
+        setQuote(data.quote);
+        setState("loaded");
       })
       .catch(() => {
         setErrorType("unknown");
@@ -1220,9 +1230,27 @@ export default function PublicQuotePage({ params }: { params: Promise<{ token: s
         <PinScreen
           token={token}
           settings={settings}
-          onVerified={() => {
-            sessionStorage.setItem(`pin_verified_${token}`, "true");
-            setState("loaded");
+          onVerified={async (pin) => {
+            sessionStorage.setItem(`pin_${token}`, pin);
+            // Ricarica i dati completi: ora il server li restituisce perché
+            // il PIN viene inviato come header.
+            try {
+              const res = await fetch(`/api/public/${token}`, {
+                headers: { "x-public-pin": pin },
+              });
+              const data = await res.json();
+              if (res.ok && data.quote) {
+                setQuote(data.quote);
+                setSettings(data.settings);
+                setState("loaded");
+              } else {
+                setErrorType(data.error ?? "unknown");
+                setState("error");
+              }
+            } catch {
+              setErrorType("unknown");
+              setState("error");
+            }
           }}
         />
       )}

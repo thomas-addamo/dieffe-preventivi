@@ -187,7 +187,7 @@ export function AiSearchPanel() {
                       )}
                       {item.quoteStatus && (
                         <span
-                          className={`ml-auto px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                          className={`ml-auto px-1.5 py-0.5 rounded-sm text-[10px] font-medium ${
                             item.quoteStatus === "accepted"
                               ? "bg-green-100 text-green-700"
                               : item.quoteStatus === "sent"

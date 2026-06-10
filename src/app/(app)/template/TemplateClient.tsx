@@ -37,7 +37,7 @@ export function TemplateClient({
       </div>
 
       {templates.length === 0 ? (
-        <div className="border rounded-lg p-16 text-center">
+        <div className="border rounded-xl p-16 text-center">
           <LayoutTemplate className="w-10 h-10 mx-auto mb-4 text-muted-foreground opacity-40" />
           <h3 className="font-medium mb-1">Nessun template</h3>
           <p className="text-sm text-muted-foreground max-w-xs mx-auto">
@@ -59,7 +59,7 @@ export function TemplateClient({
             return (
               <div
                 key={t.id}
-                className="bg-card border rounded-lg p-4 hover:border-primary/50 transition-colors"
+                className="bg-card border rounded-xl p-4 hover:border-primary/50 transition-colors"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">

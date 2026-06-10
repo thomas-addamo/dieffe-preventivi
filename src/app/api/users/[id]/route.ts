@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db/client";
-import { users } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { users, sessions } from "@/lib/db/schema";
+import { eq, and, ne } from "drizzle-orm";
 import { getCurrentUser, hashPassword } from "@/lib/auth";
 
 const patchSchema = z.object({
@@ -26,6 +26,17 @@ export async function PATCH(
   const parsed = patchSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
 
+  // Un admin non può auto-disattivarsi o auto-declassarsi: rischierebbe di
+  // lasciare il sistema senza amministratori.
+  if (id === session.user.id) {
+    if (parsed.data.disabled === true) {
+      return NextResponse.json({ error: "Non puoi disattivare il tuo account" }, { status: 400 });
+    }
+    if (parsed.data.role && parsed.data.role !== "admin") {
+      return NextResponse.json({ error: "Non puoi rimuovere il tuo ruolo admin" }, { status: 400 });
+    }
+  }
+
   const update: Partial<typeof users.$inferInsert> = {};
   if (parsed.data.role !== undefined) update.role = parsed.data.role;
   if (parsed.data.disabled !== undefined) update.disabled = parsed.data.disabled;
@@ -36,6 +47,15 @@ export async function PATCH(
   }
 
   await db.update(users).set(update).where(eq(users.id, id));
+
+  // Revoca le sessioni esistenti se l'utente è stato disattivato o se la
+  // password è stata reimpostata (eccetto la sessione corrente dell'admin).
+  if (parsed.data.disabled === true || parsed.data.password) {
+    await db
+      .delete(sessions)
+      .where(and(eq(sessions.userId, id), ne(sessions.id, session.session.id)));
+  }
+
   return NextResponse.json({ ok: true });
 }
 

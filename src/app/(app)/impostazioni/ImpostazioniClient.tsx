@@ -146,7 +146,7 @@ export function ImpostazioniClient({
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Logo */}
-        <div className="bg-card border rounded-lg p-5 space-y-4">
+        <div className="bg-card border rounded-xl p-5 space-y-4">
           <h2 className="font-medium text-sm">Logo aziendale</h2>
           <p className="text-xs text-muted-foreground -mt-2">
             Appare nell'intestazione dei PDF. Formati: PNG, JPG, WEBP, SVG — max 2MB.
@@ -216,7 +216,7 @@ export function ImpostazioniClient({
         </div>
 
         {/* Azienda */}
-        <div className="bg-card border rounded-lg p-5 space-y-4">
+        <div className="bg-card border rounded-xl p-5 space-y-4">
           <h2 className="font-medium text-sm">Dati azienda</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2 space-y-1.5">
@@ -269,7 +269,7 @@ export function ImpostazioniClient({
         </div>
 
         {/* Preventivi */}
-        <div className="bg-card border rounded-lg p-5 space-y-4">
+        <div className="bg-card border rounded-xl p-5 space-y-4">
           <h2 className="font-medium text-sm">Impostazioni preventivi</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
@@ -306,7 +306,7 @@ export function ImpostazioniClient({
                 <input
                   type="color"
                   {...register("primaryColor")}
-                  className="h-9 w-14 rounded border cursor-pointer"
+                  className="h-9 w-14 rounded-md border cursor-pointer"
                 />
                 <Input
                   {...register("primaryColor")}
@@ -321,7 +321,7 @@ export function ImpostazioniClient({
                 <input
                   type="color"
                   {...register("accentColor")}
-                  className="h-9 w-14 rounded border cursor-pointer"
+                  className="h-9 w-14 rounded-md border cursor-pointer"
                 />
                 <Input
                   {...register("accentColor")}
@@ -334,7 +334,7 @@ export function ImpostazioniClient({
         </div>
 
         {/* Export path */}
-        <div className="bg-card border rounded-lg p-5 space-y-4">
+        <div className="bg-card border rounded-xl p-5 space-y-4">
           <h2 className="font-medium text-sm">Cartella di salvataggio export</h2>
           <div className="space-y-1.5">
             <Label>Percorso cartella</Label>
@@ -351,7 +351,7 @@ export function ImpostazioniClient({
         </div>
 
         {/* Email configuration */}
-        <div className="bg-card border rounded-lg p-5 space-y-4">
+        <div className="bg-card border rounded-xl p-5 space-y-4">
           <h2 className="font-medium text-sm">Configurazione Email</h2>
           <div className="space-y-1.5">
             <Label>Indirizzo email mittente</Label>
@@ -372,7 +372,7 @@ export function ImpostazioniClient({
         </div>
 
         {/* Numerazione preventivi */}
-        <div className="bg-card border rounded-lg p-5 space-y-4">
+        <div className="bg-card border rounded-xl p-5 space-y-4">
           <h2 className="font-medium text-sm">Numerazione preventivi</h2>
           <div className="space-y-1.5">
             <Label>Prefisso codice (max 6 caratteri)</Label>
@@ -435,7 +435,7 @@ export function ImpostazioniClient({
         </div>
 
         {/* AI Settings */}
-        <div className="bg-card border rounded-lg p-5 space-y-4">
+        <div className="bg-card border rounded-xl p-5 space-y-4">
           <h2 className="font-medium text-sm flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-violet-500" /> Intelligenza Artificiale
           </h2>
