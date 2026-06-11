@@ -105,6 +105,8 @@ export function SectionBlock({
   };
 
   const isOptional = !!section.isOptional;
+  const isLumpSum = !!section.lumpSum;
+  const itemsSubtotal = section.items.reduce((sum, i) => sum + i.total, 0);
 
   const headerBg = isOptional
     ? "bg-violet-50/80 dark:bg-violet-950/20 border-l-4 border-l-violet-400"
@@ -129,6 +131,19 @@ export function SectionBlock({
             onClick={() => onUpdate({ isOptional: false, isOptionalIncluded: false })}
           >
             Rimuovi opzionale
+          </DropdownMenuItem>
+        )}
+        {!isLumpSum ? (
+          <DropdownMenuItem
+            onClick={() => onUpdate({ lumpSum: true, lumpSumPrice: itemsSubtotal || null })}
+          >
+            Prezzo a corpo sezione
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem
+            onClick={() => onUpdate({ lumpSum: false, lumpSumPrice: null })}
+          >
+            Rimuovi prezzo a corpo
           </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
@@ -172,6 +187,12 @@ export function SectionBlock({
         {isOptional && (
           <span className="hidden sm:inline-flex shrink-0 items-center rounded-sm px-1.5 py-0.5 text-xs font-medium bg-violet-100 text-violet-600">
             OPZIONALE
+          </span>
+        )}
+
+        {isLumpSum && (
+          <span className="hidden sm:inline-flex shrink-0 items-center rounded-sm px-1.5 py-0.5 text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400">
+            A CORPO
           </span>
         )}
 
@@ -239,6 +260,19 @@ export function SectionBlock({
                     Rimuovi opzionale
                   </DropdownMenuItem>
                 )}
+                {!isLumpSum ? (
+                  <DropdownMenuItem
+                    onClick={() => onUpdate({ lumpSum: true, lumpSumPrice: itemsSubtotal || null })}
+                  >
+                    Prezzo a corpo sezione
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    onClick={() => onUpdate({ lumpSum: false, lumpSumPrice: null })}
+                  >
+                    Rimuovi prezzo a corpo
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
@@ -274,6 +308,36 @@ export function SectionBlock({
           />
         )}
       </div>
+
+      {/* Lump-sum price row */}
+      {isLumpSum && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 md:px-4 py-2 border-b bg-amber-50/60 dark:bg-amber-950/20">
+          <Label
+            htmlFor={`lump-${section.id}`}
+            className="text-xs font-medium text-amber-700 dark:text-amber-400 whitespace-nowrap"
+          >
+            Prezzo a corpo sezione (€)
+          </Label>
+          <Input
+            id={`lump-${section.id}`}
+            type="number"
+            min={0}
+            step="0.01"
+            value={section.lumpSumPrice ?? ""}
+            onChange={(e) =>
+              onUpdate({
+                lumpSumPrice: e.target.value === "" ? null : Number(e.target.value),
+              })
+            }
+            disabled={isViewer}
+            className="w-32 h-8 text-right tabular-nums bg-background"
+          />
+          <span className="text-xs text-muted-foreground">
+            Le voci elencate descrivono i lavori: i loro prezzi non concorrono al
+            totale.
+          </span>
+        </div>
+      )}
 
       {!collapsed && (
         <>

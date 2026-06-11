@@ -129,6 +129,8 @@ type QuoteSection = {
   sectionNote: string | null;
   isOptional: boolean;
   isOptionalIncluded: boolean;
+  lumpSum?: boolean | null;
+  lumpSumPrice?: number | null;
   orderIndex: number;
   items: QuoteItem[];
 };
@@ -214,18 +216,19 @@ function fmtDateTime(str: string | Date) {
   }
 }
 
-function calcSectionSubtotal(items: QuoteItem[]) {
-  return items.reduce((s, i) => s + i.total, 0);
+function calcSectionSubtotal(section: QuoteSection) {
+  if (section.lumpSum) return section.lumpSumPrice ?? 0;
+  return section.items.reduce((s, i) => s + i.total, 0);
 }
 
 function calcTotals(quote: PublicQuote) {
   const normalSections = quote.sections.filter((s) => !s.isOptional);
   const optionalSections = quote.sections.filter((s) => s.isOptional);
 
-  const baseSubtotal = normalSections.reduce((s, sec) => s + calcSectionSubtotal(sec.items), 0);
+  const baseSubtotal = normalSections.reduce((s, sec) => s + calcSectionSubtotal(sec), 0);
   const optIncludedSubtotal = optionalSections
     .filter((s) => s.isOptionalIncluded)
-    .reduce((s, sec) => s + calcSectionSubtotal(sec.items), 0);
+    .reduce((s, sec) => s + calcSectionSubtotal(sec), 0);
 
   const subtotalBeforeDiscount = baseSubtotal + optIncludedSubtotal;
 
@@ -929,7 +932,8 @@ function QuoteView({
 function SectionBlock({ section, isOptional, primary }: { section: QuoteSection; isOptional: boolean; primary: string }) {
   const bg = isOptional ? "#f3e8ff" : "#dbeafe";
   const color = isOptional ? "#5b21b6" : primary;
-  const subtotal = calcSectionSubtotal(section.items);
+  const subtotal = calcSectionSubtotal(section);
+  const isLumpSum = !!section.lumpSum;
 
   return (
     <div>
@@ -939,6 +943,11 @@ function SectionBlock({ section, isOptional, primary }: { section: QuoteSection;
           {isOptional && (
             <span style={{ marginLeft: 8, fontSize: 11, color: "#7c3aed" }}>
               {section.isOptionalIncluded ? "✓ incluso" : "non incluso"}
+            </span>
+          )}
+          {isLumpSum && (
+            <span style={{ marginLeft: 8, fontSize: 11, color: "#b45309" }}>
+              a corpo
             </span>
           )}
         </span>
@@ -959,9 +968,9 @@ function SectionBlock({ section, isOptional, primary }: { section: QuoteSection;
             </div>
             <div style={{ fontSize: 12, textAlign: "right" }}>{item.unitOfMeasure}</div>
             <div style={{ fontSize: 12, textAlign: "right" }}>{fmtNum(item.quantity)}</div>
-            <div style={{ fontSize: 12, textAlign: "right" }}>{fmtCurrency(item.unitPrice)}</div>
-            <div style={{ fontSize: 12, textAlign: "right" }}>{item.discount > 0 ? `${item.discount}%` : "—"}</div>
-            <div style={{ fontSize: 12, textAlign: "right", fontWeight: 700 }}>{fmtCurrency(item.total)}</div>
+            <div style={{ fontSize: 12, textAlign: "right" }}>{isLumpSum ? "—" : fmtCurrency(item.unitPrice)}</div>
+            <div style={{ fontSize: 12, textAlign: "right" }}>{!isLumpSum && item.discount > 0 ? `${item.discount}%` : "—"}</div>
+            <div style={{ fontSize: 12, textAlign: "right", fontWeight: 700 }}>{isLumpSum ? "—" : fmtCurrency(item.total)}</div>
           </div>
           {item.images.length > 0 && (
             <div style={{ display: "flex", gap: 8, padding: "8px 12px", background: "#fafafa", flexWrap: "wrap", borderTop: "1px solid #f0f0f0" }}>

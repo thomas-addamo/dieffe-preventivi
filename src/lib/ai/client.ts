@@ -61,7 +61,8 @@ export async function generateAI(prompt: string, timeoutMs = 10000): Promise<str
 export async function generateAIJson<T = unknown>(
   systemPrompt: string,
   userPrompt: string,
-  timeoutMs = 11000
+  timeoutMs = 11000,
+  maxTokens = 900
 ): Promise<T> {
   const messages: ChatMessage[] = [
     { role: 'system', content: systemPrompt },
@@ -72,7 +73,7 @@ export async function generateAIJson<T = unknown>(
   try {
     raw = await complete(MODEL_FAST, messages, {
       temperature: 0.2,
-      maxTokens: 900,
+      maxTokens,
       timeoutMs,
       json: true,
     });
@@ -80,7 +81,7 @@ export async function generateAIJson<T = unknown>(
     // Un solo retry, senza json mode (alcuni edge case di rate-limit).
     raw = await complete(MODEL_FAST, messages, {
       temperature: 0.2,
-      maxTokens: 900,
+      maxTokens,
       timeoutMs,
     });
   }

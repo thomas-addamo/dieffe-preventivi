@@ -13,6 +13,19 @@ export function calcSectionSubtotal(items: Pick<QuoteItem, "total">[]): number {
   return items.reduce((sum, item) => sum + item.total, 0);
 }
 
+/**
+ * Subtotale effettivo di una sezione: il prezzo a corpo quando attivo,
+ * altrimenti la somma dei totali delle voci.
+ */
+export function calcSectionTotal(section: {
+  items: Pick<QuoteItem, "total">[];
+  lumpSum?: boolean | null;
+  lumpSumPrice?: number | null;
+}): number {
+  if (section.lumpSum) return section.lumpSumPrice ?? 0;
+  return calcSectionSubtotal(section.items);
+}
+
 export function calcQuoteTotals(
   sections: {
     id: string;
@@ -21,6 +34,8 @@ export function calcQuoteTotals(
     items: Pick<QuoteItem, "total">[];
     isOptional?: boolean | null;
     isOptionalIncluded?: boolean | null;
+    lumpSum?: boolean | null;
+    lumpSumPrice?: number | null;
   }[],
   vatRate: number,
   discountType?: "percent" | "fixed" | null,
@@ -33,14 +48,14 @@ export function calcQuoteTotals(
     sectionId: s.id,
     code: s.code,
     title: s.title,
-    subtotal: calcSectionSubtotal(s.items),
+    subtotal: calcSectionTotal(s),
   }));
 
   const optionalSectionDetails = optionalSections.map((s) => ({
     sectionId: s.id,
     code: s.code,
     title: s.title,
-    subtotal: calcSectionSubtotal(s.items),
+    subtotal: calcSectionTotal(s),
     isIncluded: !!s.isOptionalIncluded,
   }));
 

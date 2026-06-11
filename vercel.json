@@ -7,6 +7,9 @@
     },
     "src/app/api/export/pdf/[id]/route.ts": {
       "maxDuration": 60
+    },
+    "src/app/api/quotes/import/route.ts": {
+      "maxDuration": 60
     }
   },
   "crons": [

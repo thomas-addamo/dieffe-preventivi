@@ -8,7 +8,7 @@ import {
 } from "@react-pdf/renderer";
 import type { QuoteWithRelations } from "@/types";
 import type { CompanySettings } from "@/lib/db/schema";
-import { calcQuoteTotals, calcSectionSubtotal } from "@/lib/calculations";
+import { calcQuoteTotals, calcSectionTotal } from "@/lib/calculations";
 import { formatDate } from "@/lib/utils";
 
 function fmtCurrency(n: number): string {
@@ -427,8 +427,11 @@ function SectionRows({
           {includedNote ? (
             <Text style={s.optionalIncludedNote}>{includedNote}</Text>
           ) : null}
+          {section.lumpSum ? (
+            <Text style={s.optionalIncludedNote}>(a corpo)</Text>
+          ) : null}
           <Text style={subtotalStyle}>
-            {fmtCurrency(calcSectionSubtotal(section.items))}
+            {fmtCurrency(calcSectionTotal(section))}
           </Text>
         </View>
       </View>
@@ -448,11 +451,15 @@ function SectionRows({
               <Text style={s.colDesc}>{item.description}</Text>
               <Text style={s.colUm}>{item.unitOfMeasure}</Text>
               <Text style={s.colQty}>{fmtNum(item.quantity)}</Text>
-              <Text style={s.colPrice}>{fmtCurrency(item.unitPrice)}</Text>
-              <Text style={s.colDisc}>
-                {item.discount > 0 ? `${item.discount}%` : "—"}
+              <Text style={s.colPrice}>
+                {section.lumpSum ? "—" : fmtCurrency(item.unitPrice)}
               </Text>
-              <Text style={s.colTotal}>{fmtCurrency(item.total)}</Text>
+              <Text style={s.colDisc}>
+                {!section.lumpSum && item.discount > 0 ? `${item.discount}%` : "—"}
+              </Text>
+              <Text style={s.colTotal}>
+                {section.lumpSum ? "—" : fmtCurrency(item.total)}
+              </Text>
             </View>
 
             {hasImages && (

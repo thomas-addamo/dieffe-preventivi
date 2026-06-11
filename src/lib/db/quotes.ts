@@ -194,6 +194,8 @@ export async function upsertSection(
     sectionNote?: string | null;
     isOptional?: boolean;
     isOptionalIncluded?: boolean;
+    lumpSum?: boolean;
+    lumpSumPrice?: number | null;
   }
 ) {
   const id = data.id ?? generateId();
@@ -217,6 +219,8 @@ export async function upsertSection(
         sectionNote: data.sectionNote ?? null,
         isOptional: data.isOptional ?? false,
         isOptionalIncluded: data.isOptionalIncluded ?? false,
+        lumpSum: data.lumpSum ?? false,
+        lumpSumPrice: data.lumpSumPrice ?? null,
       })
       .where(eq(quoteSections.id, id));
   } else {
@@ -230,6 +234,8 @@ export async function upsertSection(
       sectionNote: data.sectionNote ?? null,
       isOptional: data.isOptional ?? false,
       isOptionalIncluded: data.isOptionalIncluded ?? false,
+      lumpSum: data.lumpSum ?? false,
+      lumpSumPrice: data.lumpSumPrice ?? null,
     });
   }
   return id;

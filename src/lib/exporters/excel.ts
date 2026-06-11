@@ -1,7 +1,7 @@
 import ExcelJS from "exceljs";
 import type { QuoteWithRelations } from "@/types";
 import type { CompanySettings } from "@/lib/db/schema";
-import { calcQuoteTotals, calcSectionSubtotal } from "@/lib/calculations";
+import { calcQuoteTotals, calcSectionSubtotal, calcSectionTotal } from "@/lib/calculations";
 import { formatDate } from "@/lib/utils";
 
 export async function exportToExcel(
@@ -130,15 +130,25 @@ export async function exportToExcel(
       const itemRow = ws.getRow(row);
       const isEven = idx % 2 === 1;
       const totalFormula = `=D${row}*E${row}*(1-F${row}/100)`;
-      const cells = [
-        `${section.code}.${idx + 1}`,
-        item.description,
-        item.unitOfMeasure,
-        item.quantity,
-        item.unitPrice,
-        item.discount,
-        { formula: totalFormula, result: item.total },
-      ];
+      const cells = section.lumpSum
+        ? [
+            `${section.code}.${idx + 1}`,
+            item.description,
+            item.unitOfMeasure,
+            item.quantity,
+            "",
+            "",
+            "",
+          ]
+        : [
+            `${section.code}.${idx + 1}`,
+            item.description,
+            item.unitOfMeasure,
+            item.quantity,
+            item.unitPrice,
+            item.discount,
+            { formula: totalFormula, result: item.total },
+          ];
       cells.forEach((val, i) => {
         const cell = itemRow.getCell(i + 1);
         cell.value = val as ExcelJS.CellValue;
@@ -158,10 +168,14 @@ export async function exportToExcel(
     if (section.items.length > 0) {
       const subRow = ws.getRow(row);
       ws.mergeCells(`A${row}:F${row}`);
-      subRow.getCell(1).value = `Subtotale ${section.code}`;
+      subRow.getCell(1).value = section.lumpSum
+        ? `Subtotale ${section.code} (a corpo)`
+        : `Subtotale ${section.code}`;
       subRow.getCell(1).font = { bold: true, size: 9, italic: true };
       subRow.getCell(1).alignment = { horizontal: "right" };
-      subRow.getCell(7).value = { formula: `=SUM(G${itemStartRow}:G${row - 1})`, result: calcSectionSubtotal(section.items) };
+      subRow.getCell(7).value = section.lumpSum
+        ? calcSectionTotal(section)
+        : { formula: `=SUM(G${itemStartRow}:G${row - 1})`, result: calcSectionSubtotal(section.items) };
       subRow.getCell(7).numFmt = '#,##0.00 "€"';
       subRow.getCell(7).font = { bold: true, size: 9 };
       subRow.getCell(7).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE0E7FF" } };
@@ -238,15 +252,25 @@ export async function exportToExcel(
         const itemRow = ws.getRow(row);
         const isEven = idx % 2 === 1;
         const totalFormula = `=D${row}*E${row}*(1-F${row}/100)`;
-        const cells = [
-          `${section.code}.${idx + 1}`,
-          item.description,
-          item.unitOfMeasure,
-          item.quantity,
-          item.unitPrice,
-          item.discount,
-          { formula: totalFormula, result: item.total },
-        ];
+        const cells = section.lumpSum
+          ? [
+              `${section.code}.${idx + 1}`,
+              item.description,
+              item.unitOfMeasure,
+              item.quantity,
+              "",
+              "",
+              "",
+            ]
+          : [
+              `${section.code}.${idx + 1}`,
+              item.description,
+              item.unitOfMeasure,
+              item.quantity,
+              item.unitPrice,
+              item.discount,
+              { formula: totalFormula, result: item.total },
+            ];
         cells.forEach((val, i) => {
           const cell = itemRow.getCell(i + 1);
           cell.value = val as ExcelJS.CellValue;
@@ -266,10 +290,14 @@ export async function exportToExcel(
       if (section.items.length > 0) {
         const subRow = ws.getRow(row);
         ws.mergeCells(`A${row}:F${row}`);
-        subRow.getCell(1).value = `Subtotale ${section.code}`;
+        subRow.getCell(1).value = section.lumpSum
+          ? `Subtotale ${section.code} (a corpo)`
+          : `Subtotale ${section.code}`;
         subRow.getCell(1).font = { bold: true, size: 9, italic: true };
         subRow.getCell(1).alignment = { horizontal: "right" };
-        subRow.getCell(7).value = { formula: `=SUM(G${itemStartRow}:G${row - 1})`, result: calcSectionSubtotal(section.items) };
+        subRow.getCell(7).value = section.lumpSum
+          ? calcSectionTotal(section)
+          : { formula: `=SUM(G${itemStartRow}:G${row - 1})`, result: calcSectionSubtotal(section.items) };
         subRow.getCell(7).numFmt = '#,##0.00 "€"';
         subRow.getCell(7).font = { bold: true, size: 9, color: { argb: "FF" + optionalText } };
         subRow.getCell(7).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF" + optionalBg } };
@@ -314,8 +342,8 @@ export async function exportToExcel(
   ws2.addRow(["Sezione", "Totale"]).font = { bold: true };
   for (const section of normalSections) {
     ws2.addRow([
-      `${section.code} — ${section.title}`,
-      calcSectionSubtotal(section.items),
+      `${section.code} — ${section.title}${section.lumpSum ? " (a corpo)" : ""}`,
+      calcSectionTotal(section),
     ]).getCell(2).numFmt = '#,##0.00 "€"';
   }
   ws2.addRow([]);
@@ -326,8 +354,8 @@ export async function exportToExcel(
     const optRow = ws2.addRow(["PARTE OPZIONALE"]);
     optRow.font = { bold: true };
     for (const section of optionalSections) {
-      const label = `${section.code} — ${section.title}${section.isOptionalIncluded ? " [incluso nel totale]" : ""}`;
-      ws2.addRow([label, calcSectionSubtotal(section.items)]).getCell(2).numFmt = '#,##0.00 "€"';
+      const label = `${section.code} — ${section.title}${section.isOptionalIncluded ? " [incluso nel totale]" : ""}${section.lumpSum ? " (a corpo)" : ""}`;
+      ws2.addRow([label, calcSectionTotal(section)]).getCell(2).numFmt = '#,##0.00 "€"';
     }
     ws2.addRow([]);
   }

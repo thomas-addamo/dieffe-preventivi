@@ -171,6 +171,10 @@ export const quoteSections = pgTable(
     sectionNote: text("section_note"),
     isOptional: boolean("is_optional").notNull().default(false),
     isOptionalIncluded: boolean("is_optional_included").notNull().default(false),
+    // Prezzo a corpo di sezione: quando attivo, il subtotale della sezione è
+    // lumpSumPrice e i totali delle singole voci non concorrono al totale.
+    lumpSum: boolean("lump_sum").notNull().default(false),
+    lumpSumPrice: doublePrecision("lump_sum_price"),
   },
   (t) => [index("quote_sections_quote_id_idx").on(t.quoteId)]
 );
@@ -306,6 +310,11 @@ export const notifications = pgTable(
         "quote_unlocked",
         "quote_deleted",
         "system",
+        // Tipi creabili manualmente dall'admin (broadcast / comunicazioni)
+        "feature",
+        "announcement",
+        "maintenance",
+        "alert",
       ],
     })
       .notNull()

@@ -1,23 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { it } from "date-fns/locale";
-import {
-  Bell,
-  CheckCheck,
-  FileSignature,
-  FileX2,
-  RefreshCw,
-  UserPlus,
-  Lock,
-  Unlock,
-  Trash2,
-  Info,
-  X,
-} from "lucide-react";
+import { Bell, CheckCheck, X } from "lucide-react";
+import { toast } from "sonner";
 import {
   Popover,
   PopoverContent,
@@ -25,37 +14,16 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { getNotificationMeta } from "@/lib/notification-meta";
 
 type NotificationItem = {
   id: string;
-  type:
-    | "quote_signed"
-    | "quote_rejected"
-    | "quote_status"
-    | "quote_assigned"
-    | "quote_locked"
-    | "quote_unlocked"
-    | "quote_deleted"
-    | "system";
+  type: string;
   title: string;
   body: string | null;
   link: string | null;
   readAt: string | null;
   createdAt: string;
-};
-
-const TYPE_META: Record<
-  NotificationItem["type"],
-  { icon: React.ElementType; className: string }
-> = {
-  quote_signed: { icon: FileSignature, className: "bg-emerald-500/12 text-emerald-600 dark:text-emerald-400" },
-  quote_rejected: { icon: FileX2, className: "bg-red-500/12 text-red-600 dark:text-red-400" },
-  quote_status: { icon: RefreshCw, className: "bg-blue-500/12 text-blue-600 dark:text-blue-400" },
-  quote_assigned: { icon: UserPlus, className: "bg-violet-500/12 text-violet-600 dark:text-violet-400" },
-  quote_locked: { icon: Lock, className: "bg-amber-500/12 text-amber-600 dark:text-amber-400" },
-  quote_unlocked: { icon: Unlock, className: "bg-amber-500/12 text-amber-600 dark:text-amber-400" },
-  quote_deleted: { icon: Trash2, className: "bg-zinc-500/12 text-zinc-600 dark:text-zinc-400" },
-  system: { icon: Info, className: "bg-zinc-500/12 text-zinc-600 dark:text-zinc-400" },
 };
 
 export function NotificationBell() {
@@ -100,13 +68,106 @@ export function NotificationBell() {
   const unreadCount = data?.unreadCount ?? 0;
   const items = data?.notifications ?? [];
 
-  function handleClick(n: NotificationItem) {
-    if (!n.readAt) markRead.mutate(n.id);
-    if (n.link) {
-      setOpen(false);
-      router.push(n.link);
+  const handleClick = useCallback(
+    (n: NotificationItem) => {
+      if (!n.readAt) markRead.mutate(n.id);
+      if (n.link) {
+        setOpen(false);
+        router.push(n.link);
+      }
+    },
+    [markRead, router]
+  );
+
+  // ── Toast in alto a destra per le notifiche appena arrivate ─────────────────
+  const seenIdsRef = useRef<Set<string>>(new Set());
+  const initializedRef = useRef(false);
+
+  useEffect(() => {
+    const list = data?.notifications;
+    if (!list) return;
+
+    // Primo caricamento: registra le notifiche esistenti senza mostrare toast.
+    if (!initializedRef.current) {
+      list.forEach((n) => seenIdsRef.current.add(n.id));
+      initializedRef.current = true;
+      return;
     }
-  }
+
+    const fresh = list.filter((n) => !seenIdsRef.current.has(n.id));
+    fresh.forEach((n) => seenIdsRef.current.add(n.id));
+
+    // Mostra un toast solo per le nuove non lette (max 3, dalla più vecchia).
+    const toToast = fresh
+      .filter((n) => !n.readAt)
+      .sort((a, b) => +new Date(a.createdAt) - +new Date(b.createdAt))
+      .slice(-3);
+
+    for (const n of toToast) {
+      const meta = getNotificationMeta(n.type);
+      const Icon = meta.icon;
+      const isFeature = n.type === "feature";
+
+      toast.custom(
+        (id) => (
+          <button
+            type="button"
+            onClick={() => {
+              toast.dismiss(id);
+              handleClick(n);
+            }}
+            className={cn(
+              "w-full max-w-[380px] flex items-start gap-3 rounded-xl border p-3.5 text-left shadow-lg backdrop-blur",
+              "bg-background/95",
+              meta.accentClass,
+              isFeature &&
+                "bg-gradient-to-br from-violet-500/[0.10] to-fuchsia-500/[0.06] border-violet-500/40"
+            )}
+          >
+            <span
+              className={cn(
+                "mt-0.5 w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
+                meta.iconClass
+              )}
+            >
+              <Icon className="h-4 w-4" />
+            </span>
+            <span className="flex-1 min-w-0">
+              {isFeature && (
+                <span className="inline-flex items-center gap-1 mb-1 rounded-full bg-violet-500/15 text-violet-600 dark:text-violet-300 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5">
+                  ✨ Novità
+                </span>
+              )}
+              <span className="block text-sm font-semibold leading-snug">
+                {n.title}
+              </span>
+              {n.body && (
+                <span className="block text-xs text-muted-foreground mt-0.5 line-clamp-3">
+                  {n.body}
+                </span>
+              )}
+            </span>
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => {
+                e.stopPropagation();
+                toast.dismiss(id);
+              }}
+              className="p-1 -m-1 rounded-md text-muted-foreground/50 hover:text-foreground shrink-0"
+              aria-label="Chiudi"
+            >
+              <X className="h-3.5 w-3.5" />
+            </span>
+          </button>
+        ),
+        {
+          position: "top-right",
+          duration: isFeature ? 12_000 : 8_000,
+        }
+      );
+    }
+  }, [data, handleClick]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -170,7 +231,7 @@ export function NotificationBell() {
           ) : (
             <ul className="divide-y">
               {items.map((n) => {
-                const meta = TYPE_META[n.type] ?? TYPE_META.system;
+                const meta = getNotificationMeta(n.type);
                 const Icon = meta.icon;
                 const unread = !n.readAt;
                 return (
@@ -185,7 +246,7 @@ export function NotificationBell() {
                       <span
                         className={cn(
                           "mt-0.5 w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
-                          meta.className
+                          meta.iconClass
                         )}
                       >
                         <Icon className="h-4 w-4" />

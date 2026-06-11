@@ -46,6 +46,16 @@ export async function notifyUsers(userIds: string[], input: NotifyInput) {
   }
 }
 
+/** Notifica tutti gli utenti attivi. Ritorna il numero di destinatari. */
+export async function notifyAllUsers(input: NotifyInput): Promise<number> {
+  const rows = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.disabled, false));
+  await notifyUsers(rows.map((r) => r.id), input);
+  return rows.length;
+}
+
 /** Notifica tutti gli admin attivi (escludendo facoltativamente un utente,
  *  tipicamente chi ha compiuto l'azione). */
 export async function notifyAdmins(input: NotifyInput, excludeUserId?: string) {

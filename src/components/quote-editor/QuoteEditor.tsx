@@ -300,6 +300,8 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
             sectionNote: section.sectionNote,
             isOptional: section.isOptional,
             isOptionalIncluded: section.isOptionalIncluded,
+            lumpSum: section.lumpSum,
+            lumpSumPrice: section.lumpSumPrice,
           }),
         });
 
@@ -377,6 +379,8 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
       orderIndex: quote.sections.length,
       isOptional,
       isOptionalIncluded: false,
+      lumpSum: false,
+      lumpSumPrice: null,
       items: [],
     };
 

@@ -17,6 +17,7 @@ import {
   Activity,
   ScrollText,
   List,
+  BellRing,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +30,7 @@ const navItems = [
 ];
 
 const adminItems = [
+  { href: "/admin/notifiche", label: "Invia notifica", icon: BellRing },
   { href: "/admin/audit-log", label: "Audit Log", icon: ScrollText },
   { href: "/admin/statistiche", label: "Statistiche", icon: BarChart2 },
   { href: "/admin/sessioni", label: "Sessioni attive", icon: Activity },

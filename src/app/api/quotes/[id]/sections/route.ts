@@ -13,6 +13,8 @@ const sectionSchema = z.object({
   sectionNote: z.string().nullable().optional(),
   isOptional: z.boolean().optional(),
   isOptionalIncluded: z.boolean().optional(),
+  lumpSum: z.boolean().optional(),
+  lumpSumPrice: z.number().min(0).nullable().optional(),
 });
 
 export async function POST(

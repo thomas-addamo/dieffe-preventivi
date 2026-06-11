@@ -19,6 +19,7 @@ import {
   Filter,
   X,
   Link as LinkIcon,
+  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,6 +46,7 @@ import {
   QUOTE_STATUS_COLORS,
 } from "@/lib/utils";
 import { NewQuoteModal } from "@/components/quote-editor/NewQuoteModal";
+import { ImportQuoteModal } from "@/components/quote-editor/ImportQuoteModal";
 import { usePermissions } from "@/hooks/use-permissions";
 
 type QuoteRow = {
@@ -108,6 +110,7 @@ export function DashboardClient({
   const [sortKey, setSortKey] = useState<SortKey>("createdAt");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [showNewModal, setShowNewModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   const filtered = useMemo(() => {
@@ -171,9 +174,18 @@ export function DashboardClient({
           </p>
         </div>
         {perms.createQuote && (
-          <Button onClick={() => setShowNewModal(true)} className="gap-2 hidden lg:flex">
-            <Plus className="w-4 h-4" /> Nuovo Preventivo
-          </Button>
+          <div className="hidden lg:flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowImportModal(true)}
+              className="gap-2"
+            >
+              <Upload className="w-4 h-4" /> Importa da file
+            </Button>
+            <Button onClick={() => setShowNewModal(true)} className="gap-2">
+              <Plus className="w-4 h-4" /> Nuovo Preventivo
+            </Button>
+          </div>
         )}
       </div>
 
@@ -485,22 +497,38 @@ export function DashboardClient({
       )}
 
       {perms.createQuote && (
-        <button
-          onClick={() => setShowNewModal(true)}
-          className="fixed bottom-6 right-6 z-40 lg:hidden w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all"
-          aria-label="Nuovo preventivo"
-        >
-          <Plus className="w-6 h-6" />
-        </button>
+        <>
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="fixed bottom-[5.75rem] right-6 z-40 lg:hidden w-11 h-11 rounded-full bg-card border text-foreground shadow-lg flex items-center justify-center hover:bg-muted active:scale-95 transition-all"
+            aria-label="Importa preventivo da file"
+          >
+            <Upload className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => setShowNewModal(true)}
+            className="fixed bottom-6 right-6 z-40 lg:hidden w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all"
+            aria-label="Nuovo preventivo"
+          >
+            <Plus className="w-6 h-6" />
+          </button>
+        </>
       )}
 
       {perms.createQuote && (
-        <NewQuoteModal
-          open={showNewModal}
-          onClose={() => setShowNewModal(false)}
-          onCreated={(id) => router.push(`/preventivi/${id}`)}
-          clients={clients}
-        />
+        <>
+          <NewQuoteModal
+            open={showNewModal}
+            onClose={() => setShowNewModal(false)}
+            onCreated={(id) => router.push(`/preventivi/${id}`)}
+            clients={clients}
+          />
+          <ImportQuoteModal
+            open={showImportModal}
+            onClose={() => setShowImportModal(false)}
+            onCreated={(id) => router.push(`/preventivi/${id}`)}
+          />
+        </>
       )}
     </div>
   );
