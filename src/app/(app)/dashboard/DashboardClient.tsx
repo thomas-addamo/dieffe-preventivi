@@ -14,6 +14,7 @@ import {
   ChevronUp,
   ChevronDown,
   ChevronsUpDown,
+  ChevronRight,
   Trash2,
   Eye,
   Filter,
@@ -164,12 +165,14 @@ export function DashboardClient({
   const activeFilterCount = (statusFilter !== "all" ? 1 : 0) + (clientFilter !== "all" ? 1 : 0);
 
   return (
-    <div className="p-3 md:p-6 max-w-7xl mx-auto pb-20 lg:pb-6">
+    <div className="p-4 md:p-6 max-w-7xl mx-auto">
       {/* Page header */}
       <div className="flex items-center justify-between mb-4 md:mb-6">
         <div>
-          <h1 className="text-lg md:text-xl font-semibold">Dashboard</h1>
-          <p className="text-xs md:text-sm text-muted-foreground mt-0.5">
+          <h1 className="text-2xl font-bold lg:text-xl lg:font-semibold">
+            Dashboard
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
             Gestione preventivi e stato lavori
           </p>
         </div>
@@ -229,6 +232,18 @@ export function DashboardClient({
           />
         </div>
 
+        {/* Mobile import button */}
+        {perms.createQuote && (
+          <Button
+            variant="outline"
+            className="lg:hidden h-11 w-11 px-0 shrink-0"
+            onClick={() => setShowImportModal(true)}
+            aria-label="Importa da file"
+          >
+            <Upload className="w-4 h-4" />
+          </Button>
+        )}
+
         {/* Mobile filter button */}
         <Button
           variant="outline"
@@ -277,7 +292,7 @@ export function DashboardClient({
             className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={() => setShowMobileFilters(false)}
           />
-          <div className="relative bg-background rounded-t-2xl p-5 space-y-4 pb-8">
+          <div className="animate-slide-up relative bg-background rounded-t-2xl p-5 space-y-4 pb-[calc(2rem+env(safe-area-inset-bottom))]">
             <div className="flex items-center justify-between mb-2">
               <h3 className="font-semibold">Filtri</h3>
               <button onClick={() => setShowMobileFilters(false)}>
@@ -438,52 +453,51 @@ export function DashboardClient({
       </div>
 
       {/* Mobile card list */}
-      <div className="lg:hidden space-y-3">
+      <div className="lg:hidden space-y-2.5">
         {filtered.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 text-muted-foreground py-12">
-            <FileText className="w-10 h-10 opacity-30" />
-            <p className="font-medium">Nessun preventivo trovato</p>
+          <div className="flex flex-col items-center gap-3 text-muted-foreground py-16">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary">
+              <FileText className="w-8 h-8 opacity-40" />
+            </div>
+            <p className="font-medium text-foreground">Nessun preventivo trovato</p>
             <p className="text-sm text-center">
               {search || statusFilter !== "all"
                 ? "Prova a modificare i filtri"
-                : "Crea il tuo primo preventivo"}
+                : "Tocca + per creare il primo preventivo"}
             </p>
           </div>
         ) : (
           filtered.map((q) => (
-            <Link key={q.id} href={`/preventivi/${q.id}`}>
-              <div className="bg-card border rounded-xl p-4 space-y-2 active:bg-muted/40 transition-colors">
-                <div className="flex items-start justify-between gap-2">
-                  <span className="font-mono text-xs font-medium text-primary">
-                    {q.code}
-                  </span>
-                  <div className="flex items-center gap-1.5 shrink-0">
+            <Link key={q.id} href={`/preventivi/${q.id}`} className="block">
+              <div className="flex items-center gap-3 rounded-2xl border bg-card p-3.5 shadow-xs transition-all active:scale-[.98] active:bg-accent">
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-[11px] font-semibold text-primary">
+                      {q.code}
+                    </span>
                     {q.publicToken && q.publicTokenExpiresAt && new Date() < new Date(q.publicTokenExpiresAt) && (
                       <span title="Link pubblico attivo" className="inline-flex text-blue-500">
-                        <LinkIcon className="w-3.5 h-3.5" aria-label="Link pubblico attivo" />
+                        <LinkIcon className="w-3 h-3" aria-label="Link pubblico attivo" />
                       </span>
                     )}
+                  </div>
+                  <p className="font-semibold text-[15px] leading-snug line-clamp-2">{q.title}</p>
+                  <div className="flex items-center gap-2 pt-0.5">
                     <Badge
                       variant="secondary"
-                      className={`text-xs ${QUOTE_STATUS_COLORS[q.status] ?? ""}`}
+                      className={`text-[11px] ${QUOTE_STATUS_COLORS[q.status] ?? ""}`}
                     >
                       {QUOTE_STATUS_LABELS[q.status] ?? q.status}
                     </Badge>
+                    <span className="text-xs text-muted-foreground truncate">
+                      {q.clientName ?? q.authorName}
+                    </span>
+                    <span className="ml-auto shrink-0 text-xs text-muted-foreground tabular-nums">
+                      {formatDate(q.createdAt)}
+                    </span>
                   </div>
                 </div>
-                <p className="font-medium text-sm leading-tight line-clamp-2">{q.title}</p>
-                {q.clientName && (
-                  <p className="text-xs text-muted-foreground">{q.clientName}</p>
-                )}
-                <div className="flex items-center justify-between pt-1">
-                  <span className="text-sm font-semibold tabular-nums text-foreground">
-                    {/* We don't have the total here, show author */}
-                    {q.authorName}
-                  </span>
-                  <span className="text-xs text-muted-foreground tabular-nums">
-                    {formatDate(q.createdAt)}
-                  </span>
-                </div>
+                <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/50" />
               </div>
             </Link>
           ))
@@ -494,25 +508,6 @@ export function DashboardClient({
         <p className="text-xs text-muted-foreground mt-2 text-right">
           {filtered.length} preventiv{filtered.length === 1 ? "o" : "i"}
         </p>
-      )}
-
-      {perms.createQuote && (
-        <>
-          <button
-            onClick={() => setShowImportModal(true)}
-            className="fixed bottom-[5.75rem] right-6 z-40 lg:hidden w-11 h-11 rounded-full bg-card border text-foreground shadow-lg flex items-center justify-center hover:bg-muted active:scale-95 transition-all"
-            aria-label="Importa preventivo da file"
-          >
-            <Upload className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => setShowNewModal(true)}
-            className="fixed bottom-6 right-6 z-40 lg:hidden w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all"
-            aria-label="Nuovo preventivo"
-          >
-            <Plus className="w-6 h-6" />
-          </button>
-        </>
       )}
 
       {perms.createQuote && (

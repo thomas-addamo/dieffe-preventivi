@@ -127,6 +127,9 @@
   --shadow-md: 0 2px 4px rgb(16 24 40 / 0.04), 0 6px 16px rgb(16 24 40 / 0.08);
   --shadow-lg: 0 4px 8px rgb(16 24 40 / 0.05), 0 14px 36px rgb(16 24 40 / 0.12);
   --shadow-xl: 0 8px 16px rgb(16 24 40 / 0.06), 0 24px 56px rgb(16 24 40 / 0.16);
+  /* Ombra per barre flottanti mobile (tab bar / bottom sheet): proiettata verso l'alto */
+  --shadow-float: 0 -1px 3px rgb(16 24 40 / 0.04), 0 -8px 30px rgb(16 24 40 / 0.10);
+  --shadow-fab: 0 4px 12px rgb(30 64 175 / 0.30), 0 2px 4px rgb(30 64 175 / 0.20);
 
   --font-sans: var(--font-inter);
   --font-mono: var(--font-jetbrains-mono);
@@ -178,4 +181,52 @@ body {
 /* Mono numbers */
 .tabular-nums {
   font-variant-numeric: tabular-nums;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   SAFE AREA (iPhone notch / home-indicator) — usate dalla shell mobile.
+   env(safe-area-inset-*) richiede viewport-fit=cover (impostato in layout.tsx).
+   ───────────────────────────────────────────────────────────────────────────── */
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.h-safe-bottom {
+  height: env(safe-area-inset-bottom, 0px);
+}
+/* Altezza barre mobile (riusabile per clearance del contenuto) */
+:root {
+  --mobile-tabbar-h: 4rem;   /* 64px */
+  --mobile-topbar-h: 3.25rem; /* 52px */
+}
+/* Clearance per le barre mobile — SOLO sotto lg (1024px), così il desktop non è toccato.
+   Scoperto in media-query max-width perché queste utility non sono in @layer e
+   altrimenti vincerebbero anche su desktop sovrascrivendo lg:pt-0 / lg:pb-0. */
+@media (max-width: 1023.98px) {
+  /* Padding-bottom contenuto = tab bar + safe area (evita che la barra copra il contenuto) */
+  .pb-tabbar {
+    padding-bottom: calc(var(--mobile-tabbar-h) + env(safe-area-inset-bottom, 0px) + 0.5rem);
+  }
+  /* Padding-top contenuto = top bar + safe area (clearance header mobile fisso) */
+  .pt-topbar {
+    padding-top: calc(var(--mobile-topbar-h) + env(safe-area-inset-top, 0px));
+  }
+}
+
+/* Anima l'ingresso dei bottom sheet / barre mobile */
+@keyframes slide-up-fade {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-slide-up {
+  animation: slide-up-fade 0.22s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Disattiva l'highlight blu di tap su iOS per un feel nativo */
+@media (max-width: 1023px) {
+  a, button, [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+  }
 }

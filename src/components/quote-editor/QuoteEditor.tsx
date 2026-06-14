@@ -768,7 +768,7 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
       )}
 
       {/* Toolbar */}
-      <div className="sticky top-0 z-10 bg-background border-b px-3 md:px-6 py-2.5 flex items-center gap-2 md:gap-3">
+      <div className="sticky top-0 z-10 bg-background/85 backdrop-blur-xl lg:bg-background lg:backdrop-blur-none border-b px-3 md:px-6 pb-2.5 pt-[calc(env(safe-area-inset-top)+0.625rem)] lg:py-2.5 flex items-center gap-2 md:gap-3">
         <Button
           variant="ghost"
           size="sm"
@@ -932,7 +932,7 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
       {/* Main content */}
       <div className="flex flex-1 gap-0 min-h-0">
         {/* Editor column */}
-        <div className="flex-1 overflow-y-auto pb-20 md:pb-6">
+        <div className="flex-1 overflow-y-auto pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-6">
           <div className="max-w-4xl mx-auto p-3 md:p-6 space-y-4 md:space-y-6">
             <QuoteHeaderForm
               quote={quote}
@@ -1004,14 +1004,14 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
               className="absolute inset-0 bg-black/40 backdrop-blur-sm"
               onClick={() => setMobileTotalsOpen(false)}
             />
-            <div className="relative bg-background rounded-t-2xl max-h-[80vh] overflow-y-auto">
+            <div className="animate-slide-up relative bg-background rounded-t-2xl max-h-[80vh] overflow-y-auto">
               <div className="sticky top-0 bg-background px-5 py-3 border-b flex items-center justify-between">
                 <h3 className="font-semibold">Riepilogo preventivo</h3>
                 <button onClick={() => setMobileTotalsOpen(false)}>
                   <ChevronDown className="w-5 h-5 text-muted-foreground" />
                 </button>
               </div>
-              <div className="p-5 pb-8">
+              <div className="p-5 pb-[calc(2rem+env(safe-area-inset-bottom))]">
                 <TotalsPanel
                   sections={quote.sections}
                   vatRate={quote.vatRate}
@@ -1033,7 +1033,7 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
 
         <button
           onClick={() => setMobileTotalsOpen(true)}
-          className="w-full bg-background border-t px-5 py-3 flex items-center justify-between shadow-lg"
+          className="w-full bg-background/90 backdrop-blur-xl border-t px-5 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex items-center justify-between shadow-lg"
         >
           <div className="text-left">
             <p className="text-xs text-muted-foreground">Totale</p>

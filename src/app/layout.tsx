@@ -19,12 +19,24 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Dieffe Preventivi",
   description: "Gestione preventivi edili — Dieffe Ristrutturazioni",
+  // Abilita l'installazione "Aggiungi a Home" come app standalone su iOS
+  appleWebApp: {
+    capable: true,
+    title: "Dieffe",
+    statusBarStyle: "default",
+  },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
+  // Estende il layout sotto notch e home-indicator: abilita env(safe-area-inset-*)
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f7f8fa" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b0c0f" },
+  ],
 };
 
 export default function RootLayout({

@@ -136,9 +136,9 @@ export function ImpostazioniClient({
   }
 
   return (
-    <div className="p-3 md:p-6 max-w-2xl mx-auto">
+    <div className="p-4 md:p-6 max-w-2xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-xl font-semibold">Impostazioni azienda</h1>
+        <h1 className="text-2xl font-bold lg:text-xl lg:font-semibold">Impostazioni azienda</h1>
         <p className="text-sm text-muted-foreground mt-0.5">
           Questi dati appaiono nell'intestazione di tutti i preventivi
         </p>

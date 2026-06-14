@@ -1,11 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
+import { MobileTopBar } from "./mobile/MobileTopBar";
+import { MobileTabBar } from "./mobile/MobileTabBar";
 import { UserRoleProvider } from "./UserRoleContext";
 import type { UserRole } from "@/lib/permissions/types";
-import { useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
 
 function ImpersonationBanner({ userName, userRole }: { userName: string; userRole: string }) {
   const router = useRouter();
@@ -44,41 +47,49 @@ interface AppShellProps {
 }
 
 export function AppShell({ children, userRole, userName, userEmail, trashCount = 0, isImpersonated = false }: AppShellProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const pathname = usePathname();
+  // Le pagine "immersive" (editor preventivo) gestiscono la propria chrome mobile:
+  // nascondiamo top bar + tab bar e azzeriamo il padding mobile.
+  const immersive = pathname.startsWith("/preventivi/");
 
   return (
     <UserRoleProvider role={userRole as UserRole}>
-    <div className="flex h-screen overflow-hidden">
-      {/* Desktop sidebar — always visible */}
-      <div className="hidden lg:block">
-        <Sidebar userRole={userRole} trashCount={trashCount} />
-      </div>
-
-      {/* Mobile drawer overlay */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            onClick={() => setSidebarOpen(false)}
-          />
-          <div className="absolute left-0 top-0 h-full w-64 shadow-xl overflow-hidden rounded-r-2xl">
-            <Sidebar userRole={userRole} trashCount={trashCount} onClose={() => setSidebarOpen(false)} />
-          </div>
+      <div className="lg:flex lg:h-screen lg:overflow-hidden">
+        {/* Sidebar desktop — invariata */}
+        <div className="hidden lg:block">
+          <Sidebar userRole={userRole} trashCount={trashCount} />
         </div>
-      )}
 
-      <div className="flex flex-col flex-1 overflow-hidden min-w-0">
-        <Header
-          userName={userName}
-          userEmail={userEmail}
-          onMenuClick={() => setSidebarOpen(true)}
-        />
-        {isImpersonated && <ImpersonationBanner userName={userName} userRole={userRole} />}
-        <main className="flex-1 overflow-y-auto bg-background">
-          {children}
-        </main>
+        {/* Top bar mobile (fissa, frosted) */}
+        {!immersive && <MobileTopBar userName={userName} />}
+
+        {/* Colonna contenuto */}
+        <div
+          className={cn(
+            "lg:flex lg:flex-1 lg:flex-col lg:overflow-hidden lg:min-w-0",
+            !immersive && "pt-topbar lg:pt-0"
+          )}
+        >
+          {/* Header desktop — invariato (l'hamburger interno è lg:hidden, mai visibile qui) */}
+          <div className="hidden lg:block">
+            <Header userName={userName} userEmail={userEmail} />
+          </div>
+
+          {isImpersonated && <ImpersonationBanner userName={userName} userRole={userRole} />}
+
+          <main
+            className={cn(
+              "bg-background lg:flex-1 lg:overflow-y-auto",
+              !immersive && "pb-tabbar lg:pb-0"
+            )}
+          >
+            {children}
+          </main>
+        </div>
+
+        {/* Tab bar mobile (fissa, frosted) */}
+        {!immersive && <MobileTabBar />}
       </div>
-    </div>
     </UserRoleProvider>
   );
 }

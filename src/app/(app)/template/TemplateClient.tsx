@@ -28,9 +28,9 @@ export function TemplateClient({
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-4 md:p-6 max-w-4xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-xl font-semibold">Template</h1>
+        <h1 className="text-2xl font-bold lg:text-xl lg:font-semibold">Template</h1>
         <p className="text-sm text-muted-foreground mt-0.5">
           Sezioni e voci riusabili per velocizzare la creazione dei preventivi
         </p>

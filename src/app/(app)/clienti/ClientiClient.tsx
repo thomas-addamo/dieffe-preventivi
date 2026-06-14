@@ -127,18 +127,31 @@ export function ClientiClient({
   }
 
   return (
-    <div className="p-3 md:p-6 max-w-5xl mx-auto pb-20 lg:pb-6">
+    <div className="p-4 md:p-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-4 md:mb-6">
         <div>
-          <h1 className="text-lg md:text-xl font-semibold">Clienti</h1>
-          <p className="text-xs md:text-sm text-muted-foreground mt-0.5">
+          <h1 className="text-2xl font-bold lg:text-xl lg:font-semibold">
+            Clienti
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
             {clients.length} client{clients.length === 1 ? "e" : "i"} registrat{clients.length === 1 ? "o" : "i"}
           </p>
         </div>
         {perms.manageClients && (
-          <Button onClick={openNew} className="gap-2 hidden lg:flex">
-            <Plus className="w-4 h-4" /> Nuovo cliente
-          </Button>
+          <>
+            {/* Desktop: bottone esteso */}
+            <Button onClick={openNew} className="gap-2 hidden lg:flex">
+              <Plus className="w-4 h-4" /> Nuovo cliente
+            </Button>
+            {/* Mobile: bottone "+" compatto in stile iOS */}
+            <button
+              onClick={openNew}
+              aria-label="Nuovo cliente"
+              className="lg:hidden flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xs transition-transform active:scale-90"
+            >
+              <Plus className="h-5 w-5" />
+            </button>
+          </>
         )}
       </div>
 
@@ -209,68 +222,65 @@ export function ClientiClient({
       </div>
 
       {/* Mobile card list */}
-      <div className="lg:hidden space-y-3">
+      <div className="lg:hidden space-y-2.5">
         {filtered.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            {search ? "Nessun cliente trovato" : "Nessun cliente ancora."}
+          <div className="flex flex-col items-center gap-3 text-muted-foreground py-16">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary">
+              <Building2 className="w-8 h-8 opacity-40" />
+            </div>
+            <p className="font-medium text-foreground">
+              {search ? "Nessun cliente trovato" : "Nessun cliente ancora"}
+            </p>
+            {!search && perms.manageClients && (
+              <p className="text-sm">Tocca + in alto per aggiungerne uno</p>
+            )}
           </div>
         ) : (
           filtered.map((c) => (
-            <div key={c.id} className="bg-card border rounded-xl p-4 space-y-2">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold truncate">{c.name}</p>
-                  {c.vatNumber && (
-                    <p className="font-mono text-xs text-muted-foreground">{c.vatNumber}</p>
-                  )}
-                </div>
-                {perms.manageClients && (
-                  <div className="flex gap-1 shrink-0">
-                    <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => openEdit(c)}>
-                      <Edit2 className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-10 w-10 text-destructive hover:text-destructive"
-                      onClick={() => deleteClient(c.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                )}
+            <div
+              key={c.id}
+              onClick={() => perms.manageClients && openEdit(c)}
+              className="flex items-center gap-3 rounded-2xl border bg-card p-3.5 shadow-xs transition-all active:scale-[.98] active:bg-accent"
+            >
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                {c.name.trim().slice(0, 2).toUpperCase()}
               </div>
-              {(c.email || c.phone) && (
-                <div className="space-y-1">
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold leading-tight truncate">{c.name}</p>
+                <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
                   {c.email && (
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Mail className="w-3.5 h-3.5 shrink-0" />
+                    <span className="inline-flex items-center gap-1 truncate">
+                      <Mail className="w-3 h-3 shrink-0" />
                       <span className="truncate">{c.email}</span>
-                    </div>
+                    </span>
                   )}
                   {c.phone && (
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Phone className="w-3.5 h-3.5 shrink-0" />
-                      <span>{c.phone}</span>
-                    </div>
+                    <span className="inline-flex items-center gap-1">
+                      <Phone className="w-3 h-3 shrink-0" />
+                      {c.phone}
+                    </span>
+                  )}
+                  {!c.email && !c.phone && c.vatNumber && (
+                    <span className="font-mono">{c.vatNumber}</span>
                   )}
                 </div>
+              </div>
+              {perms.manageClients && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteClient(c.id);
+                  }}
+                  aria-label="Elimina cliente"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-destructive transition-colors active:bg-destructive/10"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               )}
-              <p className="text-xs text-muted-foreground">{formatDate(c.createdAt)}</p>
             </div>
           ))
         )}
       </div>
-
-      {perms.manageClients && (
-        <button
-          onClick={openNew}
-          className="fixed bottom-6 right-6 z-40 lg:hidden w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all"
-          aria-label="Nuovo cliente"
-        >
-          <Plus className="w-6 h-6" />
-        </button>
-      )}
 
       <Dialog open={showForm} onOpenChange={(o) => !o && setShowForm(false)}>
         <DialogContent className="max-w-md w-full">

@@ -236,8 +236,8 @@ export function ListinoClient({ userRole }: ListinoClientProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-6 gap-3">
         <div>
-          <h1 className="text-xl font-semibold flex items-center gap-2">
-            <List className="w-5 h-5 text-primary" /> Listino Prezzi
+          <h1 className="text-2xl font-bold lg:text-xl lg:font-semibold flex items-center gap-2">
+            <List className="w-6 h-6 lg:w-5 lg:h-5 text-primary" /> Listino Prezzi
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {items.length} voci{filterActive === "active" ? " attive" : ""}
@@ -418,14 +418,6 @@ export function ListinoClient({ userRole }: ListinoClientProps) {
           </div>
         </>
       )}
-
-      {/* FAB mobile */}
-      <button
-        onClick={openCreate}
-        className="fixed bottom-6 right-6 md:hidden w-14 h-14 rounded-full bg-primary text-white shadow-lg flex items-center justify-center"
-      >
-        <Plus className="w-6 h-6" />
-      </button>
 
       {/* Create/Edit Modal */}
       {showModal && (

@@ -259,17 +259,26 @@ export function UtentiClient({
   }
 
   return (
-    <div className="p-3 md:p-6 max-w-4xl mx-auto pb-20 lg:pb-6">
+    <div className="p-4 md:p-6 max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-4 md:mb-6">
         <div>
-          <h1 className="text-lg md:text-xl font-semibold">Utenti</h1>
-          <p className="text-xs md:text-sm text-muted-foreground mt-0.5">
+          <h1 className="text-2xl font-bold lg:text-xl lg:font-semibold">
+            Utenti
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
             Gestione accessi
           </p>
         </div>
         <Button onClick={() => setShowCreate(true)} className="gap-2 hidden lg:flex">
           <Plus className="w-4 h-4" /> Nuovo utente
         </Button>
+        <button
+          onClick={() => setShowCreate(true)}
+          aria-label="Nuovo utente"
+          className="lg:hidden flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xs transition-transform active:scale-90"
+        >
+          <Plus className="h-5 w-5" />
+        </button>
       </div>
 
       {/* Desktop table */}
@@ -413,15 +422,6 @@ export function UtentiClient({
           </div>
         ))}
       </div>
-
-      {/* FAB — mobile only */}
-      <button
-        onClick={() => setShowCreate(true)}
-        className="fixed bottom-6 right-6 z-40 lg:hidden w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all"
-        aria-label="Nuovo utente"
-      >
-        <Plus className="w-6 h-6" />
-      </button>
 
       {/* Create dialog */}
       <Dialog open={showCreate} onOpenChange={(o) => { if (!o) { setShowCreate(false); setShowPw(false); setCopiedPw(false); } }}>
