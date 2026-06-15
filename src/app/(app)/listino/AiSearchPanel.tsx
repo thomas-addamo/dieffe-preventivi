@@ -67,7 +67,7 @@ export function AiSearchPanel() {
     results && (results.quoteItems.length > 0 || results.listinoItems.length > 0);
 
   return (
-    <div className="mb-5 border border-violet-200 dark:border-violet-800 rounded-xl bg-violet-50/60 dark:bg-violet-950/20 p-3 md:p-4">
+    <div className="mb-5 border border-violet-200 dark:border-violet-800 rounded-xl bg-violet-50/60 dark:bg-violet-950/20 p-3 md:p-4 overflow-hidden">
       <div className="flex items-center gap-2 mb-2.5">
         <Sparkles className="w-4 h-4 text-violet-500 shrink-0" />
         <span className="text-sm font-medium text-violet-700 dark:text-violet-400">
@@ -105,7 +105,7 @@ export function AiSearchPanel() {
       {results?.summary && (
         <div className="mt-3 bg-card border border-violet-200 dark:border-violet-800 rounded-lg px-3 py-2.5 text-xs text-violet-900 dark:text-violet-300 flex gap-2">
           <Sparkles className="w-3.5 h-3.5 text-violet-500 shrink-0 mt-0.5" />
-          <p className="whitespace-pre-wrap">{results.summary}</p>
+          <p className="whitespace-pre-wrap break-words min-w-0 flex-1">{results.summary}</p>
         </div>
       )}
 
@@ -119,7 +119,7 @@ export function AiSearchPanel() {
         <div className="mt-3 grid md:grid-cols-2 gap-3">
           {/* Listino */}
           {results.listinoItems.length > 0 && (
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-1.5 mb-1.5">
                 <List className="w-3.5 h-3.5 text-muted-foreground" />
                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
@@ -150,7 +150,7 @@ export function AiSearchPanel() {
 
           {/* Preventivi storici */}
           {results.quoteItems.length > 0 && (
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-1.5 mb-1.5">
                 <FileText className="w-3.5 h-3.5 text-muted-foreground" />
                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
@@ -167,7 +167,7 @@ export function AiSearchPanel() {
                       <p className="font-medium flex-1 min-w-0 truncate">
                         {item.description}
                       </p>
-                      <p className="font-semibold shrink-0">
+                      <p className="font-semibold shrink-0 whitespace-nowrap">
                         €{item.unitPrice}/{item.unitOfMeasure}
                       </p>
                     </div>
