@@ -1,10 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { Moon, Sun, Monitor, LogOut, User, ChevronDown, Menu, KeyRound } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Moon, Sun, Monitor, LogOut, User, ChevronDown, Menu, KeyRound, Bell, BellOff } from "lucide-react";
 import { useTheme } from "@/components/shared/ThemeProvider";
 import { NotificationBell } from "@/components/shared/NotificationBell";
 import { ChangePasswordDialog } from "@/components/shared/ChangePasswordDialog";
+import {
+  getPushState,
+  subscribeToPush,
+  unsubscribeFromPush,
+  isPushSupported,
+} from "@/lib/push-client";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +33,39 @@ export function Header({ userName, userEmail, title, onMenuClick }: HeaderProps)
   const { theme, setTheme } = useTheme();
   const router = useRouter();
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [pushSupported, setPushSupported] = useState(false);
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
+
+  useEffect(() => {
+    if (!isPushSupported()) return;
+    getPushState().then((s) => {
+      setPushSupported(true);
+      setPushEnabled(s.subscribed && s.permission === "granted");
+    });
+  }, []);
+
+  async function togglePush() {
+    if (pushBusy) return;
+    setPushBusy(true);
+    try {
+      if (pushEnabled) {
+        await unsubscribeFromPush();
+        setPushEnabled(false);
+        toast.success("Notifiche push disattivate");
+      } else {
+        const res = await subscribeToPush();
+        if (res.ok) {
+          setPushEnabled(true);
+          toast.success("Notifiche push attivate 🔔");
+        } else {
+          toast.error(res.reason);
+        }
+      }
+    } finally {
+      setPushBusy(false);
+    }
+  }
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -101,6 +140,25 @@ export function Header({ userName, userEmail, title, onMenuClick }: HeaderProps)
             <DropdownMenuItem onClick={() => setShowChangePassword(true)}>
               <KeyRound className="mr-2 h-4 w-4" /> Cambia password
             </DropdownMenuItem>
+            {pushSupported && (
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault();
+                  togglePush();
+                }}
+                disabled={pushBusy}
+              >
+                {pushEnabled ? (
+                  <>
+                    <BellOff className="mr-2 h-4 w-4" /> Disattiva notifiche push
+                  </>
+                ) : (
+                  <>
+                    <Bell className="mr-2 h-4 w-4" /> Attiva notifiche push
+                  </>
+                )}
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={handleLogout}

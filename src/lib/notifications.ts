@@ -1,6 +1,7 @@
 import { db } from "@/lib/db/client";
 import { notifications, users, type NewNotification } from "@/lib/db/schema";
 import { eq, and, ne } from "drizzle-orm";
+import { sendPushToUsers } from "@/lib/push";
 
 type NotificationType = NewNotification["type"];
 
@@ -25,6 +26,13 @@ export async function notifyUser(userId: string, input: NotifyInput) {
   } catch (err) {
     console.error("[notifications] insert failed:", err instanceof Error ? err.message : err);
   }
+  // Push nativa (best-effort, non blocca in caso di errore).
+  await sendPushToUsers([userId], {
+    title: input.title,
+    body: input.body,
+    url: input.link,
+    tag: input.type,
+  });
 }
 
 /** Crea la stessa notifica per più utenti (deduplicati). */
@@ -44,6 +52,13 @@ export async function notifyUsers(userIds: string[], input: NotifyInput) {
   } catch (err) {
     console.error("[notifications] bulk insert failed:", err instanceof Error ? err.message : err);
   }
+  // Push nativa a tutti i destinatari (best-effort).
+  await sendPushToUsers(unique, {
+    title: input.title,
+    body: input.body,
+    url: input.link,
+    tag: input.type,
+  });
 }
 
 /** Notifica tutti gli utenti attivi. Ritorna il numero di destinatari. */

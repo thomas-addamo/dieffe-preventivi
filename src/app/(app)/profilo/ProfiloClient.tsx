@@ -15,6 +15,7 @@ import {
 import { MobilePage } from "@/components/shared/mobile/MobilePage";
 import { useTheme } from "@/components/shared/ThemeProvider";
 import { ChangePasswordDialog } from "@/components/shared/ChangePasswordDialog";
+import { PushToggle } from "@/components/shared/PushToggle";
 import { cn } from "@/lib/utils";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -96,6 +97,14 @@ export function ProfiloClient({ user, companyName }: ProfiloClientProps) {
             );
           })}
         </div>
+      </div>
+
+      {/* Notifiche */}
+      <p className="mb-2 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+        Notifiche
+      </p>
+      <div className="mb-5 overflow-hidden rounded-2xl border bg-card shadow-xs">
+        <PushToggle />
       </div>
 
       {/* Account */}

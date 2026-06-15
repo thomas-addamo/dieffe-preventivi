@@ -6,6 +6,8 @@ import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { MobileTopBar } from "./mobile/MobileTopBar";
 import { MobileTabBar } from "./mobile/MobileTabBar";
+import { NotificationToaster } from "./NotificationToaster";
+import { PushRegistrar } from "./PushRegistrar";
 import { UserRoleProvider } from "./UserRoleContext";
 import type { UserRole } from "@/lib/permissions/types";
 import { cn } from "@/lib/utils";
@@ -54,6 +56,9 @@ export function AppShell({ children, userRole, userName, userEmail, trashCount =
 
   return (
     <UserRoleProvider role={userRole as UserRole}>
+      {/* Montati una sola volta: toast in-app + registrazione service worker push */}
+      <NotificationToaster />
+      <PushRegistrar />
       <div className="lg:flex lg:h-screen lg:overflow-hidden">
         {/* Sidebar desktop — invariata */}
         <div className="hidden lg:block">

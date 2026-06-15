@@ -71,6 +71,13 @@
       "when": 1781174353692,
       "tag": "0009_sad_vision",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1781535312710,
+      "tag": "0010_silky_cammi",
+      "breakpoints": true
     }
   ]
 }
