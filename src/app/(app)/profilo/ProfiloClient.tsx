@@ -16,6 +16,7 @@ import { MobilePage } from "@/components/shared/mobile/MobilePage";
 import { useTheme } from "@/components/shared/ThemeProvider";
 import { ChangePasswordDialog } from "@/components/shared/ChangePasswordDialog";
 import { PushToggle } from "@/components/shared/PushToggle";
+import { APP_VERSION } from "@/lib/version";
 import { cn } from "@/lib/utils";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -35,10 +36,9 @@ function initials(name: string): string {
 
 interface ProfiloClientProps {
   user: { name: string; email: string; role: string };
-  companyName: string | null;
 }
 
-export function ProfiloClient({ user, companyName }: ProfiloClientProps) {
+export function ProfiloClient({ user }: ProfiloClientProps) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const [showChangePassword, setShowChangePassword] = useState(false);
@@ -138,7 +138,7 @@ export function ProfiloClient({ user, companyName }: ProfiloClientProps) {
       </div>
 
       <p className="pb-2 text-center text-xs text-muted-foreground">
-        {companyName ?? "Dieffe Ristrutturazioni"} · Dieffe Preventivi
+        v{APP_VERSION} · Dieffe Preventivi
       </p>
 
       <ChangePasswordDialog
