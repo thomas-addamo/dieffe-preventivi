@@ -9,7 +9,14 @@ const PUBLIC_PATHS = ["/login", "/api/auth", "/p/", "/api/public", "/api/cron"];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  // Asset statici / metadata pubblici (icone, manifest, favicon, ecc.): devono
+  // essere raggiungibili SENZA sessione, altrimenti iOS/Safari riceve un 307
+  // verso /login mentre prova a scaricare apple-icon/manifest in "Aggiungi a
+  // Home" e l'icona della web app non si carica. Tutto ciò che ha un'estensione
+  // di file (e non è una rotta API) è un asset pubblico.
+  const isStaticAsset = !pathname.startsWith("/api") && /\.[a-z0-9]+$/i.test(pathname);
   const isPublic =
+    isStaticAsset ||
     PUBLIC_PATHS.some((p) => pathname.startsWith(p)) ||
     pathname === "/p" ||
     pathname.startsWith("/_next") ||
