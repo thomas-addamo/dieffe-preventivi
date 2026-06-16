@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/permissions/guard';
+import { aiDisabledResponse } from '@/lib/ai/guard';
 import { searchAll } from '@/lib/ai/rag';
 import { generateAI, isAiConfigured } from '@/lib/ai/client';
 
 export async function GET(req: NextRequest) {
   const { error } = await requireRole('admin', 'editor');
   if (error) return error;
+
+  const aiOff = await aiDisabledResponse();
+  if (aiOff) return aiOff;
 
   const q = new URL(req.url).searchParams.get('q') ?? '';
   if (q.trim().length < 2) {

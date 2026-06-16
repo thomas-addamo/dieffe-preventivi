@@ -78,6 +78,15 @@ export const companySettings = pgTable("company_settings", {
   accentColor: text("accent_color").notNull().default("#059669"),
   emailFromAddress: text("email_from_address").default("onboarding@resend.dev"),
   quotePrefix: text("quote_prefix").notNull().default("PREV"),
+  // ── Controlli amministratore (org-wide) ──────────────────────────────────
+  // Notifica tutto il team quando un preventivo viene accettato / rifiutato.
+  notifyTeamOnAccept: boolean("notify_team_on_accept").notNull().default(true),
+  notifyTeamOnReject: boolean("notify_team_on_reject").notNull().default(false),
+  // Valori predefiniti applicati ai nuovi preventivi (se non specificati).
+  defaultPaymentTerms: text("default_payment_terms"),
+  defaultQuoteNotes: text("default_quote_notes"),
+  // Interruttore generale dell'AI per tutto il team.
+  aiEnabled: boolean("ai_enabled").notNull().default(true),
   updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
     .notNull()
     .defaultNow(),

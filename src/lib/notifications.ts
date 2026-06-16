@@ -1,5 +1,5 @@
 import { db } from "@/lib/db/client";
-import { notifications, users, type NewNotification } from "@/lib/db/schema";
+import { notifications, users, companySettings, type NewNotification } from "@/lib/db/schema";
 import { eq, and, ne } from "drizzle-orm";
 import { sendPushToUsers } from "@/lib/push";
 
@@ -111,9 +111,31 @@ export async function notifyQuoteSigned(opts: {
     body: `${opts.signerName} ha ${accepted ? "accettato e firmato" : "rifiutato"} "${opts.quoteTitle}".`,
     link: `/preventivi/${opts.quoteId}`,
   };
-  // Il titolare del preventivo + gli admin (senza duplicare se coincidono).
-  await notifyUser(opts.ownerUserId, input);
-  await notifyAdmins(input, opts.ownerUserId);
+
+  // L'admin decide se notificare TUTTO il team (in-app + push nativa) oppure
+  // solo il titolare del preventivo + gli admin.
+  let broadcast = accepted; // default storico: broadcast all'accettazione
+  try {
+    const [settings] = await db
+      .select({
+        onAccept: companySettings.notifyTeamOnAccept,
+        onReject: companySettings.notifyTeamOnReject,
+      })
+      .from(companySettings)
+      .limit(1);
+    if (settings) broadcast = accepted ? settings.onAccept : settings.onReject;
+  } catch {
+    /* in caso di errore usa il default */
+  }
+
+  if (broadcast) {
+    // Tutti gli utenti attivi ricevono notifica in-app + push nativa.
+    await notifyAllUsers(input);
+  } else {
+    // Titolare del preventivo + admin (senza duplicare se coincidono).
+    await notifyUser(opts.ownerUserId, input);
+    await notifyAdmins(input, opts.ownerUserId);
+  }
 }
 
 /** Cambio stato fatto da un altro utente. */

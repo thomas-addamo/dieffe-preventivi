@@ -19,6 +19,12 @@ const schema = z.object({
   accentColor: z.string().optional(),
   emailFromAddress: z.string().nullable().optional(),
   quotePrefix: z.string().max(6).optional(),
+  // Controlli amministratore (org-wide)
+  notifyTeamOnAccept: z.boolean().optional(),
+  notifyTeamOnReject: z.boolean().optional(),
+  defaultPaymentTerms: z.string().nullable().optional(),
+  defaultQuoteNotes: z.string().nullable().optional(),
+  aiEnabled: z.boolean().optional(),
 });
 
 export async function GET() {

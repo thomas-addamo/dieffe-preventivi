@@ -158,15 +158,27 @@ export async function createQuote(
 ) {
   const code = await generateQuoteCode();
   const id = generateId();
+
+  // Valori predefiniti org-wide impostati dall'admin (IVA, condizioni, note):
+  // usati solo se il preventivo non ne specifica di propri.
+  const [settings] = await db
+    .select({
+      defaultVatRate: companySettings.defaultVatRate,
+      defaultPaymentTerms: companySettings.defaultPaymentTerms,
+      defaultQuoteNotes: companySettings.defaultQuoteNotes,
+    })
+    .from(companySettings)
+    .limit(1);
+
   await db.insert(quotes).values({
     id,
     code,
     title: data.title,
     clientId: data.clientId ?? null,
     userId,
-    vatRate: data.vatRate ?? 22,
-    notes: data.notes ?? null,
-    paymentTerms: data.paymentTerms ?? null,
+    vatRate: data.vatRate ?? settings?.defaultVatRate ?? 22,
+    notes: data.notes ?? settings?.defaultQuoteNotes ?? null,
+    paymentTerms: data.paymentTerms ?? settings?.defaultPaymentTerms ?? null,
     validUntil: data.validUntil ?? null,
     projectAddress: data.projectAddress ?? null,
   });

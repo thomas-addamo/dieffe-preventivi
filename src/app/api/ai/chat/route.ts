@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/permissions/guard';
+import { aiDisabledResponse } from '@/lib/ai/guard';
 import { generateAIChat, isAiConfigured } from '@/lib/ai/client';
 import { buildSearchContext } from '@/lib/ai/rag';
 import { z } from 'zod';
@@ -16,6 +17,9 @@ const schema = z.object({
 export async function POST(req: NextRequest) {
   const { error } = await requireRole('admin', 'editor');
   if (error) return error;
+
+  const aiOff = await aiDisabledResponse();
+  if (aiOff) return aiOff;
 
   if (!isAiConfigured()) {
     return NextResponse.json({ error: 'AI non configurata' }, { status: 503 });

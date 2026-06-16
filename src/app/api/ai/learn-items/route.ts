@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/permissions/guard';
+import { aiDisabledResponse } from '@/lib/ai/guard';
 import { generateAIJson, isAiConfigured } from '@/lib/ai/client';
 import { db } from '@/lib/db/client';
 import { priceListItems } from '@/lib/db/schema';
@@ -24,6 +25,9 @@ interface AiCondensed {
 export async function POST(req: NextRequest) {
   const { error, session } = await requireRole('admin', 'editor');
   if (error) return error;
+
+  const aiOff = await aiDisabledResponse();
+  if (aiOff) return aiOff;
 
   const body = await req.json().catch(() => ({}));
   const parsed = schema.safeParse(body);

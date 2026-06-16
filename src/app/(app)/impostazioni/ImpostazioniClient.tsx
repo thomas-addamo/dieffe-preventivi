@@ -14,9 +14,50 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Save, Upload, X, AlertTriangle, Sparkles } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2, Save, Upload, X, AlertTriangle, Sparkles, BellRing, FileText, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import type { CompanySettings } from "@/lib/db/schema";
+
+/** Toggle iOS-style riutilizzabile per le impostazioni booleane. */
+function SettingToggle({
+  checked,
+  onChange,
+  title,
+  description,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <div className="min-w-0">
+        <p className="text-sm font-medium">{title}</p>
+        <p className="text-xs text-muted-foreground">{description}</p>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
+        className={cn(
+          "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors",
+          checked ? "bg-primary" : "bg-muted-foreground/30"
+        )}
+      >
+        <span
+          className={cn(
+            "inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform",
+            checked ? "translate-x-6" : "translate-x-1"
+          )}
+        />
+      </button>
+    </div>
+  );
+}
 
 const schema = z.object({
   companyName: z.string().min(1, "Nome azienda obbligatorio"),
@@ -32,6 +73,11 @@ const schema = z.object({
   accentColor: z.string(),
   emailFromAddress: z.string().email("Email non valida").optional().or(z.literal("")),
   quotePrefix: z.string().max(6).regex(/^[A-Z0-9]*$/, "Solo lettere maiuscole e numeri").optional(),
+  notifyTeamOnAccept: z.boolean(),
+  notifyTeamOnReject: z.boolean(),
+  defaultPaymentTerms: z.string().optional(),
+  defaultQuoteNotes: z.string().optional(),
+  aiEnabled: z.boolean(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -79,10 +125,18 @@ export function ImpostazioniClient({
       accentColor: initialSettings?.accentColor ?? "#059669",
       emailFromAddress: initialSettings?.emailFromAddress ?? "",
       quotePrefix: initialSettings?.quotePrefix ?? "PREV",
+      notifyTeamOnAccept: initialSettings?.notifyTeamOnAccept ?? true,
+      notifyTeamOnReject: initialSettings?.notifyTeamOnReject ?? false,
+      defaultPaymentTerms: initialSettings?.defaultPaymentTerms ?? "",
+      defaultQuoteNotes: initialSettings?.defaultQuoteNotes ?? "",
+      aiEnabled: initialSettings?.aiEnabled ?? true,
     },
   });
 
   const watchedPrefix = watch("quotePrefix") ?? "PREV";
+  const notifyAccept = watch("notifyTeamOnAccept");
+  const notifyReject = watch("notifyTeamOnReject");
+  const aiEnabled = watch("aiEnabled");
 
   async function resetCounter() {
     if (resetConfirmText !== "RESET") return;
@@ -434,14 +488,81 @@ export function ImpostazioniClient({
           </div>
         </div>
 
+        {/* Controllo amministratore — Notifiche del team */}
+        <div className="bg-card border rounded-xl p-5 space-y-4">
+          <h2 className="font-medium text-sm flex items-center gap-2">
+            <BellRing className="w-4 h-4 text-primary" /> Notifiche del team
+          </h2>
+          <p className="text-xs text-muted-foreground -mt-2">
+            Decidi quando avvisare <strong>tutto il team</strong> (notifica in-app
+            + push nativa su telefono/Mac). Vale per tutti gli utenti.
+          </p>
+          <div className="space-y-3">
+            <SettingToggle
+              checked={notifyAccept}
+              onChange={(v) => setValue("notifyTeamOnAccept", v, { shouldDirty: true })}
+              title="Avvisa il team quando un preventivo è accettato"
+              description="Tutti gli utenti ricevono la notifica appena un cliente firma e accetta."
+            />
+            <div className="border-t" />
+            <SettingToggle
+              checked={notifyReject}
+              onChange={(v) => setValue("notifyTeamOnReject", v, { shouldDirty: true })}
+              title="Avvisa il team quando un preventivo è rifiutato"
+              description="Se disattivo, il rifiuto avvisa solo il titolare del preventivo e gli admin."
+            />
+          </div>
+        </div>
+
+        {/* Controllo amministratore — Valori predefiniti preventivi */}
+        <div className="bg-card border rounded-xl p-5 space-y-4">
+          <h2 className="font-medium text-sm flex items-center gap-2">
+            <FileText className="w-4 h-4 text-primary" /> Valori predefiniti nuovi preventivi
+          </h2>
+          <p className="text-xs text-muted-foreground -mt-2">
+            Precompilati automaticamente su ogni nuovo preventivo (modificabili poi
+            voce per voce). L&apos;IVA predefinita si imposta nella sezione sopra.
+          </p>
+          <div className="space-y-1.5">
+            <Label>Condizioni di pagamento predefinite</Label>
+            <Textarea
+              {...register("defaultPaymentTerms")}
+              rows={2}
+              placeholder="Es: 30% all'accettazione, 40% a metà lavori, saldo a fine lavori."
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Note predefinite</Label>
+            <Textarea
+              {...register("defaultQuoteNotes")}
+              rows={2}
+              placeholder="Es: Prezzi IVA esclusa. Preventivo valido 30 giorni."
+            />
+          </div>
+        </div>
+
         {/* AI Settings */}
         <div className="bg-card border rounded-xl p-5 space-y-4">
           <h2 className="font-medium text-sm flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-violet-500" /> Intelligenza Artificiale
           </h2>
-          <p className="text-xs text-muted-foreground -mt-2">
-            Preferenze AI salvate nel browser (per utente/dispositivo).
-          </p>
+
+          {/* Interruttore org-wide (admin): vale per tutto il team, lato server */}
+          <div className="rounded-lg border border-violet-200 dark:border-violet-900 bg-violet-50/50 dark:bg-violet-950/20 p-3">
+            <SettingToggle
+              checked={aiEnabled}
+              onChange={(v) => setValue("aiEnabled", v, { shouldDirty: true })}
+              title="Assistente AI attivo per tutto il team"
+              description="Interruttore generale: se disattivo, chat AI, ricerca e suggerimenti prezzo sono bloccati per tutti."
+            />
+          </div>
+
+          <div className="flex items-center gap-2 pt-1">
+            <ShieldCheck className="w-3.5 h-3.5 text-muted-foreground" />
+            <p className="text-xs text-muted-foreground">
+              Le preferenze qui sotto sono salvate nel browser (per utente/dispositivo).
+            </p>
+          </div>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
