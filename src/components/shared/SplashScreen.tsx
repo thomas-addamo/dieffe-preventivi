@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { Loader2 } from "lucide-react";
 import { APP_VERSION } from "@/lib/version";
 
 /**
@@ -20,8 +21,8 @@ export function SplashScreen() {
 
   useEffect(() => {
     // Tempo minimo di visibilità per un'uscita morbida, poi fade-out e unmount.
-    const t1 = setTimeout(() => setHiding(true), 550);
-    const t2 = setTimeout(() => setRemoved(true), 550 + 450);
+    const t1 = setTimeout(() => setHiding(true), 900);
+    const t2 = setTimeout(() => setRemoved(true), 900 + 450);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
@@ -46,7 +47,7 @@ export function SplashScreen() {
           priority
           className="h-24 w-24 animate-[splash-pop_0.5s_cubic-bezier(0.32,0.72,0,1)] drop-shadow-sm"
         />
-        <span className="h-7 w-7 animate-spin rounded-full border-[3px] border-primary/20 border-t-primary" />
+        <Loader2 className="h-7 w-7 animate-spin text-primary" strokeWidth={2.5} />
       </div>
 
       {/* Versione — solo mobile, ancorata in basso con safe-area */}
