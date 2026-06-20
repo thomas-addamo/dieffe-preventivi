@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/shared/ThemeProvider";
+import { SplashScreen } from "@/components/shared/SplashScreen";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -54,6 +55,7 @@ export default function RootLayout({
         className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
       >
         <ThemeProvider>
+          <SplashScreen />
           {children}
           <Toaster position="bottom-right" richColors />
         </ThemeProvider>
