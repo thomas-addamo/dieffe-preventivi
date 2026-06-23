@@ -40,6 +40,12 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Electron
+/dist-electron/
+/electron-dist/
+# Output grezzo del generatore icone (teniamo solo assets/icon.{png,icns,ico})
+/assets/icons/
+
 # local storage (legacy — non usato in produzione cloud)
 /storage/
 *.sqlite

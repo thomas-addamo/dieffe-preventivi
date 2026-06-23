@@ -92,6 +92,72 @@ git push
 
 ---
 
+## App Desktop (macOS + Windows)
+
+L'app desktop è un wrapper Electron che carica la stessa web app (la versione
+pubblicata su Vercel in produzione, `localhost:3847` in sviluppo). Aggiunge menu
+nativi, finestra ridimensionabile con dimensioni persistenti, banner offline e
+aggiornamenti automatici.
+
+### Download
+
+Vai su [GitHub Releases](https://github.com/thomas-addamo/dieffe-preventivi/releases)
+e scarica l'ultima versione:
+- **macOS**: `Dieffe-Preventivi-x.x.x.dmg`
+- **Windows**: `Dieffe-Preventivi-Setup-x.x.x.exe`
+
+### Installazione macOS
+
+1. Apri il file `.dmg`
+2. Trascina l'app nella cartella Applicazioni
+3. Al primo avvio: tasto destro → Apri → Apri comunque
+   (necessario solo la prima volta se l'app non è notarizzata)
+
+### Installazione Windows
+
+1. Esegui il file `.exe` o `.msi`
+2. Segui l'installazione guidata
+
+### Sviluppo desktop
+
+```bash
+pnpm install
+pnpm electron:dev   # compila il wrapper, avvia Next su :3847 e apre la finestra Electron
+```
+
+Build locale dei pacchetti distribuibili:
+
+```bash
+pnpm electron:build:mac   # solo macOS (.dmg + .zip)
+pnpm electron:build:win   # solo Windows (.exe + .msi)
+pnpm electron:dist        # entrambi
+```
+
+### Funzionalità offline
+
+Quando non c'è connessione internet:
+- Un banner arancione in alto avvisa della modalità offline
+- I preventivi già visualizzati in precedenza sono consultabili (cache del renderer)
+- Le modifiche sono disabilitate finché non torni online
+- Al ripristino della connessione, l'app si riconnette automaticamente
+
+### Aggiornamenti automatici
+
+L'app controlla automaticamente gli aggiornamenti all'avvio e ogni ora.
+Quando un aggiornamento è disponibile, viene scaricato in background.
+Al termine del download, appare un banner in basso a destra con il bottone
+"Riavvia" per installare l'aggiornamento.
+
+### Release nuova versione (per admin)
+
+1. Aggiorna la versione in `package.json` **e** in `src/lib/version.ts` (devono restare allineate)
+2. Crea un tag git: `git tag v3.x.x && git push origin v3.x.x`
+3. GitHub Actions builderà automaticamente macOS + Windows
+4. I file appaiono in GitHub Releases dopo ~10 minuti
+5. Tutti gli utenti con l'app installata ricevono notifica automatica
+
+---
+
 ## Export preventivi
 
 Dall'editor preventivo, menu **Esporta**:

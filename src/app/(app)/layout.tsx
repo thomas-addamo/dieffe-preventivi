@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { AppShell } from "@/components/shared/AppShell";
 import { QueryProvider } from "@/components/shared/QueryProvider";
+import { OfflineBanner } from "@/components/shared/offline-banner";
+import { UpdateBanner } from "@/components/shared/update-banner";
 import { db } from "@/lib/db/client";
 import { quotes } from "@/lib/db/schema";
 import { isNotNull, count } from "drizzle-orm";
@@ -24,6 +26,9 @@ export default async function AppLayout({
 
   return (
     <QueryProvider>
+      {/* Solo in Electron mostrano contenuto; in web/Vercel restano invisibili */}
+      <OfflineBanner />
+      <UpdateBanner />
       <AppShell
         userRole={user.role}
         userName={user.name}

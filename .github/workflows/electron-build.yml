@@ -1,0 +1,69 @@
+name: Build Electron App
+
+on:
+  push:
+    tags:
+      - 'v*' # Si attiva solo sui tag tipo v1.0.0
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            platform: mac
+          - os: windows-latest
+            platform: win
+
+    runs-on: ${{ matrix.os }}
+
+    # Necessario a softprops/action-gh-release per creare/aggiornare la Release.
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      # NB: niente "next build" qui. L'app desktop è un wrapper che carica la web app
+      # remota (Vercel) e NON impacchetta .next, quindi non servono i secret del DB ecc.
+      - name: Compile Electron TypeScript
+        run: npx tsc --project electron/tsconfig.json
+
+      # electron-builder solo impacchetta. --publish never evita che crei una release
+      # "draft" in conflitto con lo step "Release" qui sotto (softprops).
+      - name: Build Electron (${{ matrix.platform }})
+        run: npx electron-builder --${{ matrix.platform }} --publish never
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Per notarizzazione macOS (opzionale, richiede Apple Developer)
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dieffe-preventivi-${{ matrix.platform }}
+          path: dist-electron/
+          retention-days: 30
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist-electron/**/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

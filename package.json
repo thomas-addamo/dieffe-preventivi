@@ -1,7 +1,10 @@
 {
   "name": "dieffe-preventivi",
-  "version": "3.2.1",
+  "version": "3.3.0",
   "private": true,
+  "description": "Gestione preventivi edili — Dieffe Ristrutturazioni",
+  "author": "Dieffe Ristrutturazioni <impresa.dieffe@gmail.com>",
+  "main": "electron-dist/main.js",
   "scripts": {
     "dev": "next dev -p 3847",
     "build": "next build",
@@ -11,7 +14,14 @@
     "db:migrate": "tsx src/lib/db/migrate.ts",
     "db:seed": "tsx scripts/seed.ts",
     "db:studio": "drizzle-kit studio",
-    "icons": "node scripts/gen-icons.mjs"
+    "icons": "node scripts/gen-icons.mjs",
+    "electron:compile": "tsc --project electron/tsconfig.json",
+    "electron:dev": "pnpm electron:compile && concurrently \"pnpm dev\" \"wait-on http://localhost:3847 && electron .\"",
+    "electron:build": "pnpm build && pnpm electron:compile && electron-builder",
+    "electron:build:mac": "pnpm build && pnpm electron:compile && electron-builder --mac",
+    "electron:build:win": "pnpm build && pnpm electron:compile && electron-builder --win",
+    "electron:dist": "pnpm build && pnpm electron:compile && electron-builder --mac --win",
+    "electron:icons": "electron-icon-builder --input=assets/icon.png --output=assets"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -45,6 +55,8 @@
     "date-fns": "^4.1.0",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
+    "electron-store": "^8.0.0",
+    "electron-updater": "^6.0.0",
     "exceljs": "^4.4.0",
     "groq-sdk": "^1.2.1",
     "lucide-react": "^1.14.0",
@@ -75,13 +87,20 @@
     "@types/react-dom": "^19",
     "@types/react-signature-canvas": "^1.0.7",
     "@types/web-push": "^3.6.4",
+    "@electron/notarize": "^2.0.0",
     "babel-plugin-react-compiler": "1.0.0",
+    "concurrently": "^8.0.0",
     "drizzle-kit": "^0.31.10",
+    "electron": "^31.0.0",
+    "electron-builder": "^24.0.0",
+    "electron-devtools-installer": "^3.2.0",
+    "electron-icon-builder": "^2.0.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
     "sharp": "^0.35.1",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wait-on": "^7.0.0"
   }
 }
