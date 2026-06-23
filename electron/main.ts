@@ -1,9 +1,8 @@
 import { app, BrowserWindow, shell, ipcMain, Menu } from 'electron';
 import { join } from 'path';
-import { autoUpdater } from 'electron-updater';
 import Store from 'electron-store';
 import { setupOfflineCache } from './offline';
-import { setupAutoUpdater } from './updater';
+import { setupAutoUpdater, installUpdate } from './updater';
 
 const store = new Store();
 // In sviluppo l'app NON è pacchettizzata: idioma Electron più affidabile di NODE_ENV.
@@ -178,7 +177,8 @@ ipcMain.handle('get-app-version', () => app.getVersion());
 ipcMain.handle('open-external', (_, url: string) => shell.openExternal(url));
 ipcMain.handle('get-platform', () => process.platform);
 
-// Riavvio per installare l'aggiornamento scaricato (richiesto dal preload)
+// Riavvio per installare l'aggiornamento scaricato (richiesto dal preload).
+// Su macOS usa l'updater custom (swap del bundle), su Windows electron-updater.
 ipcMain.on('install-update', () => {
-  autoUpdater.quitAndInstall();
+  installUpdate();
 });
