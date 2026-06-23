@@ -12,6 +12,13 @@ import {
   isPushSupported,
 } from "@/lib/push-client";
 import {
+  isDesktopApp,
+  desktopNotificationsEnabled,
+  desktopNotificationPermission,
+  enableDesktopNotifications,
+  disableDesktopNotifications,
+} from "@/lib/desktop-notifications";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -36,8 +43,18 @@ export function Header({ userName, userEmail, title, onMenuClick }: HeaderProps)
   const [pushSupported, setPushSupported] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushBusy, setPushBusy] = useState(false);
+  // In Electron usiamo le notifiche native del sistema, non il Web Push.
+  const [desktop, setDesktop] = useState(false);
 
   useEffect(() => {
+    // App desktop (Electron): notifiche native
+    if (isDesktopApp()) {
+      setDesktop(true);
+      setPushSupported(desktopNotificationPermission() !== "unsupported");
+      setPushEnabled(desktopNotificationsEnabled());
+      return;
+    }
+    // Web / PWA: Web Push (VAPID)
     if (!isPushSupported()) return;
     getPushState().then((s) => {
       setPushSupported(true);
@@ -49,6 +66,24 @@ export function Header({ userName, userEmail, title, onMenuClick }: HeaderProps)
     if (pushBusy) return;
     setPushBusy(true);
     try {
+      // App desktop: notifiche native
+      if (desktop) {
+        if (pushEnabled) {
+          disableDesktopNotifications();
+          setPushEnabled(false);
+          toast.success("Notifiche desktop disattivate");
+        } else {
+          const res = await enableDesktopNotifications();
+          if (res.ok) {
+            setPushEnabled(true);
+            toast.success("Notifiche desktop attivate 🔔");
+          } else {
+            toast.error(res.reason);
+          }
+        }
+        return;
+      }
+      // Web / PWA: Web Push
       if (pushEnabled) {
         await unsubscribeFromPush();
         setPushEnabled(false);
@@ -150,11 +185,13 @@ export function Header({ userName, userEmail, title, onMenuClick }: HeaderProps)
               >
                 {pushEnabled ? (
                   <>
-                    <BellOff className="mr-2 h-4 w-4" /> Disattiva notifiche push
+                    <BellOff className="mr-2 h-4 w-4" /> Disattiva notifiche{" "}
+                    {desktop ? "desktop" : "push"}
                   </>
                 ) : (
                   <>
-                    <Bell className="mr-2 h-4 w-4" /> Attiva notifiche push
+                    <Bell className="mr-2 h-4 w-4" /> Attiva notifiche{" "}
+                    {desktop ? "desktop" : "push"}
                   </>
                 )}
               </DropdownMenuItem>
