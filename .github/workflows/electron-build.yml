@@ -56,13 +56,28 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: dieffe-preventivi-${{ matrix.platform }}
-          path: dist-electron/
+          path: |
+            dist-electron/*.dmg
+            dist-electron/*.zip
+            dist-electron/*.exe
+            dist-electron/*.msi
+            dist-electron/*.blockmap
+            dist-electron/latest*.yml
           retention-days: 30
 
+      # IMPORTANTE: solo i distributabili (file al top di dist-electron), NON il glob
+      # ricorsivo **/* che caricherebbe anche il contenuto interno del bundle .app
+      # (locale.pak, Electron Framework, app.asar, ...) facendo fallire la release.
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist-electron/**/*
+          files: |
+            dist-electron/*.dmg
+            dist-electron/*.zip
+            dist-electron/*.exe
+            dist-electron/*.msi
+            dist-electron/*.blockmap
+            dist-electron/latest*.yml
           draft: false
           prerelease: false
         env:
