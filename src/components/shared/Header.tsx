@@ -1,23 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Moon, Sun, Monitor, LogOut, User, ChevronDown, Menu, KeyRound, Bell, BellOff } from "lucide-react";
+import { Moon, Sun, Monitor, LogOut, User, ChevronDown, Menu } from "lucide-react";
 import { useTheme } from "@/components/shared/ThemeProvider";
 import { NotificationBell } from "@/components/shared/NotificationBell";
-import { ChangePasswordDialog } from "@/components/shared/ChangePasswordDialog";
-import {
-  getPushState,
-  subscribeToPush,
-  unsubscribeFromPush,
-  isPushSupported,
-} from "@/lib/push-client";
-import {
-  isDesktopApp,
-  desktopNotificationsEnabled,
-  desktopNotificationPermission,
-  enableDesktopNotifications,
-  disableDesktopNotifications,
-} from "@/lib/desktop-notifications";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,68 +24,6 @@ interface HeaderProps {
 export function Header({ userName, userEmail, title, onMenuClick }: HeaderProps) {
   const { theme, setTheme } = useTheme();
   const router = useRouter();
-  const [showChangePassword, setShowChangePassword] = useState(false);
-  const [pushSupported, setPushSupported] = useState(false);
-  const [pushEnabled, setPushEnabled] = useState(false);
-  const [pushBusy, setPushBusy] = useState(false);
-  // In Electron usiamo le notifiche native del sistema, non il Web Push.
-  const [desktop, setDesktop] = useState(false);
-
-  useEffect(() => {
-    // App desktop (Electron): notifiche native
-    if (isDesktopApp()) {
-      setDesktop(true);
-      setPushSupported(desktopNotificationPermission() !== "unsupported");
-      setPushEnabled(desktopNotificationsEnabled());
-      return;
-    }
-    // Web / PWA: Web Push (VAPID)
-    if (!isPushSupported()) return;
-    getPushState().then((s) => {
-      setPushSupported(true);
-      setPushEnabled(s.subscribed && s.permission === "granted");
-    });
-  }, []);
-
-  async function togglePush() {
-    if (pushBusy) return;
-    setPushBusy(true);
-    try {
-      // App desktop: notifiche native
-      if (desktop) {
-        if (pushEnabled) {
-          disableDesktopNotifications();
-          setPushEnabled(false);
-          toast.success("Notifiche desktop disattivate");
-        } else {
-          const res = await enableDesktopNotifications();
-          if (res.ok) {
-            setPushEnabled(true);
-            toast.success("Notifiche desktop attivate 🔔");
-          } else {
-            toast.error(res.reason);
-          }
-        }
-        return;
-      }
-      // Web / PWA: Web Push
-      if (pushEnabled) {
-        await unsubscribeFromPush();
-        setPushEnabled(false);
-        toast.success("Notifiche push disattivate");
-      } else {
-        const res = await subscribeToPush();
-        if (res.ok) {
-          setPushEnabled(true);
-          toast.success("Notifiche push attivate 🔔");
-        } else {
-          toast.error(res.reason);
-        }
-      }
-    } finally {
-      setPushBusy(false);
-    }
-  }
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -108,8 +31,7 @@ export function Header({ userName, userEmail, title, onMenuClick }: HeaderProps)
     toast.success("Disconnesso");
   }
 
-  const ThemeIcon =
-    theme === "dark" ? Moon : theme === "light" ? Sun : Monitor;
+  const ThemeIcon = theme === "dark" ? Moon : theme === "light" ? Sun : Monitor;
 
   return (
     <header className="flex items-center justify-between h-14 px-4 md:px-6 border-b bg-background/80 backdrop-blur-md sticky top-0 z-20 shrink-0">
@@ -167,35 +89,12 @@ export function Header({ userName, userEmail, title, onMenuClick }: HeaderProps)
           <DropdownMenuContent align="end" className="w-52">
             <div className="px-3 py-2">
               <p className="text-sm font-medium">{userName}</p>
-              <p className="text-xs text-muted-foreground truncate">
-                {userEmail}
-              </p>
+              <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
             </div>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setShowChangePassword(true)}>
-              <KeyRound className="mr-2 h-4 w-4" /> Cambia password
+            <DropdownMenuItem onClick={() => router.push("/impostazioni")}>
+              <User className="mr-2 h-4 w-4" /> Impostazioni
             </DropdownMenuItem>
-            {pushSupported && (
-              <DropdownMenuItem
-                onSelect={(e) => {
-                  e.preventDefault();
-                  togglePush();
-                }}
-                disabled={pushBusy}
-              >
-                {pushEnabled ? (
-                  <>
-                    <BellOff className="mr-2 h-4 w-4" /> Disattiva notifiche{" "}
-                    {desktop ? "desktop" : "push"}
-                  </>
-                ) : (
-                  <>
-                    <Bell className="mr-2 h-4 w-4" /> Attiva notifiche{" "}
-                    {desktop ? "desktop" : "push"}
-                  </>
-                )}
-              </DropdownMenuItem>
-            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={handleLogout}
@@ -206,11 +105,6 @@ export function Header({ userName, userEmail, title, onMenuClick }: HeaderProps)
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-
-      <ChangePasswordDialog
-        open={showChangePassword}
-        onOpenChange={setShowChangePassword}
-      />
     </header>
   );
 }
