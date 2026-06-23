@@ -7,6 +7,7 @@ import { X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { getNotificationMeta } from "@/lib/notification-meta";
+import { isDesktopApp, showDesktopNotification } from "@/lib/desktop-notifications";
 
 type NotificationItem = {
   id: string;
@@ -98,6 +99,11 @@ export function NotificationToaster() {
       .slice(-3);
 
     for (const n of toToast) {
+      // App desktop (Electron): mostra anche la notifica nativa di sistema.
+      if (isDesktopApp()) {
+        showDesktopNotification(n.title, n.body, () => handleClick(n));
+      }
+
       const meta = getNotificationMeta(n.type);
       const Icon = meta.icon;
       const isFeature = n.type === "feature";

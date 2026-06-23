@@ -10,4 +10,4 @@
 // all'entità delle modifiche. Tenere allineato anche "version" in package.json.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const APP_VERSION = "3.3.0";
+export const APP_VERSION = "3.4.0";

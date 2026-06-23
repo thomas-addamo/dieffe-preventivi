@@ -10,6 +10,13 @@ import {
   unsubscribeFromPush,
   isPushSupported,
 } from "@/lib/push-client";
+import {
+  isDesktopApp,
+  desktopNotificationsEnabled,
+  desktopNotificationPermission,
+  enableDesktopNotifications,
+  disableDesktopNotifications,
+} from "@/lib/desktop-notifications";
 
 /** Rileva se siamo in PWA installata (necessario per le push su iOS). */
 function isStandalone(): boolean {
@@ -36,10 +43,25 @@ export function PushToggle() {
   const [denied, setDenied] = useState(false);
   const [loading, setLoading] = useState(true);
   const [needsInstall, setNeedsInstall] = useState(false);
+  // In Electron usiamo le notifiche native del sistema, non il Web Push.
+  const [desktop, setDesktop] = useState(false);
 
   useEffect(() => {
     let active = true;
     (async () => {
+      // ── App desktop (Electron): notifiche native ──────────────────────────
+      if (isDesktopApp()) {
+        if (!active) return;
+        setDesktop(true);
+        const perm = desktopNotificationPermission();
+        setSupported(perm !== "unsupported");
+        setDenied(perm === "denied");
+        setEnabled(desktopNotificationsEnabled());
+        setLoading(false);
+        return;
+      }
+
+      // ── Web / PWA: Web Push (VAPID) ───────────────────────────────────────
       if (!isPushSupported()) {
         // Su iOS le push richiedono la PWA installata: distinguiamo il caso.
         if (active) {
@@ -63,6 +85,26 @@ export function PushToggle() {
   async function toggle() {
     setLoading(true);
     try {
+      // ── App desktop: notifiche native ───────────────────────────────────────
+      if (desktop) {
+        if (enabled) {
+          disableDesktopNotifications();
+          setEnabled(false);
+          toast.success("Notifiche desktop disattivate");
+        } else {
+          const res = await enableDesktopNotifications();
+          if (res.ok) {
+            setEnabled(true);
+            toast.success("Notifiche desktop attivate 🔔");
+          } else {
+            if (res.reason.includes("negato")) setDenied(true);
+            toast.error(res.reason);
+          }
+        }
+        return;
+      }
+
+      // ── Web / PWA: Web Push ─────────────────────────────────────────────────
       if (enabled) {
         await unsubscribeFromPush();
         setEnabled(false);
@@ -82,6 +124,8 @@ export function PushToggle() {
     }
   }
 
+  const title = desktop ? "Notifiche desktop" : "Notifiche push";
+
   // Non supportato (es. iOS Safari non installato come app)
   if (!supported) {
     return (
@@ -90,7 +134,7 @@ export function PushToggle() {
           <BellOff className="h-[18px] w-[18px] text-muted-foreground" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium">Notifiche push</p>
+          <p className="text-sm font-medium">{title}</p>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {needsInstall
               ? "Aggiungi l'app alla schermata Home (Condividi → Aggiungi a Home) per ricevere le notifiche native."
@@ -117,12 +161,18 @@ export function PushToggle() {
         />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium">Notifiche push</p>
+        <p className="text-sm font-medium">{title}</p>
         <p className="mt-0.5 text-xs text-muted-foreground">
           {denied
-            ? "Bloccate dal browser. Abilitale dalle impostazioni del sito."
+            ? desktop
+              ? "Bloccate dal sistema. Abilitale dalle Impostazioni di sistema."
+              : "Bloccate dal browser. Abilitale dalle impostazioni del sito."
             : enabled
-            ? "Attive su questo dispositivo."
+            ? desktop
+              ? "Attive mentre l'app è aperta."
+              : "Attive su questo dispositivo."
+            : desktop
+            ? "Ricevi le notifiche di sistema mentre l'app è aperta."
             : "Ricevi le notifiche anche ad app chiusa."}
         </p>
       </div>
@@ -132,7 +182,7 @@ export function PushToggle() {
         onClick={toggle}
         disabled={loading || denied}
         aria-pressed={enabled}
-        aria-label="Attiva/disattiva notifiche push"
+        aria-label="Attiva/disattiva notifiche"
         className={cn(
           "relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:opacity-50",
           enabled ? "bg-primary" : "bg-muted-foreground/30"

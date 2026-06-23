@@ -36,6 +36,19 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      # Incorpora il token di sola lettura per l'auto-update da repo privato.
+      # Se il secret non c'è, la build esce senza token (nessun auto-update auth).
+      - name: Inject update token
+        shell: bash
+        run: |
+          if [ -n "${{ secrets.UPDATE_TOKEN }}" ]; then
+            sed -i.bak "s/__UPDATE_TOKEN__/${{ secrets.UPDATE_TOKEN }}/" electron/update-token.ts
+            rm -f electron/update-token.ts.bak
+            echo "Token di update iniettato."
+          else
+            echo "Nessun secret UPDATE_TOKEN: build senza token di auto-update."
+          fi
+
       # NB: niente "next build" qui. L'app desktop è un wrapper che carica la web app
       # remota (Vercel) e NON impacchetta .next, quindi non servono i secret del DB ecc.
       - name: Compile Electron TypeScript

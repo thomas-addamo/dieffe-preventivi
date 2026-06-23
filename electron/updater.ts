@@ -1,7 +1,20 @@
 import { autoUpdater } from 'electron-updater';
 import { BrowserWindow } from 'electron';
+import { UPDATE_TOKEN } from './update-token';
 
 export function setupAutoUpdater(window: BrowserWindow) {
+  // Repo privato: senza token l'app non può scaricare gli update. Se è stato
+  // incorporato in build (CI), lo passiamo al provider GitHub per l'autenticazione.
+  if (UPDATE_TOKEN) {
+    autoUpdater.setFeedURL({
+      provider: 'github',
+      owner: 'thomas-addamo',
+      repo: 'dieffe-preventivi',
+      private: true,
+      token: UPDATE_TOKEN,
+    } as Parameters<typeof autoUpdater.setFeedURL>[0]);
+  }
+
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
 
