@@ -9,6 +9,24 @@ const PUBLIC_PATHS = ["/login", "/api/auth", "/p/", "/api/public", "/api/cron"];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // ── Root "/" : landing pubblica vs dashboard vs Electron ──────────────────
+  // La root mostra la landing di presentazione SOLO a visitatori non loggati su
+  // browser. In Electron la landing non va mai mostrata; chi è loggato salta
+  // diretto in dashboard.
+  if (pathname === "/") {
+    const userAgent = request.headers.get("user-agent") ?? "";
+    if (userAgent.includes("Electron")) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+    const rootToken = request.cookies.get("dieffe_session")?.value;
+    if (rootToken) {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+    // Nessuna sessione, browser normale → mostra la landing (page.tsx).
+    return NextResponse.next();
+  }
+
   // Asset statici / metadata pubblici (icone, manifest, favicon, ecc.): devono
   // essere raggiungibili SENZA sessione, altrimenti iOS/Safari riceve un 307
   // verso /login mentre prova a scaricare apple-icon/manifest in "Aggiungi a
