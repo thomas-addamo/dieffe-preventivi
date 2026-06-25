@@ -1,69 +1,34 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import {
+  FileText,
+  PenLine,
+  Sparkles,
+  BarChart3,
+  ShieldCheck,
+  MonitorSmartphone,
+  CheckCircle2,
+  Clock,
+  ArrowRight,
+  Download,
+  Check,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  formatCurrency,
+  QUOTE_STATUS_LABELS,
+  QUOTE_STATUS_COLORS,
+  cn,
+} from "@/lib/utils";
 import { APP_VERSION } from "@/lib/version";
 
 const GITHUB_URL = "https://github.com/thomas-addamo/dieffe-preventivi";
 const RELEASES_URL = `${GITHUB_URL}/releases/latest`;
 
-/* ─────────────────────────────────────────────────────────────────────────
-   DISPLACEMENT MAP — il cuore del liquid glass (tecnica kube.io).
-   Genera un'immagine in cui R = spostamento orizzontale, G = verticale.
-   128 = neutro (nessuno spostamento → centro del vetro pulito). Sul bordo,
-   un profilo convesso (SDF di rounded-rect) spinge i pixel verso l'esterno,
-   simulando la rifrazione della luce attraverso lo spessore del vetro.
-   ──────────────────────────────────────────────────────────────────────── */
-function buildDisplacementMap(size = 320): string {
-  const c = document.createElement("canvas");
-  c.width = c.height = size;
-  const ctx = c.getContext("2d");
-  if (!ctx) return "";
-  const img = ctx.createImageData(size, size);
-  const d = img.data;
-  const half = size / 2;
-  const r = size * 0.2; // raggio angoli (squircle-like)
-  const edge = size * 0.34; // spessore della banda di rifrazione (verso l'interno)
-
-  // Signed distance field di un rounded-rect (negativo dentro, 0 sul bordo).
-  const sdf = (x: number, y: number) => {
-    const px = Math.abs(x) - (half - r);
-    const py = Math.abs(y) - (half - r);
-    const ox = Math.max(px, 0);
-    const oy = Math.max(py, 0);
-    return Math.hypot(ox, oy) + Math.min(Math.max(px, py), 0) - r;
-  };
-
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const cx = x - half + 0.5;
-      const cy = y - half + 0.5;
-      const dist = sdf(cx, cy);
-      let R = 128;
-      let G = 128;
-      if (dist < 0 && dist > -edge) {
-        const t = -dist / edge; // 0 sul bordo → 1 al limite interno
-        const m = Math.pow(1 - t, 1.7); // massimo sul bordo, decade verso il centro
-        // Normale (gradiente dell'SDF) calcolata numericamente: punta verso l'esterno.
-        const gx = sdf(cx + 1, cy) - sdf(cx - 1, cy);
-        const gy = sdf(cx, cy + 1) - sdf(cx, cy - 1);
-        const gl = Math.hypot(gx, gy) || 1;
-        R = 128 + (gx / gl) * m * 127;
-        G = 128 + (gy / gl) * m * 127;
-      }
-      const i = (y * size + x) * 4;
-      d[i] = Math.max(0, Math.min(255, R));
-      d[i + 1] = Math.max(0, Math.min(255, G));
-      d[i + 2] = 128;
-      d[i + 3] = 255;
-    }
-  }
-  ctx.putImageData(img, 0, 0);
-  return c.toDataURL();
-}
-
-/* ── Icone brand (inline, niente dipendenze) ─────────────────────────────── */
+/* ── Icone brand (inline) ────────────────────────────────────────────────── */
 function AppleIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 384 512" className={className} fill="currentColor" aria-hidden>
@@ -86,34 +51,45 @@ function GitHubIcon({ className }: { className?: string }) {
   );
 }
 
-/* ── Feature cards ───────────────────────────────────────────────────────── */
+const Logo = ({ size = 36 }: { size?: number }) => (
+  <span
+    className="inline-flex items-center justify-center rounded-xl border bg-card shadow-2xs"
+    style={{ width: size, height: size }}
+  >
+    <Image src="/icona_dieffe.svg" alt="Dieffe" width={size * 0.62} height={size * 0.62} priority />
+  </span>
+);
+
+/* ── Dati realistici per l'anteprima dashboard (riproduce l'app 1:1) ─────── */
+const PREVIEW_STATS = [
+  { icon: FileText, label: "Preventivi totali", value: "128", color: "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400" },
+  { icon: CheckCircle2, label: "Accettati questo mese", value: "14", color: "bg-green-50 text-green-600 dark:bg-green-500/10 dark:text-green-400" },
+  { icon: Clock, label: "In attesa di firma", value: "7", color: "bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400" },
+];
+const PREVIEW_ROWS = [
+  { code: "2026-014", title: "Ristrutturazione appartamento", client: "Rossi Costruzioni", status: "sent", amount: 27499 },
+  { code: "2026-013", title: "Cappotto termico condominio", client: "Bianchi S.r.l.", status: "accepted", amount: 41200 },
+  { code: "2026-012", title: "Rifacimento bagno", client: "M. Verdi", status: "draft", amount: 6850 },
+  { code: "2026-011", title: "Impianto elettrico villa", client: "Ferrari Immobili", status: "accepted", amount: 18300 },
+];
+
 const FEATURES = [
-  { icon: "⚡", title: "Preventivi professionali", body: "Sezioni, voci, IVA, sconti e note. Esporta in PDF, Excel, CSV e JSON." },
-  { icon: "✍️", title: "Firma digitale", body: "Il cliente firma dal link condivisibile. IP registrato con consenso GDPR." },
-  { icon: "🤖", title: "AI integrata", body: "Descrizioni professionali e suggerimenti di prezzo generati dall'intelligenza artificiale." },
-  { icon: "📊", title: "SAL e avanzamento", body: "Traccia lo stato di ogni cantiere e le milestone di pagamento." },
-  { icon: "🔒", title: "3 livelli di accesso", body: "Admin, Editor, Viewer. Ogni utente vede solo quello che deve." },
-  { icon: "💻", title: "Desktop + Browser", body: "App nativa per macOS e Windows. Sempre disponibile anche dal browser." },
+  { icon: FileText, color: "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400", title: "Preventivi professionali", body: "Sezioni, voci, IVA, sconti e note. Esporta in PDF, Excel, CSV e JSON con un clic." },
+  { icon: PenLine, color: "bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400", title: "Firma digitale", body: "Il cliente firma dal link condivisibile. IP e data registrati con consenso GDPR." },
+  { icon: Sparkles, color: "bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400", title: "AI integrata", body: "Descrizioni professionali e suggerimenti di prezzo generati dall'intelligenza artificiale." },
+  { icon: BarChart3, color: "bg-green-50 text-green-600 dark:bg-green-500/10 dark:text-green-400", title: "SAL e avanzamento", body: "Traccia lo stato di ogni cantiere e le milestone di pagamento, sempre aggiornate." },
+  { icon: ShieldCheck, color: "bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400", title: "3 livelli di accesso", body: "Admin, Editor e Viewer. Ogni membro del team vede solo quello che deve vedere." },
+  { icon: MonitorSmartphone, color: "bg-sky-50 text-sky-600 dark:bg-sky-500/10 dark:text-sky-400", title: "Desktop + Browser", body: "App nativa per macOS e Windows, con aggiornamenti automatici. E sempre dal browser." },
 ];
 
-const HERO_CHIPS = [
-  { icon: "✍️", label: "Firma digitale" },
-  { icon: "🤖", label: "AI integrata" },
-  { icon: "📄", label: "PDF · Excel · CSV" },
-  { icon: "📊", label: "SAL & cantieri" },
+const STEPS = [
+  { n: "01", title: "Crea il preventivo", body: "Aggiungi sezioni e voci, lascia che l'AI scriva le descrizioni e calcoli i totali." },
+  { n: "02", title: "Invia e fai firmare", body: "Condividi un link sicuro: il cliente visualizza e firma digitalmente dal browser." },
+  { n: "03", title: "Traccia il lavoro", body: "Segui stato, SAL e pagamenti di ogni cantiere da un'unica dashboard." },
 ];
 
-export function LandingClient({ fontClass }: { fontClass: string }) {
+export function LandingClient() {
   const router = useRouter();
-  const [mapUrl, setMapUrl] = useState<string>("");
-  const blob1 = useRef<HTMLDivElement>(null);
-  const blob2 = useRef<HTMLDivElement>(null);
-  const blob3 = useRef<HTMLDivElement>(null);
-
-  // Genera la displacement map sul client (richiede il canvas/DOM).
-  useEffect(() => {
-    setMapUrl(buildDisplacementMap());
-  }, []);
 
   // Electron: la landing non va mai mostrata → login.
   useEffect(() => {
@@ -121,22 +97,6 @@ export function LandingClient({ fontClass }: { fontClass: string }) {
       router.replace("/login");
     }
   }, [router]);
-
-  // Parallax dei blob al movimento del puntatore.
-  useEffect(() => {
-    const onMove = (e: PointerEvent) => {
-      const dx = e.clientX / window.innerWidth - 0.5;
-      const dy = e.clientY / window.innerHeight - 0.5;
-      blob1.current?.style.setProperty("margin-left", `${dx * 40}px`);
-      blob1.current?.style.setProperty("margin-top", `${dy * 40}px`);
-      blob2.current?.style.setProperty("margin-left", `${dx * -55}px`);
-      blob2.current?.style.setProperty("margin-top", `${dy * -35}px`);
-      blob3.current?.style.setProperty("margin-left", `${dx * 30}px`);
-      blob3.current?.style.setProperty("margin-top", `${dy * -45}px`);
-    };
-    window.addEventListener("pointermove", onMove);
-    return () => window.removeEventListener("pointermove", onMove);
-  }, []);
 
   // Reveal on scroll.
   useEffect(() => {
@@ -149,287 +109,267 @@ export function LandingClient({ fontClass }: { fontClass: string }) {
           }
         });
       },
-      { threshold: 0.1 }
+      { threshold: 0.12 }
     );
     document.querySelectorAll(".reveal-on-scroll").forEach((el) => observer.observe(el));
     return () => observer.disconnect();
   }, []);
 
-  function handleTilt(e: React.PointerEvent<HTMLDivElement>) {
-    const card = e.currentTarget;
-    const r = card.getBoundingClientRect();
-    const px = (e.clientX - r.left) / r.width - 0.5;
-    const py = (e.clientY - r.top) / r.height - 0.5;
-    card.style.transform = `perspective(900px) rotateY(${px * 6}deg) rotateX(${-py * 6}deg) translateY(-4px)`;
-  }
-  function handleTiltLeave(e: React.PointerEvent<HTMLDivElement>) {
-    e.currentTarget.style.transform = "";
-  }
-
-  const logo = (
-    <span className="lp-logo-chip inline-flex items-center justify-center rounded-xl p-1.5">
-      <Image src="/icona_dieffe.svg" alt="Dieffe" width={26} height={26} priority className="h-[26px] w-[26px]" />
-    </span>
-  );
-
   return (
-    <div className={`lp-root min-h-screen overflow-x-hidden ${fontClass}`}>
-      {/* ── FILTRI SVG liquid glass (renderizzati quando la map è pronta) ──── */}
-      {mapUrl && (
-        <svg width="0" height="0" aria-hidden style={{ position: "absolute" }}>
-          <defs>
-            {/* Soft: rifrazione lieve per nav, card, bottoni, chip */}
-            <filter id="lg-soft" x="0%" y="0%" width="100%" height="100%" colorInterpolationFilters="sRGB">
-              <feImage href={mapUrl} x="0%" y="0%" width="100%" height="100%" preserveAspectRatio="none" result="m" />
-              <feDisplacementMap in="SourceGraphic" in2="m" scale={14} xChannelSelector="R" yChannelSelector="G" />
-            </filter>
-
-            {/* Strong: rifrazione marcata + aberrazione cromatica (R/G/B sfasati) */}
-            <filter id="lg-strong" x="0%" y="0%" width="100%" height="100%" colorInterpolationFilters="sRGB">
-              <feImage href={mapUrl} x="0%" y="0%" width="100%" height="100%" preserveAspectRatio="none" result="m" />
-              <feDisplacementMap in="SourceGraphic" in2="m" scale={34} xChannelSelector="R" yChannelSelector="G" result="dR" />
-              <feColorMatrix in="dR" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="cR" />
-              <feDisplacementMap in="SourceGraphic" in2="m" scale={27} xChannelSelector="R" yChannelSelector="G" result="dG" />
-              <feColorMatrix in="dG" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="cG" />
-              <feDisplacementMap in="SourceGraphic" in2="m" scale={20} xChannelSelector="R" yChannelSelector="G" result="dB" />
-              <feColorMatrix in="dB" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="cB" />
-              <feBlend in="cR" in2="cG" mode="screen" result="rg" />
-              <feBlend in="rg" in2="cB" mode="screen" />
-            </filter>
-          </defs>
-        </svg>
-      )}
-
-      {/* ── BACKGROUND AMBIENT ─────────────────────────────────────────────── */}
-      <div
-        style={{
-          position: "fixed",
-          inset: 0,
-          zIndex: 0,
-          overflow: "hidden",
-          background: "radial-gradient(120% 90% at 50% -10%, #0a1840 0%, #050b22 55%, #03060f 100%)",
-        }}
-      >
-        <div ref={blob1} className="lp-blob" style={{ position: "absolute", top: "-12%", left: "-8%", width: "48vw", height: "48vw", borderRadius: "50%", background: "radial-gradient(circle at 35% 35%, oklch(0.7 0.17 248), transparent 68%)", filter: "blur(40px)", opacity: 0.85, animation: "blobA 26s ease-in-out infinite" }} />
-        <div ref={blob2} className="lp-blob" style={{ position: "absolute", top: "18%", right: "-12%", width: "42vw", height: "42vw", borderRadius: "50%", background: "radial-gradient(circle at 50% 50%, oklch(0.66 0.18 268), transparent 66%)", filter: "blur(46px)", opacity: 0.75, animation: "blobB 32s ease-in-out infinite" }} />
-        <div ref={blob3} className="lp-blob" style={{ position: "absolute", bottom: "-18%", left: "28%", width: "50vw", height: "50vw", borderRadius: "50%", background: "radial-gradient(circle at 50% 50%, oklch(0.62 0.15 224), transparent 64%)", filter: "blur(52px)", opacity: 0.7, animation: "blobC 38s ease-in-out infinite" }} />
-        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(120% 120% at 50% 50%, transparent 55%, rgba(2,5,15,.7) 100%)" }} />
-      </div>
-
-      {/* ════════════════ DESKTOP / TABLET ════════════════ */}
-      <div className="relative z-10 hidden md:block">
-        {/* NAVBAR */}
-        <nav className="fixed inset-x-0 top-0 z-50 px-4 pt-4">
-          <div className="glass glass-nav mx-auto flex max-w-6xl items-center justify-between rounded-2xl px-4 py-2.5">
-            <a href="#top" className="flex items-center gap-2.5">
-              {logo}
-              <span className="lp-display text-[15px] font-semibold text-white">Dieffe Preventivi</span>
-            </a>
-            <div className="hidden items-center gap-7 text-sm font-medium text-white/70 lg:flex">
-              <a href="#funzioni" className="transition-colors hover:text-white">Funzioni</a>
-              <a href="#anteprima" className="transition-colors hover:text-white">Anteprima</a>
-              <a href="#download" className="transition-colors hover:text-white">Download</a>
-            </div>
-            <div className="flex items-center gap-2">
-              <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="glass-btn-secondary hidden items-center gap-2 rounded-xl px-3.5 py-2 text-sm sm:inline-flex">
+    <div className="min-h-screen bg-background text-foreground">
+      {/* ── NAVBAR ───────────────────────────────────────────────────────── */}
+      <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+          <a href="#top" className="flex items-center gap-2.5">
+            <Logo size={34} />
+            <span className="text-[15px] font-semibold tracking-tight">Dieffe Preventivi</span>
+          </a>
+          <nav className="hidden items-center gap-8 text-sm font-medium text-muted-foreground lg:flex">
+            <a href="#funzioni" className="transition-colors hover:text-foreground">Funzioni</a>
+            <a href="#anteprima" className="transition-colors hover:text-foreground">Anteprima</a>
+            <a href="#come-funziona" className="transition-colors hover:text-foreground">Come funziona</a>
+            <a href="#download" className="transition-colors hover:text-foreground">Download</a>
+          </nav>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
+              <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
                 <GitHubIcon className="h-4 w-4" /> GitHub
               </a>
-              <a href="/login" className="glass-btn-secondary rounded-xl px-3.5 py-2 text-sm">Accedi</a>
-              <a href="#download" className="glass-btn-primary rounded-xl px-4 py-2 text-sm">Scarica</a>
-            </div>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <a href="/login">Accedi</a>
+            </Button>
+            <Button asChild size="sm" className="hidden sm:inline-flex">
+              <a href="#download"><Download className="h-4 w-4" /> Scarica</a>
+            </Button>
           </div>
-        </nav>
+        </div>
+      </header>
 
-        {/* HERO — centrato, showcase di vetro al posto del mockup */}
-        <header id="top" className="mx-auto max-w-3xl px-6 pb-4 pt-40 text-center">
-          <span className="glass glass-nav mb-7 inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-medium text-white/85">
-            <span className="lp-pulse-dot inline-block h-2 w-2 rounded-full bg-sky-400" />
-            Disponibile per macOS &amp; Windows
-          </span>
-          <h1 className="lp-display text-5xl font-bold leading-[1.04] text-white sm:text-[4.25rem]">
-            Gestisci i preventivi
-            <br />
-            della tua impresa.
+      {/* ── HERO ─────────────────────────────────────────────────────────── */}
+      <section id="top" className="relative overflow-hidden">
+        <div aria-hidden className="lp-grid-bg pointer-events-none absolute inset-0" />
+        <div aria-hidden className="pointer-events-none absolute -top-32 left-1/2 h-[420px] w-[760px] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
+
+        <div className="relative mx-auto max-w-3xl px-6 pb-10 pt-20 text-center sm:pt-28">
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1 text-xs font-medium text-muted-foreground shadow-2xs">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
+            </span>
+            Disponibile per macOS, Windows e browser
+          </div>
+          <h1 className="text-balance text-4xl font-semibold leading-[1.08] tracking-tight sm:text-6xl">
+            I preventivi della tua impresa,
+            <span className="block bg-gradient-to-r from-primary to-blue-500 bg-clip-text text-transparent">
+              gestiti come si deve.
+            </span>
           </h1>
-          <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-white/65">
-            Il gestionale professionale per preventivi edili. Crea, invia, fai firmare e traccia ogni
-            lavoro — da desktop o dal browser.
+          <p className="mx-auto mt-6 max-w-xl text-pretty text-lg leading-relaxed text-muted-foreground">
+            Crea preventivi edili professionali, falli firmare digitalmente e traccia ogni cantiere.
+            Dal desktop o dal browser — con l&apos;AI che lavora al tuo fianco.
           </p>
-          <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-            <a href={RELEASES_URL} target="_blank" rel="noopener noreferrer" className="glass-btn-primary inline-flex items-center gap-2 rounded-xl px-5 py-3 text-[15px]">
-              <AppleIcon className="h-5 w-5" /> Scarica per Mac
-            </a>
-            <a href={RELEASES_URL} target="_blank" rel="noopener noreferrer" className="glass glass-btn-secondary inline-flex items-center gap-2 rounded-xl px-5 py-3 text-[15px]">
-              <WindowsIcon className="h-[18px] w-[18px]" /> Scarica per Windows
-            </a>
-            <a href="/login" className="inline-flex items-center gap-1.5 px-2 py-3 text-[15px] font-medium text-white/75 transition-colors hover:text-white">
-              Accedi al sito →
-            </a>
+          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <Button asChild size="lg">
+              <a href="#download"><Download className="h-4 w-4" /> Scarica l&apos;app</a>
+            </Button>
+            <Button asChild size="lg" variant="outline">
+              <a href="/login">Accedi dal browser <ArrowRight className="h-4 w-4" /></a>
+            </Button>
           </div>
-          <p className="mt-7 text-xs font-medium uppercase tracking-[0.2em] text-white/40">
-            Usato da Dieffe Ristrutturazioni Moncalieri
+          <p className="mt-6 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground/70">
+            Realizzato per Dieffe Ristrutturazioni Moncalieri
           </p>
-        </header>
+        </div>
 
-        {/* SHOWCASE VETRO — dimostra la rifrazione sopra i blob colorati */}
-        <section id="anteprima" className="mx-auto max-w-5xl px-6 pb-12 pt-6">
-          <div className="relative">
-            {/* chip flottanti per profondità */}
-            <div className="lp-chip lp-float absolute -left-2 top-6 z-20 hidden items-center gap-2 rounded-2xl px-3.5 py-2.5 text-sm font-medium text-white shadow-lg lg:flex" style={{ animationDelay: "0.4s" }}>
-              <span className="text-base">🔒</span> 3 livelli di accesso
-            </div>
-            <div className="lp-chip lp-float-slow absolute -right-3 bottom-8 z-20 hidden items-center gap-2 rounded-2xl px-3.5 py-2.5 text-sm font-medium text-white shadow-lg lg:flex" style={{ animationDelay: "1.1s" }}>
-              <span className="text-base">⚡</span> Pronto in pochi clic
+        {/* ── APP PREVIEW (riproduce fedelmente la dashboard) ─────────────── */}
+        <div id="anteprima" className="relative mx-auto max-w-5xl px-4 pb-20 sm:px-6">
+          <div className="reveal-on-scroll overflow-hidden rounded-2xl border bg-card shadow-xl">
+            {/* toolbar finestra */}
+            <div className="flex items-center gap-2 border-b bg-muted/40 px-4 py-3">
+              <span className="h-3 w-3 rounded-full bg-red-400/80" />
+              <span className="h-3 w-3 rounded-full bg-amber-400/80" />
+              <span className="h-3 w-3 rounded-full bg-green-400/80" />
+              <div className="mx-auto hidden items-center gap-2 rounded-md border bg-background px-3 py-1 text-xs text-muted-foreground sm:flex">
+                <span className="h-2 w-2 rounded-full bg-green-500" />
+                dieffe-preventivi.vercel.app/dashboard
+              </div>
             </div>
 
-            <div className="glass glass-surface lp-float mx-auto max-w-3xl rounded-[2rem] p-10 text-center">
-              <span className="lp-logo-chip mx-auto mb-5 inline-flex items-center justify-center rounded-2xl p-3">
-                <Image src="/icona_dieffe.svg" alt="Dieffe" width={48} height={48} className="h-12 w-12" />
-              </span>
-              <h2 className="lp-display text-2xl font-bold text-white">Dieffe Preventivi</h2>
-              <p className="mx-auto mt-2 max-w-md text-sm text-white/60">
-                Preventivi edili professionali — firmati, esportati e tracciati. Tutto in un&apos;unica app.
-              </p>
-              <div className="mt-7 flex flex-wrap items-center justify-center gap-2.5">
-                {HERO_CHIPS.map((chip) => (
-                  <span key={chip.label} className="lp-chip inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-medium text-white/90">
-                    <span>{chip.icon}</span> {chip.label}
-                  </span>
+            {/* corpo dashboard */}
+            <div className="p-4 sm:p-6">
+              <div className="mb-5 flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold tracking-tight">Dashboard</h2>
+                  <p className="text-xs text-muted-foreground">I tuoi preventivi più recenti</p>
+                </div>
+                <span className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-xs">
+                  <span className="text-base leading-none">+</span> Nuovo preventivo
+                </span>
+              </div>
+
+              {/* stat cards */}
+              <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {PREVIEW_STATS.map((s) => (
+                  <div key={s.label} className="flex items-start gap-3 rounded-xl border bg-card p-4">
+                    <div className={cn("shrink-0 rounded-lg p-2", s.color)}>
+                      <s.icon className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs leading-tight text-muted-foreground">{s.label}</p>
+                      <p className="text-xl font-semibold tabular-nums">{s.value}</p>
+                    </div>
+                  </div>
                 ))}
+              </div>
+
+              {/* tabella preventivi */}
+              <div className="overflow-hidden rounded-xl border">
+                <table className="w-full text-left text-sm">
+                  <thead className="border-b bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
+                    <tr>
+                      <th className="px-4 py-2.5 font-medium">Codice</th>
+                      <th className="px-4 py-2.5 font-medium">Preventivo</th>
+                      <th className="hidden px-4 py-2.5 font-medium md:table-cell">Cliente</th>
+                      <th className="px-4 py-2.5 font-medium">Stato</th>
+                      <th className="px-4 py-2.5 text-right font-medium">Importo</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {PREVIEW_ROWS.map((r) => (
+                      <tr key={r.code} className="transition-colors hover:bg-muted/30">
+                        <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-muted-foreground">{r.code}</td>
+                        <td className="px-4 py-3 font-medium">{r.title}</td>
+                        <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">{r.client}</td>
+                        <td className="px-4 py-3">
+                          <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold", QUOTE_STATUS_COLORS[r.status])}>
+                            {QUOTE_STATUS_LABELS[r.status]}
+                          </span>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-right font-medium tabular-nums">{formatCurrency(r.amount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* FEATURES */}
-        <section id="funzioni" className="mx-auto max-w-6xl px-6 py-20">
-          <div className="reveal-on-scroll mx-auto mb-14 max-w-2xl text-center">
-            <h2 className="lp-display text-3xl font-bold text-white sm:text-4xl">
-              Tutto quello che serve. Niente di superfluo.
-            </h2>
+      {/* ── FUNZIONI ─────────────────────────────────────────────────────── */}
+      <section id="funzioni" className="mx-auto max-w-6xl px-6 py-20">
+        <div className="reveal-on-scroll mx-auto mb-12 max-w-2xl text-center">
+          <p className="mb-2 text-sm font-semibold text-primary">Funzioni</p>
+          <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+            Tutto quello che serve. Niente di superfluo.
+          </h2>
+          <p className="mt-3 text-muted-foreground">
+            Pensato per le imprese edili, dalla prima voce alla firma del cliente.
+          </p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {FEATURES.map((f, i) => (
+            <div
+              key={f.title}
+              className="reveal-on-scroll group rounded-2xl border bg-card p-6 shadow-2xs transition-all duration-200 hover:-translate-y-1 hover:shadow-md"
+              style={{ transitionDelay: `${i * 50}ms` }}
+            >
+              <div className={cn("mb-4 inline-flex rounded-xl p-2.5", f.color)}>
+                <f.icon className="h-5 w-5" />
+              </div>
+              <h3 className="mb-1.5 font-semibold tracking-tight">{f.title}</h3>
+              <p className="text-sm leading-relaxed text-muted-foreground">{f.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── COME FUNZIONA ────────────────────────────────────────────────── */}
+      <section id="come-funziona" className="border-y bg-muted/30">
+        <div className="mx-auto max-w-6xl px-6 py-20">
+          <div className="reveal-on-scroll mx-auto mb-12 max-w-2xl text-center">
+            <p className="mb-2 text-sm font-semibold text-primary">Come funziona</p>
+            <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">Dal preventivo alla firma in 3 passi.</h2>
           </div>
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {FEATURES.map((f, i) => (
+          <div className="grid gap-4 md:grid-cols-3">
+            {STEPS.map((s, i) => (
               <div
-                key={f.title}
-                onPointerMove={handleTilt}
-                onPointerLeave={handleTiltLeave}
-                className="glass glass-card reveal-on-scroll rounded-2xl p-6"
-                style={{ transitionDelay: `${i * 60}ms` }}
+                key={s.n}
+                className="reveal-on-scroll relative rounded-2xl border bg-card p-6 shadow-2xs"
+                style={{ transitionDelay: `${i * 70}ms` }}
               >
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 text-2xl">
-                  {f.icon}
-                </div>
-                <h3 className="lp-display mb-1.5 text-lg font-semibold text-white">{f.title}</h3>
-                <p className="text-sm leading-relaxed text-white/60">{f.body}</p>
+                <span className="text-sm font-mono font-semibold text-primary">{s.n}</span>
+                <h3 className="mt-2 font-semibold tracking-tight">{s.title}</h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{s.body}</p>
+                {i < STEPS.length - 1 && (
+                  <ArrowRight className="absolute -right-3 top-1/2 hidden h-5 w-5 -translate-y-1/2 text-muted-foreground/40 md:block" />
+                )}
               </div>
             ))}
           </div>
-        </section>
-
-        {/* DOWNLOAD */}
-        <section id="download" className="mx-auto max-w-5xl px-6 py-20">
-          <div className="reveal-on-scroll mx-auto mb-12 max-w-2xl text-center">
-            <h2 className="lp-display text-3xl font-bold text-white sm:text-4xl">Scarica l&apos;app.</h2>
-            <p className="mt-3 text-white/60">Disponibile per macOS e Windows. Sempre aggiornata automaticamente.</p>
-          </div>
-          <div className="grid gap-5 sm:grid-cols-2">
-            <a href={RELEASES_URL} target="_blank" rel="noopener noreferrer" className="glass glass-card reveal-on-scroll flex flex-col items-center rounded-2xl p-8 text-center">
-              <AppleIcon className="mb-4 h-12 w-12 text-white" />
-              <h3 className="lp-display text-xl font-semibold text-white">Dieffe Preventivi per Mac</h3>
-              <p className="mt-1 text-sm text-white/55">Intel &amp; Apple Silicon</p>
-              <span className="glass-btn-primary mt-5 inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm">Scarica .dmg</span>
-              <p className="mt-3 text-xs text-white/45">v{APP_VERSION} · Richiede macOS 12+</p>
-            </a>
-            <a href={RELEASES_URL} target="_blank" rel="noopener noreferrer" className="glass glass-card reveal-on-scroll flex flex-col items-center rounded-2xl p-8 text-center">
-              <WindowsIcon className="mb-4 h-11 w-11 text-white" />
-              <h3 className="lp-display text-xl font-semibold text-white">Dieffe Preventivi per Windows</h3>
-              <p className="mt-1 text-sm text-white/55">x64</p>
-              <span className="glass-btn-primary mt-5 inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm">Scarica .exe</span>
-              <p className="mt-3 text-xs text-white/45">v{APP_VERSION} · Richiede Windows 10+</p>
-            </a>
-          </div>
-          <div className="mt-8 flex flex-col items-center gap-3 text-sm">
-            <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 font-medium text-white/70 transition-colors hover:text-white">
-              <GitHubIcon className="h-4 w-4" /> Visualizza su GitHub →
-            </a>
-            <a href="/login" className="font-medium text-white/55 transition-colors hover:text-white">
-              Preferisci il browser? Accedi dal sito →
-            </a>
-          </div>
-        </section>
-
-        {/* FOOTER */}
-        <footer className="mx-auto max-w-6xl px-6 py-12">
-          <div className="glass glass-nav flex flex-col items-center gap-5 rounded-2xl px-6 py-8 text-center">
-            <div className="flex items-center gap-2.5">
-              {logo}
-              <span className="lp-display text-sm font-semibold text-white">Dieffe Preventivi</span>
-            </div>
-            <div className="text-sm text-white/55">
-              Dieffe Ristrutturazioni Moncalieri
-              <br />
-              P.IVA 10908150013 ·{" "}
-              <a href="https://impresadieffe.it" target="_blank" rel="noopener noreferrer" className="underline-offset-2 hover:underline">impresadieffe.it</a>
-            </div>
-            <div className="flex items-center gap-6 text-sm font-medium text-white/70">
-              <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="hover:text-white">GitHub</a>
-              <a href="/login" className="hover:text-white">Accedi</a>
-            </div>
-            <div className="text-xs text-white/40">© 2026 Dieffe Ristrutturazioni. Tutti i diritti riservati.</div>
-          </div>
-        </footer>
-      </div>
-
-      {/* ════════════════ MOBILE ════════════════ */}
-      <div className="relative z-10 flex min-h-screen flex-col px-6 pb-12 pt-14 md:hidden">
-        <div className="flex items-center gap-2.5">
-          {logo}
-          <span className="lp-display text-base font-semibold text-white">Dieffe Preventivi</span>
         </div>
+      </section>
 
-        <div className="mt-14">
-          <h1 className="lp-display text-4xl font-bold leading-[1.08] text-white">
-            Gestisci i preventivi
-            <br />
-            della tua impresa.
-          </h1>
-          <p className="mt-4 text-base leading-relaxed text-white/65">L&apos;app professionale per preventivi edili.</p>
+      {/* ── DOWNLOAD ─────────────────────────────────────────────────────── */}
+      <section id="download" className="mx-auto max-w-5xl px-6 py-20">
+        <div className="reveal-on-scroll mx-auto mb-10 max-w-2xl text-center">
+          <p className="mb-2 text-sm font-semibold text-primary">Download</p>
+          <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">Scarica l&apos;app.</h2>
+          <p className="mt-3 text-muted-foreground">Per macOS e Windows. Sempre aggiornata automaticamente.</p>
         </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {[
+            { Icon: AppleIcon, title: "Dieffe per Mac", sub: "Intel & Apple Silicon", btn: "Scarica .dmg", req: "macOS 12+", iconCls: "h-9 w-9" },
+            { Icon: WindowsIcon, title: "Dieffe per Windows", sub: "x64", btn: "Scarica .exe", req: "Windows 10+", iconCls: "h-8 w-8" },
+          ].map((d) => (
+            <div key={d.title} className="reveal-on-scroll flex flex-col items-center rounded-2xl border bg-card p-8 text-center shadow-2xs transition-shadow hover:shadow-md">
+              <d.Icon className={cn("mb-4 text-foreground", d.iconCls)} />
+              <h3 className="text-lg font-semibold tracking-tight">{d.title}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">{d.sub}</p>
+              <Button asChild className="mt-5">
+                <a href={RELEASES_URL} target="_blank" rel="noopener noreferrer">
+                  <Download className="h-4 w-4" /> {d.btn}
+                </a>
+              </Button>
+              <p className="mt-3 text-xs text-muted-foreground">v{APP_VERSION} · Richiede {d.req}</p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-10 flex flex-col items-center gap-4">
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5"><Check className="h-4 w-4 text-green-600" /> Aggiornamenti automatici</span>
+            <span className="inline-flex items-center gap-1.5"><Check className="h-4 w-4 text-green-600" /> Funziona offline</span>
+            <span className="inline-flex items-center gap-1.5"><Check className="h-4 w-4 text-green-600" /> Nessun abbonamento</span>
+          </div>
+          <Button asChild variant="ghost" size="sm">
+            <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
+              <GitHubIcon className="h-4 w-4" /> Visualizza su GitHub
+            </a>
+          </Button>
+        </div>
+      </section>
 
-        <div className="mt-10 space-y-3">
-          <div className="glass lp-chip rounded-2xl p-4">
-            <div className="flex items-center gap-3">
-              <AppleIcon className="h-6 w-6 shrink-0 text-white" />
-              <div>
-                <div className="text-sm font-semibold text-white">Scarica per iPhone / iPad</div>
-                <div className="text-xs text-white/55">PWA — Safari → Condividi → Aggiungi a Home</div>
-              </div>
+      {/* ── FOOTER ───────────────────────────────────────────────────────── */}
+      <footer className="border-t">
+        <div className="mx-auto flex max-w-6xl flex-col items-center gap-6 px-6 py-12 text-center sm:flex-row sm:justify-between sm:text-left">
+          <div className="flex items-center gap-2.5">
+            <Logo size={34} />
+            <div>
+              <p className="text-sm font-semibold tracking-tight">Dieffe Preventivi</p>
+              <p className="text-xs text-muted-foreground">Dieffe Ristrutturazioni Moncalieri · P.IVA 10908150013</p>
             </div>
           </div>
-          <a href={RELEASES_URL} target="_blank" rel="noopener noreferrer" className="glass lp-chip flex items-center gap-3 rounded-2xl p-4">
-            <AppleIcon className="h-6 w-6 shrink-0 text-white" />
-            <div className="text-sm font-semibold text-white">Scarica per Mac (.dmg)</div>
-          </a>
-          <a href={RELEASES_URL} target="_blank" rel="noopener noreferrer" className="glass lp-chip flex items-center gap-3 rounded-2xl p-4">
-            <WindowsIcon className="h-5 w-5 shrink-0 text-white" />
-            <div className="text-sm font-semibold text-white">Scarica per Windows (.exe)</div>
-          </a>
-        </div>
-
-        <a href="/login" className="glass-btn-primary mt-6 inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-[15px]">
-          Accedi dal browser →
-        </a>
-
-        <div className="mt-auto pt-12 text-center text-xs text-white/40">
-          <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="font-medium text-white/60 hover:text-white">Visualizza su GitHub →</a>
-          <div className="mt-3">
-            Dieffe Ristrutturazioni Moncalieri · P.IVA 10908150013
-            <br />
-            © 2026 — v{APP_VERSION}
+          <div className="flex items-center gap-6 text-sm font-medium text-muted-foreground">
+            <a href="https://impresadieffe.it" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-foreground">impresadieffe.it</a>
+            <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-foreground">GitHub</a>
+            <a href="/login" className="transition-colors hover:text-foreground">Accedi</a>
           </div>
         </div>
-      </div>
+        <div className="border-t py-4 text-center text-xs text-muted-foreground">
+          © 2026 Dieffe Ristrutturazioni. Tutti i diritti riservati. · v{APP_VERSION}
+        </div>
+      </footer>
     </div>
   );
 }
