@@ -1,12 +1,67 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { APP_VERSION } from "@/lib/version";
 
 const GITHUB_URL = "https://github.com/thomas-addamo/dieffe-preventivi";
 const RELEASES_URL = `${GITHUB_URL}/releases/latest`;
+
+/* ─────────────────────────────────────────────────────────────────────────
+   DISPLACEMENT MAP — il cuore del liquid glass (tecnica kube.io).
+   Genera un'immagine in cui R = spostamento orizzontale, G = verticale.
+   128 = neutro (nessuno spostamento → centro del vetro pulito). Sul bordo,
+   un profilo convesso (SDF di rounded-rect) spinge i pixel verso l'esterno,
+   simulando la rifrazione della luce attraverso lo spessore del vetro.
+   ──────────────────────────────────────────────────────────────────────── */
+function buildDisplacementMap(size = 320): string {
+  const c = document.createElement("canvas");
+  c.width = c.height = size;
+  const ctx = c.getContext("2d");
+  if (!ctx) return "";
+  const img = ctx.createImageData(size, size);
+  const d = img.data;
+  const half = size / 2;
+  const r = size * 0.2; // raggio angoli (squircle-like)
+  const edge = size * 0.34; // spessore della banda di rifrazione (verso l'interno)
+
+  // Signed distance field di un rounded-rect (negativo dentro, 0 sul bordo).
+  const sdf = (x: number, y: number) => {
+    const px = Math.abs(x) - (half - r);
+    const py = Math.abs(y) - (half - r);
+    const ox = Math.max(px, 0);
+    const oy = Math.max(py, 0);
+    return Math.hypot(ox, oy) + Math.min(Math.max(px, py), 0) - r;
+  };
+
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const cx = x - half + 0.5;
+      const cy = y - half + 0.5;
+      const dist = sdf(cx, cy);
+      let R = 128;
+      let G = 128;
+      if (dist < 0 && dist > -edge) {
+        const t = -dist / edge; // 0 sul bordo → 1 al limite interno
+        const m = Math.pow(1 - t, 1.7); // massimo sul bordo, decade verso il centro
+        // Normale (gradiente dell'SDF) calcolata numericamente: punta verso l'esterno.
+        const gx = sdf(cx + 1, cy) - sdf(cx - 1, cy);
+        const gy = sdf(cx, cy + 1) - sdf(cx, cy - 1);
+        const gl = Math.hypot(gx, gy) || 1;
+        R = 128 + (gx / gl) * m * 127;
+        G = 128 + (gy / gl) * m * 127;
+      }
+      const i = (y * size + x) * 4;
+      d[i] = Math.max(0, Math.min(255, R));
+      d[i + 1] = Math.max(0, Math.min(255, G));
+      d[i + 2] = 128;
+      d[i + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  return c.toDataURL();
+}
 
 /* ── Icone brand (inline, niente dipendenze) ─────────────────────────────── */
 function AppleIcon({ className }: { className?: string }) {
@@ -33,50 +88,32 @@ function GitHubIcon({ className }: { className?: string }) {
 
 /* ── Feature cards ───────────────────────────────────────────────────────── */
 const FEATURES = [
-  {
-    icon: "⚡",
-    title: "Preventivi professionali",
-    body: "Sezioni, voci, IVA, sconti e note. Esporta in PDF, Excel, CSV e JSON.",
-  },
-  {
-    icon: "✍️",
-    title: "Firma digitale",
-    body: "Il cliente firma dal link condivisibile. IP registrato con consenso GDPR.",
-  },
-  {
-    icon: "🤖",
-    title: "AI integrata",
-    body: "Descrizioni professionali e suggerimenti di prezzo generati dall'intelligenza artificiale.",
-  },
-  {
-    icon: "📊",
-    title: "SAL e avanzamento",
-    body: "Traccia lo stato di ogni cantiere e le milestone di pagamento.",
-  },
-  {
-    icon: "🔒",
-    title: "3 livelli di accesso",
-    body: "Admin, Editor, Viewer. Ogni utente vede solo quello che deve.",
-  },
-  {
-    icon: "💻",
-    title: "Desktop + Browser",
-    body: "App nativa per macOS e Windows. Sempre disponibile anche dal browser.",
-  },
+  { icon: "⚡", title: "Preventivi professionali", body: "Sezioni, voci, IVA, sconti e note. Esporta in PDF, Excel, CSV e JSON." },
+  { icon: "✍️", title: "Firma digitale", body: "Il cliente firma dal link condivisibile. IP registrato con consenso GDPR." },
+  { icon: "🤖", title: "AI integrata", body: "Descrizioni professionali e suggerimenti di prezzo generati dall'intelligenza artificiale." },
+  { icon: "📊", title: "SAL e avanzamento", body: "Traccia lo stato di ogni cantiere e le milestone di pagamento." },
+  { icon: "🔒", title: "3 livelli di accesso", body: "Admin, Editor, Viewer. Ogni utente vede solo quello che deve." },
+  { icon: "💻", title: "Desktop + Browser", body: "App nativa per macOS e Windows. Sempre disponibile anche dal browser." },
 ];
 
-/* ── Mock dell'editor mostrato nella hero ────────────────────────────────── */
-const MOCK_ROWS = [
-  { code: "01", label: "Allestimento Cantiere", value: "2.450,00" },
-  { code: "02", label: "Demolizioni e rimozioni", value: "5.180,00" },
-  { code: "03", label: "Cappotto Termico", value: "14.920,00" },
+const HERO_CHIPS = [
+  { icon: "✍️", label: "Firma digitale" },
+  { icon: "🤖", label: "AI integrata" },
+  { icon: "📄", label: "PDF · Excel · CSV" },
+  { icon: "📊", label: "SAL & cantieri" },
 ];
 
 export function LandingClient({ fontClass }: { fontClass: string }) {
   const router = useRouter();
+  const [mapUrl, setMapUrl] = useState<string>("");
   const blob1 = useRef<HTMLDivElement>(null);
   const blob2 = useRef<HTMLDivElement>(null);
   const blob3 = useRef<HTMLDivElement>(null);
+
+  // Genera la displacement map sul client (richiede il canvas/DOM).
+  useEffect(() => {
+    setMapUrl(buildDisplacementMap());
+  }, []);
 
   // Electron: la landing non va mai mostrata → login.
   useEffect(() => {
@@ -123,7 +160,7 @@ export function LandingClient({ fontClass }: { fontClass: string }) {
     const r = card.getBoundingClientRect();
     const px = (e.clientX - r.left) / r.width - 0.5;
     const py = (e.clientY - r.top) / r.height - 0.5;
-    card.style.transform = `perspective(800px) rotateY(${px * 7}deg) rotateX(${-py * 7}deg) translateY(-4px)`;
+    card.style.transform = `perspective(900px) rotateY(${px * 6}deg) rotateX(${-py * 6}deg) translateY(-4px)`;
   }
   function handleTiltLeave(e: React.PointerEvent<HTMLDivElement>) {
     e.currentTarget.style.transform = "";
@@ -137,21 +174,31 @@ export function LandingClient({ fontClass }: { fontClass: string }) {
 
   return (
     <div className={`lp-root min-h-screen overflow-x-hidden ${fontClass}`}>
-      {/* ── SVG FILTERS (solo definizioni) ─────────────────────────────────── */}
-      <svg width="0" height="0" style={{ position: "absolute", pointerEvents: "none" }} aria-hidden>
-        <defs>
-          <filter id="glassRefract" x="-25%" y="-25%" width="150%" height="150%" colorInterpolationFilters="sRGB">
-            <feTurbulence type="fractalNoise" baseFrequency="0.0010 0.0014" numOctaves={2} seed={42} result="noise" />
-            <feGaussianBlur in="noise" stdDeviation="1.2" result="smoothNoise" />
-            <feDisplacementMap in="SourceGraphic" in2="smoothNoise" scale={38} xChannelSelector="R" yChannelSelector="G" />
-          </filter>
-          <filter id="glassRefractSoft" x="-20%" y="-20%" width="140%" height="140%" colorInterpolationFilters="sRGB">
-            <feTurbulence type="fractalNoise" baseFrequency="0.0018 0.0022" numOctaves={2} seed={11} result="noise" />
-            <feGaussianBlur in="noise" stdDeviation="0.9" result="smoothNoise" />
-            <feDisplacementMap in="SourceGraphic" in2="smoothNoise" scale={20} xChannelSelector="R" yChannelSelector="G" />
-          </filter>
-        </defs>
-      </svg>
+      {/* ── FILTRI SVG liquid glass (renderizzati quando la map è pronta) ──── */}
+      {mapUrl && (
+        <svg width="0" height="0" aria-hidden style={{ position: "absolute" }}>
+          <defs>
+            {/* Soft: rifrazione lieve per nav, card, bottoni, chip */}
+            <filter id="lg-soft" x="0%" y="0%" width="100%" height="100%" colorInterpolationFilters="sRGB">
+              <feImage href={mapUrl} x="0%" y="0%" width="100%" height="100%" preserveAspectRatio="none" result="m" />
+              <feDisplacementMap in="SourceGraphic" in2="m" scale={14} xChannelSelector="R" yChannelSelector="G" />
+            </filter>
+
+            {/* Strong: rifrazione marcata + aberrazione cromatica (R/G/B sfasati) */}
+            <filter id="lg-strong" x="0%" y="0%" width="100%" height="100%" colorInterpolationFilters="sRGB">
+              <feImage href={mapUrl} x="0%" y="0%" width="100%" height="100%" preserveAspectRatio="none" result="m" />
+              <feDisplacementMap in="SourceGraphic" in2="m" scale={34} xChannelSelector="R" yChannelSelector="G" result="dR" />
+              <feColorMatrix in="dR" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="cR" />
+              <feDisplacementMap in="SourceGraphic" in2="m" scale={27} xChannelSelector="R" yChannelSelector="G" result="dG" />
+              <feColorMatrix in="dG" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="cG" />
+              <feDisplacementMap in="SourceGraphic" in2="m" scale={20} xChannelSelector="R" yChannelSelector="G" result="dB" />
+              <feColorMatrix in="dB" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="cB" />
+              <feBlend in="cR" in2="cG" mode="screen" result="rg" />
+              <feBlend in="rg" in2="cB" mode="screen" />
+            </filter>
+          </defs>
+        </svg>
+      )}
 
       {/* ── BACKGROUND AMBIENT ─────────────────────────────────────────────── */}
       <div
@@ -163,46 +210,17 @@ export function LandingClient({ fontClass }: { fontClass: string }) {
           background: "radial-gradient(120% 90% at 50% -10%, #0a1840 0%, #050b22 55%, #03060f 100%)",
         }}
       >
-        <div
-          ref={blob1}
-          className="lp-blob"
-          style={{
-            position: "absolute", top: "-12%", left: "-8%", width: "48vw", height: "48vw", borderRadius: "50%",
-            background: "radial-gradient(circle at 35% 35%, oklch(0.7 0.17 248), transparent 68%)",
-            filter: "blur(40px)", opacity: 0.85, animation: "blobA 26s ease-in-out infinite",
-          }}
-        />
-        <div
-          ref={blob2}
-          className="lp-blob"
-          style={{
-            position: "absolute", top: "18%", right: "-12%", width: "42vw", height: "42vw", borderRadius: "50%",
-            background: "radial-gradient(circle at 50% 50%, oklch(0.66 0.18 268), transparent 66%)",
-            filter: "blur(46px)", opacity: 0.75, animation: "blobB 32s ease-in-out infinite",
-          }}
-        />
-        <div
-          ref={blob3}
-          className="lp-blob"
-          style={{
-            position: "absolute", bottom: "-18%", left: "28%", width: "50vw", height: "50vw", borderRadius: "50%",
-            background: "radial-gradient(circle at 50% 50%, oklch(0.62 0.15 224), transparent 64%)",
-            filter: "blur(52px)", opacity: 0.7, animation: "blobC 38s ease-in-out infinite",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute", inset: 0,
-            background: "radial-gradient(120% 120% at 50% 50%, transparent 55%, rgba(2,5,15,.7) 100%)",
-          }}
-        />
+        <div ref={blob1} className="lp-blob" style={{ position: "absolute", top: "-12%", left: "-8%", width: "48vw", height: "48vw", borderRadius: "50%", background: "radial-gradient(circle at 35% 35%, oklch(0.7 0.17 248), transparent 68%)", filter: "blur(40px)", opacity: 0.85, animation: "blobA 26s ease-in-out infinite" }} />
+        <div ref={blob2} className="lp-blob" style={{ position: "absolute", top: "18%", right: "-12%", width: "42vw", height: "42vw", borderRadius: "50%", background: "radial-gradient(circle at 50% 50%, oklch(0.66 0.18 268), transparent 66%)", filter: "blur(46px)", opacity: 0.75, animation: "blobB 32s ease-in-out infinite" }} />
+        <div ref={blob3} className="lp-blob" style={{ position: "absolute", bottom: "-18%", left: "28%", width: "50vw", height: "50vw", borderRadius: "50%", background: "radial-gradient(circle at 50% 50%, oklch(0.62 0.15 224), transparent 64%)", filter: "blur(52px)", opacity: 0.7, animation: "blobC 38s ease-in-out infinite" }} />
+        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(120% 120% at 50% 50%, transparent 55%, rgba(2,5,15,.7) 100%)" }} />
       </div>
 
       {/* ════════════════ DESKTOP / TABLET ════════════════ */}
       <div className="relative z-10 hidden md:block">
         {/* NAVBAR */}
         <nav className="fixed inset-x-0 top-0 z-50 px-4 pt-4">
-          <div className="glass-nav mx-auto flex max-w-6xl items-center justify-between rounded-2xl px-4 py-2.5">
+          <div className="glass glass-nav mx-auto flex max-w-6xl items-center justify-between rounded-2xl px-4 py-2.5">
             <a href="#top" className="flex items-center gap-2.5">
               {logo}
               <span className="lp-display text-[15px] font-semibold text-white">Dieffe Preventivi</span>
@@ -213,12 +231,7 @@ export function LandingClient({ fontClass }: { fontClass: string }) {
               <a href="#download" className="transition-colors hover:text-white">Download</a>
             </div>
             <div className="flex items-center gap-2">
-              <a
-                href={GITHUB_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="glass-btn-secondary hidden items-center gap-2 rounded-xl px-3.5 py-2 text-sm sm:inline-flex"
-              >
+              <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="glass-btn-secondary hidden items-center gap-2 rounded-xl px-3.5 py-2 text-sm sm:inline-flex">
                 <GitHubIcon className="h-4 w-4" /> GitHub
               </a>
               <a href="/login" className="glass-btn-secondary rounded-xl px-3.5 py-2 text-sm">Accedi</a>
@@ -227,75 +240,66 @@ export function LandingClient({ fontClass }: { fontClass: string }) {
           </div>
         </nav>
 
-        {/* HERO */}
-        <header id="top" className="mx-auto max-w-6xl px-6 pb-10 pt-36">
-          <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_0.95fr]">
-            <div>
-              <span className="glass-nav mb-6 inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-medium text-white/85">
-                <span className="lp-pulse-dot inline-block h-2 w-2 rounded-full bg-sky-400" />
-                Disponibile per macOS &amp; Windows
-              </span>
-              <h1 className="lp-display text-5xl font-bold leading-[1.05] text-white sm:text-6xl">
-                Gestisci i preventivi
-                <br />
-                della tua impresa.
-              </h1>
-              <p className="mt-6 max-w-xl text-lg leading-relaxed text-white/65">
-                Dieffe Preventivi è il gestionale professionale per preventivi edili. Crea, invia,
-                fai firmare e traccia ogni lavoro — da desktop o dal browser.
-              </p>
-              <div className="mt-8 flex flex-wrap items-center gap-3">
-                <a href={RELEASES_URL} target="_blank" rel="noopener noreferrer" className="glass-btn-primary inline-flex items-center gap-2 rounded-xl px-5 py-3 text-[15px]">
-                  <AppleIcon className="h-5 w-5" /> Scarica per Mac
-                </a>
-                <a href={RELEASES_URL} target="_blank" rel="noopener noreferrer" className="glass-btn-secondary inline-flex items-center gap-2 rounded-xl px-5 py-3 text-[15px]">
-                  <WindowsIcon className="h-[18px] w-[18px]" /> Scarica per Windows
-                </a>
-                <a href="/login" className="inline-flex items-center gap-1.5 px-2 py-3 text-[15px] font-medium text-white/75 transition-colors hover:text-white">
-                  Accedi al sito →
-                </a>
-              </div>
-              <p className="mt-6 text-xs font-medium uppercase tracking-wider text-white/40">
-                Usato da Dieffe Ristrutturazioni Moncalieri
-              </p>
+        {/* HERO — centrato, showcase di vetro al posto del mockup */}
+        <header id="top" className="mx-auto max-w-3xl px-6 pb-4 pt-40 text-center">
+          <span className="glass glass-nav mb-7 inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-medium text-white/85">
+            <span className="lp-pulse-dot inline-block h-2 w-2 rounded-full bg-sky-400" />
+            Disponibile per macOS &amp; Windows
+          </span>
+          <h1 className="lp-display text-5xl font-bold leading-[1.04] text-white sm:text-[4.25rem]">
+            Gestisci i preventivi
+            <br />
+            della tua impresa.
+          </h1>
+          <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-white/65">
+            Il gestionale professionale per preventivi edili. Crea, invia, fai firmare e traccia ogni
+            lavoro — da desktop o dal browser.
+          </p>
+          <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+            <a href={RELEASES_URL} target="_blank" rel="noopener noreferrer" className="glass-btn-primary inline-flex items-center gap-2 rounded-xl px-5 py-3 text-[15px]">
+              <AppleIcon className="h-5 w-5" /> Scarica per Mac
+            </a>
+            <a href={RELEASES_URL} target="_blank" rel="noopener noreferrer" className="glass glass-btn-secondary inline-flex items-center gap-2 rounded-xl px-5 py-3 text-[15px]">
+              <WindowsIcon className="h-[18px] w-[18px]" /> Scarica per Windows
+            </a>
+            <a href="/login" className="inline-flex items-center gap-1.5 px-2 py-3 text-[15px] font-medium text-white/75 transition-colors hover:text-white">
+              Accedi al sito →
+            </a>
+          </div>
+          <p className="mt-7 text-xs font-medium uppercase tracking-[0.2em] text-white/40">
+            Usato da Dieffe Ristrutturazioni Moncalieri
+          </p>
+        </header>
+
+        {/* SHOWCASE VETRO — dimostra la rifrazione sopra i blob colorati */}
+        <section id="anteprima" className="mx-auto max-w-5xl px-6 pb-12 pt-6">
+          <div className="relative">
+            {/* chip flottanti per profondità */}
+            <div className="lp-chip lp-float absolute -left-2 top-6 z-20 hidden items-center gap-2 rounded-2xl px-3.5 py-2.5 text-sm font-medium text-white shadow-lg lg:flex" style={{ animationDelay: "0.4s" }}>
+              <span className="text-base">🔒</span> 3 livelli di accesso
+            </div>
+            <div className="lp-chip lp-float-slow absolute -right-3 bottom-8 z-20 hidden items-center gap-2 rounded-2xl px-3.5 py-2.5 text-sm font-medium text-white shadow-lg lg:flex" style={{ animationDelay: "1.1s" }}>
+              <span className="text-base">⚡</span> Pronto in pochi clic
             </div>
 
-            {/* HERO MOCKUP */}
-            <div id="anteprima" className="lp-float">
-              <div className="glass-surface rounded-3xl p-5">
-                <div className="mb-4 flex items-center justify-between">
-                  <div>
-                    <div className="lp-display text-sm font-semibold text-white">Preventivo #2026-014</div>
-                    <div className="text-xs text-white/55">Cliente · Rossi Costruzioni S.r.l.</div>
-                  </div>
-                  <span className="rounded-full bg-emerald-400/15 px-2.5 py-1 text-[11px] font-semibold text-emerald-300 ring-1 ring-emerald-400/30">
-                    In attesa di firma
+            <div className="glass glass-surface lp-float mx-auto max-w-3xl rounded-[2rem] p-10 text-center">
+              <span className="lp-logo-chip mx-auto mb-5 inline-flex items-center justify-center rounded-2xl p-3">
+                <Image src="/icona_dieffe.svg" alt="Dieffe" width={48} height={48} className="h-12 w-12" />
+              </span>
+              <h2 className="lp-display text-2xl font-bold text-white">Dieffe Preventivi</h2>
+              <p className="mx-auto mt-2 max-w-md text-sm text-white/60">
+                Preventivi edili professionali — firmati, esportati e tracciati. Tutto in un&apos;unica app.
+              </p>
+              <div className="mt-7 flex flex-wrap items-center justify-center gap-2.5">
+                {HERO_CHIPS.map((chip) => (
+                  <span key={chip.label} className="lp-chip inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-medium text-white/90">
+                    <span>{chip.icon}</span> {chip.label}
                   </span>
-                </div>
-                <div className="space-y-2">
-                  {MOCK_ROWS.map((r) => (
-                    <div
-                      key={r.code}
-                      className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3.5 py-3"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10 text-[11px] font-semibold text-white/70">
-                          {r.code}
-                        </span>
-                        <span className="text-sm text-white/85">{r.label}</span>
-                      </div>
-                      <span className="font-mono text-sm text-white/90">€ {r.value}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-4 flex items-center justify-between rounded-xl border border-sky-400/20 bg-sky-400/10 px-3.5 py-3.5">
-                  <span className="text-sm font-semibold text-white">Totale (IVA 22% incl.)</span>
-                  <span className="lp-display font-mono text-lg font-bold text-white">€ 27.499,00</span>
-                </div>
+                ))}
               </div>
             </div>
           </div>
-        </header>
+        </section>
 
         {/* FEATURES */}
         <section id="funzioni" className="mx-auto max-w-6xl px-6 py-20">
@@ -310,7 +314,7 @@ export function LandingClient({ fontClass }: { fontClass: string }) {
                 key={f.title}
                 onPointerMove={handleTilt}
                 onPointerLeave={handleTiltLeave}
-                className="glass-card reveal-on-scroll rounded-2xl p-6"
+                className="glass glass-card reveal-on-scroll rounded-2xl p-6"
                 style={{ transitionDelay: `${i * 60}ms` }}
               >
                 <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 text-2xl">
@@ -327,47 +331,26 @@ export function LandingClient({ fontClass }: { fontClass: string }) {
         <section id="download" className="mx-auto max-w-5xl px-6 py-20">
           <div className="reveal-on-scroll mx-auto mb-12 max-w-2xl text-center">
             <h2 className="lp-display text-3xl font-bold text-white sm:text-4xl">Scarica l&apos;app.</h2>
-            <p className="mt-3 text-white/60">
-              Disponibile per macOS e Windows. Sempre aggiornata automaticamente.
-            </p>
+            <p className="mt-3 text-white/60">Disponibile per macOS e Windows. Sempre aggiornata automaticamente.</p>
           </div>
           <div className="grid gap-5 sm:grid-cols-2">
-            <a
-              href={RELEASES_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="glass-card reveal-on-scroll flex flex-col items-center rounded-2xl p-8 text-center"
-            >
+            <a href={RELEASES_URL} target="_blank" rel="noopener noreferrer" className="glass glass-card reveal-on-scroll flex flex-col items-center rounded-2xl p-8 text-center">
               <AppleIcon className="mb-4 h-12 w-12 text-white" />
               <h3 className="lp-display text-xl font-semibold text-white">Dieffe Preventivi per Mac</h3>
               <p className="mt-1 text-sm text-white/55">Intel &amp; Apple Silicon</p>
-              <span className="glass-btn-primary mt-5 inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm">
-                Scarica .dmg
-              </span>
+              <span className="glass-btn-primary mt-5 inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm">Scarica .dmg</span>
               <p className="mt-3 text-xs text-white/45">v{APP_VERSION} · Richiede macOS 12+</p>
             </a>
-            <a
-              href={RELEASES_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="glass-card reveal-on-scroll flex flex-col items-center rounded-2xl p-8 text-center"
-            >
+            <a href={RELEASES_URL} target="_blank" rel="noopener noreferrer" className="glass glass-card reveal-on-scroll flex flex-col items-center rounded-2xl p-8 text-center">
               <WindowsIcon className="mb-4 h-11 w-11 text-white" />
               <h3 className="lp-display text-xl font-semibold text-white">Dieffe Preventivi per Windows</h3>
               <p className="mt-1 text-sm text-white/55">x64</p>
-              <span className="glass-btn-primary mt-5 inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm">
-                Scarica .exe
-              </span>
+              <span className="glass-btn-primary mt-5 inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm">Scarica .exe</span>
               <p className="mt-3 text-xs text-white/45">v{APP_VERSION} · Richiede Windows 10+</p>
             </a>
           </div>
           <div className="mt-8 flex flex-col items-center gap-3 text-sm">
-            <a
-              href={GITHUB_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 font-medium text-white/70 transition-colors hover:text-white"
-            >
+            <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 font-medium text-white/70 transition-colors hover:text-white">
               <GitHubIcon className="h-4 w-4" /> Visualizza su GitHub →
             </a>
             <a href="/login" className="font-medium text-white/55 transition-colors hover:text-white">
@@ -378,7 +361,7 @@ export function LandingClient({ fontClass }: { fontClass: string }) {
 
         {/* FOOTER */}
         <footer className="mx-auto max-w-6xl px-6 py-12">
-          <div className="glass-nav flex flex-col items-center gap-5 rounded-2xl px-6 py-8 text-center">
+          <div className="glass glass-nav flex flex-col items-center gap-5 rounded-2xl px-6 py-8 text-center">
             <div className="flex items-center gap-2.5">
               {logo}
               <span className="lp-display text-sm font-semibold text-white">Dieffe Preventivi</span>
@@ -387,17 +370,13 @@ export function LandingClient({ fontClass }: { fontClass: string }) {
               Dieffe Ristrutturazioni Moncalieri
               <br />
               P.IVA 10908150013 ·{" "}
-              <a href="https://impresadieffe.it" target="_blank" rel="noopener noreferrer" className="underline-offset-2 hover:underline">
-                impresadieffe.it
-              </a>
+              <a href="https://impresadieffe.it" target="_blank" rel="noopener noreferrer" className="underline-offset-2 hover:underline">impresadieffe.it</a>
             </div>
             <div className="flex items-center gap-6 text-sm font-medium text-white/70">
               <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="hover:text-white">GitHub</a>
               <a href="/login" className="hover:text-white">Accedi</a>
             </div>
-            <div className="text-xs text-white/40">
-              © 2026 Dieffe Ristrutturazioni. Tutti i diritti riservati.
-            </div>
+            <div className="text-xs text-white/40">© 2026 Dieffe Ristrutturazioni. Tutti i diritti riservati.</div>
           </div>
         </footer>
       </div>
@@ -415,13 +394,11 @@ export function LandingClient({ fontClass }: { fontClass: string }) {
             <br />
             della tua impresa.
           </h1>
-          <p className="mt-4 text-base leading-relaxed text-white/65">
-            L&apos;app professionale per preventivi edili.
-          </p>
+          <p className="mt-4 text-base leading-relaxed text-white/65">L&apos;app professionale per preventivi edili.</p>
         </div>
 
         <div className="mt-10 space-y-3">
-          <div className="glass-card rounded-2xl p-4">
+          <div className="glass lp-chip rounded-2xl p-4">
             <div className="flex items-center gap-3">
               <AppleIcon className="h-6 w-6 shrink-0 text-white" />
               <div>
@@ -430,11 +407,11 @@ export function LandingClient({ fontClass }: { fontClass: string }) {
               </div>
             </div>
           </div>
-          <a href={RELEASES_URL} target="_blank" rel="noopener noreferrer" className="glass-card flex items-center gap-3 rounded-2xl p-4">
+          <a href={RELEASES_URL} target="_blank" rel="noopener noreferrer" className="glass lp-chip flex items-center gap-3 rounded-2xl p-4">
             <AppleIcon className="h-6 w-6 shrink-0 text-white" />
             <div className="text-sm font-semibold text-white">Scarica per Mac (.dmg)</div>
           </a>
-          <a href={RELEASES_URL} target="_blank" rel="noopener noreferrer" className="glass-card flex items-center gap-3 rounded-2xl p-4">
+          <a href={RELEASES_URL} target="_blank" rel="noopener noreferrer" className="glass lp-chip flex items-center gap-3 rounded-2xl p-4">
             <WindowsIcon className="h-5 w-5 shrink-0 text-white" />
             <div className="text-sm font-semibold text-white">Scarica per Windows (.exe)</div>
           </a>
@@ -445,9 +422,7 @@ export function LandingClient({ fontClass }: { fontClass: string }) {
         </a>
 
         <div className="mt-auto pt-12 text-center text-xs text-white/40">
-          <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="font-medium text-white/60 hover:text-white">
-            Visualizza su GitHub →
-          </a>
+          <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="font-medium text-white/60 hover:text-white">Visualizza su GitHub →</a>
           <div className="mt-3">
             Dieffe Ristrutturazioni Moncalieri · P.IVA 10908150013
             <br />

@@ -1,10 +1,14 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   LANDING PAGE — Liquid Glass (Dieffe Preventivi)
-   Stili isolati con prefisso .glass-* / .lp-* per non interferire con l'app.
-   Importato solo dalla landing (src/app/page.tsx).
+   LANDING PAGE — Liquid Glass reale (tecnica displacement-map, kube.io)
+   ───────────────────────────────────────────────────────────────────────────
+   Il vetro liquido NON è blur: è rifrazione. Una displacement map precalcolata
+   (canvas → dataURL, in LandingClient) codifica lo spostamento dei pixel del
+   backdrop sul bordo (profilo convesso/squircle), neutra al centro. Viene
+   applicata via SVG <feDisplacementMap> dentro `backdrop-filter: url(#lg-*)`.
+   Qui stanno: superfici, specular rim, bottoni, animazioni, fallback.
+   Prefissi .glass-* / .lp-* per non interferire con l'app.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* Tipografia landing (variabili impostate da next/font sul contenitore .lp-root) */
 .lp-root {
   font-family: var(--font-plus-jakarta, system-ui, sans-serif);
   color: #eaf1ff;
@@ -12,47 +16,54 @@
 }
 .lp-display {
   font-family: var(--font-space-grotesk, var(--font-plus-jakarta, system-ui, sans-serif));
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
 }
 
-/* === LIQUID GLASS SURFACES === */
-
-.glass-surface {
-  backdrop-filter: blur(12px) saturate(180%) url(#glassRefract);
-  -webkit-backdrop-filter: blur(12px) saturate(180%);
+/* === BASE VETRO + SPECULAR RIM ============================================ */
+/* Il blur è volutamente BASSO: troppo blur nasconde la rifrazione. */
+.glass {
+  position: relative;
+  isolation: isolate;
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.02) 60%, rgba(255, 255, 255, 0.05));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.06),
+    0 18px 50px rgba(2, 8, 30, 0.45);
+}
+/* Bordo speculare: 1px di gradiente luce → ombra che gira sul perimetro */
+.glass::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
   background: linear-gradient(
-    160deg,
-    rgba(255, 255, 255, 0.18) 0%,
-    rgba(255, 255, 255, 0.06) 50%,
-    rgba(255, 255, 255, 0.02) 100%
+    135deg,
+    rgba(255, 255, 255, 0.85),
+    rgba(255, 255, 255, 0.05) 35%,
+    rgba(255, 255, 255, 0) 55%,
+    rgba(140, 170, 255, 0.35)
   );
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.55),
-    inset 0 -1px 2px rgba(255, 255, 255, 0.08),
-    0 24px 60px rgba(2, 8, 30, 0.55),
-    0 0 0 1px rgba(100, 140, 255, 0.08);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 1;
 }
 
+/* Superfici: differiscono per intensità di rifrazione e blur */
+.glass-surface {
+  backdrop-filter: blur(2px) saturate(180%) brightness(1.06) url(#lg-strong);
+  -webkit-backdrop-filter: blur(2px) saturate(180%) brightness(1.06);
+}
 .glass-nav {
-  backdrop-filter: blur(8px) saturate(160%) url(#glassRefractSoft);
-  -webkit-backdrop-filter: blur(8px) saturate(160%);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.04));
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.45),
-    inset 0 -1px 1px rgba(255, 255, 255, 0.1),
-    0 12px 34px rgba(2, 8, 30, 0.5);
+  backdrop-filter: blur(5px) saturate(165%) url(#lg-soft);
+  -webkit-backdrop-filter: blur(5px) saturate(165%);
 }
-
 .glass-card {
-  backdrop-filter: blur(6px) saturate(140%) url(#glassRefractSoft);
-  -webkit-backdrop-filter: blur(6px) saturate(140%);
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03));
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.4),
-    0 16px 40px rgba(2, 8, 30, 0.45);
+  backdrop-filter: blur(3px) saturate(150%) url(#lg-soft);
+  -webkit-backdrop-filter: blur(3px) saturate(150%);
   transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1),
     box-shadow 0.45s cubic-bezier(0.16, 1, 0.3, 1);
   will-change: transform;
@@ -60,18 +71,17 @@
 .glass-card:hover {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.5),
-    0 24px 60px rgba(2, 8, 30, 0.6),
-    0 0 0 1px rgba(120, 160, 255, 0.12);
+    0 28px 70px rgba(2, 8, 30, 0.6),
+    0 0 0 1px rgba(120, 160, 255, 0.14);
 }
 
-/* === BOTTONI === */
-
+/* === BOTTONI ============================================================== */
 .glass-btn-primary {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(180deg, #f0f6ff, #bcd0ff);
+  background: linear-gradient(180deg, #ffffff, #c2d4ff);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
     0 8px 24px rgba(30, 64, 175, 0.5);
   color: #04102e;
   font-weight: 600;
@@ -80,8 +90,8 @@
 .glass-btn-primary:hover {
   transform: translateY(-1px);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    0 12px 32px rgba(30, 64, 175, 0.6);
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 12px 32px rgba(30, 64, 175, 0.62);
 }
 .glass-btn-primary:active {
   transform: translateY(0) scale(0.98);
@@ -89,44 +99,65 @@
 .glass-btn-primary::before {
   content: "";
   position: absolute;
-  top: 0;
-  left: 0;
+  inset: 0;
   width: 35%;
   height: 100%;
-  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.8), transparent);
-  animation: sheen 4s ease-in-out infinite;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.85), transparent);
+  animation: sheen 4.5s ease-in-out infinite;
   pointer-events: none;
 }
 
 .glass-btn-secondary {
-  backdrop-filter: blur(8px) saturate(150%);
-  -webkit-backdrop-filter: blur(8px) saturate(150%);
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  position: relative;
+  isolation: isolate;
+  backdrop-filter: blur(6px) saturate(150%) url(#lg-soft);
+  -webkit-backdrop-filter: blur(6px) saturate(150%);
+  background: rgba(255, 255, 255, 0.06);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    0 8px 24px rgba(2, 8, 30, 0.4);
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 8px 22px rgba(2, 8, 30, 0.4);
   color: #eaf1ff;
   font-weight: 600;
-  transition: transform 0.2s ease, background 0.3s ease, border-color 0.3s ease;
+  transition: transform 0.2s ease, background 0.3s ease;
+}
+.glass-btn-secondary::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0) 60%, rgba(140, 170, 255, 0.25));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
 }
 .glass-btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.12);
   transform: translateY(-1px);
 }
 .glass-btn-secondary:active {
   transform: translateY(0) scale(0.98);
 }
 
-/* Chip che ospita il logo (logo nero → su superficie chiara per leggibilità) */
+/* Chip che ospita il logo (logo nero → fondo chiaro per leggibilità) */
 .lp-logo-chip {
-  background: linear-gradient(180deg, #ffffff, #e8eefc);
+  background: linear-gradient(180deg, #ffffff, #dde8fc);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 4px 12px rgba(2, 8, 30, 0.4);
 }
 
-/* === ANIMAZIONI === */
+/* Chip vetrose dello showcase hero */
+.lp-chip {
+  position: relative;
+  isolation: isolate;
+  backdrop-filter: blur(3px) saturate(160%) url(#lg-soft);
+  -webkit-backdrop-filter: blur(3px) saturate(160%);
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 10px 26px rgba(2, 8, 30, 0.4);
+}
 
+/* === ANIMAZIONI =========================================================== */
 @keyframes blobA {
   0% { transform: translate(0, 0) scale(1); }
   33% { transform: translate(8vw, 6vh) scale(1.15); }
@@ -145,8 +176,8 @@
   100% { transform: translate(0, 0) scale(1); }
 }
 @keyframes sheen {
-  0% { transform: translateX(-120%); }
-  60%, 100% { transform: translateX(220%); }
+  0% { transform: translateX(-130%); }
+  55%, 100% { transform: translateX(330%); }
 }
 @keyframes pulseDot {
   0%, 100% { opacity: 0.4; }
@@ -154,17 +185,13 @@
 }
 @keyframes floatY {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-14px); }
+  50% { transform: translateY(-16px); }
 }
+.lp-pulse-dot { animation: pulseDot 2s ease-in-out infinite; }
+.lp-float { animation: floatY 7s ease-in-out infinite; }
+.lp-float-slow { animation: floatY 9s ease-in-out infinite; }
 
-.lp-pulse-dot {
-  animation: pulseDot 2s ease-in-out infinite;
-}
-.lp-float {
-  animation: floatY 7s ease-in-out infinite;
-}
-
-/* === REVEAL ON SCROLL === */
+/* === REVEAL ON SCROLL ===================================================== */
 .reveal-on-scroll {
   opacity: 0;
   transform: translateY(28px);
@@ -176,27 +203,18 @@
   transform: translateY(0);
 }
 
-/* === FALLBACK BROWSER NON-CHROMIUM (Safari/Firefox: niente filtro SVG) ====== */
+/* === FALLBACK BROWSER NON-CHROMIUM (Safari/Firefox: niente filtro SVG) ==== */
+/* Senza la rifrazione SVG, alziamo il blur per un frosted glass comunque elegante. */
 @supports not (backdrop-filter: url(#test)) {
-  .glass-surface,
+  .glass-surface { backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); }
   .glass-nav,
-  .glass-card {
-    backdrop-filter: blur(16px) saturate(180%);
-    -webkit-backdrop-filter: blur(16px) saturate(180%);
-  }
+  .glass-card,
+  .glass-btn-secondary,
+  .lp-chip { backdrop-filter: blur(16px) saturate(160%); -webkit-backdrop-filter: blur(16px) saturate(160%); }
 }
 
-/* === RIDUZIONE MOVIMENTO === */
+/* === RIDUZIONE MOVIMENTO ================================================== */
 @media (prefers-reduced-motion: reduce) {
-  .lp-blob,
-  .lp-pulse-dot,
-  .lp-float,
-  .glass-btn-primary::before {
-    animation: none !important;
-  }
-  .reveal-on-scroll {
-    opacity: 1;
-    transform: none;
-    transition: none;
-  }
+  .lp-blob, .lp-pulse-dot, .lp-float, .lp-float-slow, .glass-btn-primary::before { animation: none !important; }
+  .reveal-on-scroll { opacity: 1; transform: none; transition: none; }
 }
