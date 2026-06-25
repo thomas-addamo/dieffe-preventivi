@@ -33,6 +33,7 @@ import type { PriceListItem } from "@/lib/db/schema";
 import { QUOTE_STATUS_LABELS, QUOTE_STATUS_COLORS, generateId, formatCurrency, formatDate } from "@/lib/utils";
 import { calcQuoteTotals } from "@/lib/calculations";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useQuoteTabs } from "@/lib/stores/quote-tabs";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 
@@ -230,6 +231,15 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
   const [priceListItems, setPriceListItems] = useState<PriceListItem[]>([]);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastLearnRef = useRef<number>(0);
+
+  // Registra il preventivo come tab aperto (esperienza editor a schede) e nei
+  // "recenti" della Dashboard. Si aggiorna se cambiano codice/titolo.
+  const openTab = useQuoteTabs((s) => s.openTab);
+  const recordRecent = useQuoteTabs((s) => s.recordRecent);
+  useEffect(() => {
+    openTab({ id: quote.id, code: quote.code, title: quote.title });
+    recordRecent(quote.id);
+  }, [quote.id, quote.code, quote.title, openTab, recordRecent]);
 
   // Tracks section IDs currently being deleted, so performSave won't
   // re-insert them if a stale debounce fires concurrently with the DELETE.
@@ -768,7 +778,7 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
       )}
 
       {/* Toolbar */}
-      <div className="sticky top-0 z-10 bg-background/85 backdrop-blur-xl lg:bg-background lg:backdrop-blur-none border-b px-3 md:px-6 pb-2.5 pt-[calc(env(safe-area-inset-top)+0.625rem)] lg:py-2.5 flex items-center gap-2 md:gap-3">
+      <div className="sticky top-0 lg:top-[2.375rem] z-10 bg-background/85 backdrop-blur-xl lg:bg-background lg:backdrop-blur-none border-b px-3 md:px-6 pb-2.5 pt-[calc(env(safe-area-inset-top)+0.625rem)] lg:py-2.5 flex items-center gap-2 md:gap-3">
         <Button
           variant="ghost"
           size="sm"

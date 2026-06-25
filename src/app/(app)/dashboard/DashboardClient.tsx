@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -21,6 +21,7 @@ import {
   X,
   Link as LinkIcon,
   Upload,
+  History,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,7 +46,9 @@ import {
   formatCurrency,
   QUOTE_STATUS_LABELS,
   QUOTE_STATUS_COLORS,
+  cn,
 } from "@/lib/utils";
+import { useQuoteTabs } from "@/lib/stores/quote-tabs";
 import { NewQuoteModal } from "@/components/quote-editor/NewQuoteModal";
 import { ImportQuoteModal } from "@/components/quote-editor/ImportQuoteModal";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -71,6 +74,63 @@ interface DashboardClientProps {
   initialQuotes: QuoteRow[];
   clients: { id: string; name: string }[];
   stats: { total: number; acceptedThisMonth: number; pending: number };
+}
+
+// Sezione "Aperti di recente": mette in evidenza gli ultimi preventivi aperti
+// dall'utente (fonte: store dei tab, persistito in localStorage). Mappa gli id
+// recenti sulle righe già caricate in pagina — nessuna fetch aggiuntiva.
+function RecentQuotes({ quotes }: { quotes: QuoteRow[] }) {
+  const router = useRouter();
+  const recent = useQuoteTabs((s) => s.recent);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  const items = useMemo(() => {
+    if (!mounted) return [] as QuoteRow[];
+    const byId = new Map(quotes.map((q) => [q.id, q]));
+    return recent
+      .map((r) => byId.get(r.id))
+      .filter((q): q is QuoteRow => Boolean(q))
+      .slice(0, 4);
+  }, [mounted, recent, quotes]);
+
+  if (items.length === 0) return null;
+
+  return (
+    <div className="mb-4 md:mb-6">
+      <div className="flex items-center gap-2 mb-2.5">
+        <History className="w-4 h-4 text-muted-foreground" />
+        <h2 className="text-sm font-semibold">Aperti di recente</h2>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+        {items.map((q) => (
+          <button
+            key={q.id}
+            onClick={() => router.push(`/preventivi/${q.id}`)}
+            className="group text-left bg-card border rounded-xl p-3.5 transition-all hover:border-primary/40 hover:shadow-sm active:scale-[0.99]"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-mono text-xs text-muted-foreground truncate">{q.code}</span>
+              <span
+                className={cn(
+                  "inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                  QUOTE_STATUS_COLORS[q.status]
+                )}
+              >
+                {QUOTE_STATUS_LABELS[q.status]}
+              </span>
+            </div>
+            <p className="mt-2 font-medium text-sm truncate group-hover:text-primary transition-colors">
+              {q.title}
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground truncate">
+              {q.clientName ?? "Nessun cliente"}
+            </p>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function StatCard({
@@ -219,6 +279,9 @@ export function DashboardClient({
           color="bg-violet-50 text-violet-600 dark:bg-violet-950 dark:text-violet-400"
         />
       </div>
+
+      {/* Aperti di recente */}
+      <RecentQuotes quotes={quotes} />
 
       {/* Search + filters bar */}
       <div className="flex gap-2 mb-3 md:mb-4">
