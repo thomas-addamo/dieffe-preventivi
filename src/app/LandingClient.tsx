@@ -357,7 +357,7 @@ export function LandingClient() {
             <Logo size={34} />
             <div>
               <p className="text-sm font-semibold tracking-tight">Dieffe Preventivi</p>
-              <p className="text-xs text-muted-foreground">Dieffe Ristrutturazioni Moncalieri · P.IVA 10908150013</p>
+              <p className="text-xs text-muted-foreground">Dieffe Ristrutturazioni Moncalieri · P.IVA 13460330015</p>
             </div>
           </div>
           <div className="flex items-center gap-6 text-sm font-medium text-muted-foreground">
