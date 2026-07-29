@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useRef, useState } from "react";
+import { use, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -84,18 +84,18 @@ function CookieBanner({ settings, onAccept }: { settings: Settings | null; onAcc
   const [showPrivacy, setShowPrivacy] = useState(false);
   return (
     <>
-      <div style={{
+      <div className="public-cookie-banner" style={{
         position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 80,
         background: "#fff", borderTop: "1px solid #e5e7eb",
         padding: "16px",
         boxShadow: "0 -4px 12px rgba(0,0,0,0.08)",
       }}>
-        <div style={{ maxWidth: 900, margin: "0 auto", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12, justifyContent: "space-between" }}>
+        <div className="public-cookie-banner-content" style={{ maxWidth: 900, margin: "0 auto", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12, justifyContent: "space-between" }}>
           <p style={{ fontSize: 13, color: "#374151", margin: 0, flex: 1, minWidth: 200, lineHeight: 1.6 }}>
             🍪 Questo sito utilizza cookie tecnici necessari al funzionamento della pagina (sessione e sicurezza).
             Non vengono utilizzati cookie di profilazione o tracciamento di terze parti.
           </p>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <div className="public-cookie-actions" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button
               onClick={() => setShowPrivacy(true)}
               style={{ padding: "8px 14px", background: "none", border: "1px solid #d1d5db", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: "pointer", color: "#374151" }}
@@ -176,6 +176,26 @@ type Settings = {
   primaryColor: string;
   accentColor: string;
 };
+
+const PUBLIC_COOKIE_CONSENT_KEY = "cookie_consent_public";
+const PUBLIC_COOKIE_CONSENT_EVENT = "public-cookie-consent";
+
+function subscribeToCookieConsent(onStoreChange: () => void) {
+  window.addEventListener("storage", onStoreChange);
+  window.addEventListener(PUBLIC_COOKIE_CONSENT_EVENT, onStoreChange);
+  return () => {
+    window.removeEventListener("storage", onStoreChange);
+    window.removeEventListener(PUBLIC_COOKIE_CONSENT_EVENT, onStoreChange);
+  };
+}
+
+function getCookieConsentSnapshot() {
+  return localStorage.getItem(PUBLIC_COOKIE_CONSENT_KEY) === "true";
+}
+
+function getCookieConsentServerSnapshot() {
+  return true;
+}
 
 function maskIp(ip: string): string {
   const parts = ip.split(".");
@@ -322,7 +342,7 @@ function IpBlockedMessage({ settings }: { settings: Settings | null }) {
       <p style={{ fontSize: 13, color: "#78350f", marginBottom: 6, fontWeight: 600 }}>Questo può accadere se:</p>
       <ul style={{ fontSize: 13, color: "#78350f", lineHeight: 1.8, paddingLeft: 20, marginBottom: 16 }}>
         <li>Stai usando un browser con protezione avanzata della privacy (es. Brave)</li>
-        <li>Hai un'estensione che blocca il tracciamento</li>
+        <li>Hai un&apos;estensione che blocca il tracciamento</li>
         <li>Stai usando una VPN con funzioni anti-tracking</li>
         <li>La tua rete aziendale blocca certe connessioni</li>
       </ul>
@@ -811,7 +831,7 @@ function QuoteView({
         {/* Table */}
         <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 16, overflow: "hidden", marginBottom: 16 }}>
           {/* Table header */}
-          <div style={{ display: "grid", gridTemplateColumns: "40px 1fr 50px 60px 70px 40px 80px", background: primary, padding: "8px 12px", gap: 4 }}>
+          <div className="public-quote-table-heading" style={{ background: primary }}>
             {["N.", "Descrizione", "U.M.", "Qtà", "Prezzo", "Sc.", "Totale"].map((h, i) => (
               <div key={i} style={{ color: "white", fontWeight: 700, fontSize: 12, textAlign: i > 1 ? "right" : "left" }}>{h}</div>
             ))}
@@ -937,7 +957,7 @@ function SectionBlock({ section, isOptional, primary }: { section: QuoteSection;
 
   return (
     <div>
-      <div style={{ background: bg, padding: "8px 12px", display: "flex", justifyContent: "space-between", borderTop: "1px solid #e5e7eb" }}>
+      <div className="public-quote-section-heading" style={{ background: bg, padding: "8px 12px", display: "flex", justifyContent: "space-between", borderTop: "1px solid #e5e7eb" }}>
         <span style={{ fontWeight: 700, fontSize: 13, color }}>
           {section.code} — {section.title}
           {isOptional && (
@@ -951,7 +971,7 @@ function SectionBlock({ section, isOptional, primary }: { section: QuoteSection;
             </span>
           )}
         </span>
-        <span style={{ fontWeight: 700, fontSize: 13, color }}>{fmtCurrency(subtotal)}</span>
+        <span className="public-quote-section-total" style={{ fontWeight: 700, fontSize: 13, color }}>{fmtCurrency(subtotal)}</span>
       </div>
       {section.sectionNote && (
         <div style={{ padding: "4px 12px 6px", fontSize: 12, fontStyle: "italic", color: "#6b7280", borderBottom: "1px solid #f0f0f0" }}>
@@ -960,20 +980,20 @@ function SectionBlock({ section, isOptional, primary }: { section: QuoteSection;
       )}
       {section.items.map((item, idx) => (
         <div key={item.id}>
-          <div style={{ display: "grid", gridTemplateColumns: "40px 1fr 50px 60px 70px 40px 80px", padding: "8px 12px", gap: 4, borderTop: "1px solid #f0f0f0", background: idx % 2 === 1 ? "#f9fafb" : "#fff", alignItems: "start" }}>
-            <div style={{ fontSize: 12, color: "#6b7280" }}>{section.code}.{idx + 1}</div>
-            <div style={{ fontSize: 13 }}>
+          <div className="public-quote-item-row" style={{ borderTop: "1px solid #f0f0f0", background: idx % 2 === 1 ? "#f9fafb" : "#fff" }}>
+            <div className="public-quote-item-number" style={{ fontSize: 12, color: "#6b7280" }}>{section.code}.{idx + 1}</div>
+            <div className="public-quote-item-description" style={{ fontSize: 13 }}>
               {item.description}
               {item.notes && <div style={{ fontSize: 11, color: "#6b7280", fontStyle: "italic", marginTop: 2 }}>{item.notes}</div>}
             </div>
-            <div style={{ fontSize: 12, textAlign: "right" }}>{item.unitOfMeasure}</div>
-            <div style={{ fontSize: 12, textAlign: "right" }}>{fmtNum(item.quantity)}</div>
-            <div style={{ fontSize: 12, textAlign: "right" }}>{isLumpSum ? "—" : fmtCurrency(item.unitPrice)}</div>
-            <div style={{ fontSize: 12, textAlign: "right" }}>{!isLumpSum && item.discount > 0 ? `${item.discount}%` : "—"}</div>
-            <div style={{ fontSize: 12, textAlign: "right", fontWeight: 700 }}>{isLumpSum ? "—" : fmtCurrency(item.total)}</div>
+            <div className="public-quote-item-field" data-label="Unità" style={{ fontSize: 12, textAlign: "right" }}>{item.unitOfMeasure}</div>
+            <div className="public-quote-item-field" data-label="Quantità" style={{ fontSize: 12, textAlign: "right" }}>{fmtNum(item.quantity)}</div>
+            <div className="public-quote-item-field" data-label="Prezzo unitario" style={{ fontSize: 12, textAlign: "right" }}>{isLumpSum ? "—" : fmtCurrency(item.unitPrice)}</div>
+            <div className="public-quote-item-field" data-label="Sconto" style={{ fontSize: 12, textAlign: "right" }}>{!isLumpSum && item.discount > 0 ? `${item.discount}%` : "—"}</div>
+            <div className="public-quote-item-field public-quote-item-total" data-label="Totale" style={{ fontSize: 12, textAlign: "right", fontWeight: 700 }}>{isLumpSum ? "—" : fmtCurrency(item.total)}</div>
           </div>
           {item.images.length > 0 && (
-            <div style={{ display: "flex", gap: 8, padding: "8px 12px", background: "#fafafa", flexWrap: "wrap", borderTop: "1px solid #f0f0f0" }}>
+            <div className="public-quote-item-images" style={{ display: "flex", gap: 8, padding: "8px 12px", background: "#fafafa", flexWrap: "wrap", borderTop: "1px solid #f0f0f0" }}>
               {item.images.slice(0, 2).map((img) => (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -1103,16 +1123,17 @@ function PinScreen({
       </header>
 
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "32px 16px" }}>
-        <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 16, padding: "32px 24px", width: "100%", maxWidth: 400, textAlign: "center" }}>
+        <div className="public-pin-card" style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 16, padding: "32px 24px", width: "100%", maxWidth: 400, textAlign: "center" }}>
           <div style={{ fontSize: 36, marginBottom: 16 }}>🔒</div>
           <h2 style={{ fontSize: 20, fontWeight: 700, margin: "0 0 8px" }}>Preventivo riservato</h2>
           <p style={{ fontSize: 14, color: "#6b7280", margin: "0 0 24px", lineHeight: 1.6 }}>
             Inserisci il codice PIN di 6 cifre fornito dal nostro ufficio per accedere al documento.
           </p>
 
-          <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 16 }}>
+          <div className="public-pin-digits" style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 16 }}>
             {digits.map((d, i) => (
               <input
+                className="public-pin-digit"
                 key={i}
                 ref={(el) => { inputRefs.current[i] = el; }}
                 type="text"
@@ -1184,12 +1205,11 @@ export default function PublicQuotePage({ params }: { params: Promise<{ token: s
   const [errorType, setErrorType] = useState<string>("");
   const [quote, setQuote] = useState<PublicQuote | null>(null);
   const [settings, setSettings] = useState<Settings | null>(null);
-  const [showCookieBanner, setShowCookieBanner] = useState(false);
-
-  useEffect(() => {
-    const consent = typeof window !== "undefined" ? localStorage.getItem("cookie_consent_public") : null;
-    if (!consent) setShowCookieBanner(true);
-  }, []);
+  const hasCookieConsent = useSyncExternalStore(
+    subscribeToCookieConsent,
+    getCookieConsentSnapshot,
+    getCookieConsentServerSnapshot,
+  );
 
   // Il PIN viene verificato lato server: senza PIN valido l'API non restituisce
   // i dati del preventivo. Il PIN inserito è conservato in sessionStorage e
@@ -1227,12 +1247,20 @@ export default function PublicQuotePage({ params }: { params: Promise<{ token: s
   }, [token]);
 
   function acceptCookies() {
-    localStorage.setItem("cookie_consent_public", "true");
-    setShowCookieBanner(false);
+    localStorage.setItem(PUBLIC_COOKIE_CONSENT_KEY, "true");
+    window.dispatchEvent(new Event(PUBLIC_COOKIE_CONSENT_EVENT));
   }
 
   return (
-    <>
+    <div
+      className="public-quote-page"
+      style={{
+        minHeight: "100vh",
+        background: "#F9FAFB",
+        color: "#18181b",
+        colorScheme: "light",
+      }}
+    >
       {state === "loading" && <Skeleton />}
       {state === "error" && <ErrorPage error={errorType} />}
       {state === "pin" && (
@@ -1265,7 +1293,7 @@ export default function PublicQuotePage({ params }: { params: Promise<{ token: s
       )}
       {state === "loaded" && !quote && <ErrorPage error="unknown" />}
       {state === "loaded" && quote && <QuoteView quote={quote} settings={settings} token={token} />}
-      {showCookieBanner && <CookieBanner settings={settings} onAccept={acceptCookies} />}
-    </>
+      {!hasCookieConsent && <CookieBanner settings={settings} onAccept={acceptCookies} />}
+    </div>
   );
 }

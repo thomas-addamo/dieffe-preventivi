@@ -230,6 +230,146 @@ body {
   animation: slide-up-fade 0.22s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
+/* La pagina pubblica dei preventivi usa superfici chiare indipendentemente dal
+   tema scelto nell'area riservata. */
+.public-quote-page {
+  overflow-wrap: anywhere;
+}
+
+.public-quote-table-heading,
+.public-quote-item-row {
+  display: grid;
+  grid-template-columns: 40px minmax(180px, 1fr) 50px 60px 70px 40px 80px;
+  gap: 4px;
+}
+
+.public-quote-table-heading {
+  padding: 8px 12px;
+}
+
+.public-quote-item-row {
+  align-items: start;
+  padding: 8px 12px;
+}
+
+@media (max-width: 640px) {
+  .public-quote-table-heading {
+    display: none;
+  }
+
+  .public-quote-section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .public-quote-section-total {
+    align-self: flex-end;
+  }
+
+  .public-quote-item-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .public-quote-item-number,
+  .public-quote-item-description,
+  .public-quote-item-total {
+    grid-column: 1 / -1;
+  }
+
+  .public-quote-item-number {
+    font-weight: 700;
+  }
+
+  .public-quote-item-description {
+    font-size: 14px !important;
+    line-height: 1.5;
+  }
+
+  .public-quote-item-field {
+    min-width: 0;
+    padding-top: 8px;
+    border-top: 1px solid #e5e7eb;
+    text-align: left !important;
+  }
+
+  .public-quote-item-field::before {
+    display: block;
+    margin-bottom: 3px;
+    color: #71717a;
+    content: attr(data-label);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .public-quote-item-total {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-top: 0;
+    border-radius: 8px;
+    background: #eef2ff;
+    color: #18181b;
+    font-size: 14px !important;
+  }
+
+  .public-quote-item-total::before {
+    margin-bottom: 0;
+    color: #3730a3;
+  }
+
+  .public-quote-item-images img {
+    width: calc(50% - 4px) !important;
+    height: auto !important;
+    aspect-ratio: 3 / 2;
+  }
+
+  .public-pin-digits {
+    gap: min(2vw, 8px) !important;
+  }
+
+  .public-pin-digit {
+    width: clamp(36px, 10.5vw, 44px) !important;
+    height: 50px !important;
+  }
+
+  .public-cookie-banner {
+    padding: 12px 16px !important;
+  }
+
+  .public-cookie-banner-content {
+    align-items: stretch !important;
+  }
+
+  .public-cookie-actions {
+    width: 100%;
+  }
+
+  .public-cookie-actions button {
+    flex: 1;
+  }
+}
+
+@media (max-width: 360px) {
+  .public-pin-card {
+    padding-right: 16px !important;
+    padding-left: 16px !important;
+  }
+
+  .public-pin-digits {
+    gap: 4px !important;
+  }
+
+  .public-pin-digit {
+    width: 36px !important;
+  }
+}
+
 /* Disattiva l'highlight blu di tap su iOS per un feel nativo */
 @media (max-width: 1023px) {
   a, button, [role="button"] {
