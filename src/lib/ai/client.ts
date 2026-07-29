@@ -7,46 +7,139 @@ export function isAiConfigured() {
   return !!env.GROQ_API_KEY;
 }
 
-// Modello veloce e stabile per task strutturati (prezzi, descrizioni, learn).
-const MODEL_FAST = 'llama-3.3-70b-versatile';
-// Modello chat principale: stabile. compound-beta resta come "potenziamento"
-// opzionale (ricerca web) ma NON come default perché va spesso in rate-limit
-// sulle richieste consecutive → era la causa del "secondo messaggio dà errore".
-const MODEL_CHAT = 'llama-3.3-70b-versatile';
-const MODEL_CHAT_WEB = 'compound-beta';
+// Llama 3.3 70B ha solo 100K token/giorno sul piano Groq Free ed è in
+// dismissione. Separiamo i carichi su modelli con 200K TPD e ruotiamo
+// automaticamente quando un modello raggiunge quota o non è disponibile.
+const MODEL_FAST = 'openai/gpt-oss-20b';
+const MODEL_CHAT = 'openai/gpt-oss-120b';
+const MODEL_FALLBACK = 'qwen/qwen3.6-27b';
+const MODEL_CHAT_WEB = 'groq/compound-mini';
+
+const MODELS_FAST = [MODEL_FAST, MODEL_FALLBACK, MODEL_CHAT] as const;
+const MODELS_CHAT = [MODEL_CHAT, MODEL_FALLBACK, MODEL_FAST] as const;
+const MODELS_CHAT_WEB = [MODEL_CHAT_WEB, ...MODELS_CHAT] as const;
 
 type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string };
+type CompleteOptions = {
+  temperature?: number;
+  maxTokens?: number;
+  timeoutMs?: number;
+  json?: boolean;
+};
+
+type AiError = Error & {
+  status?: number;
+  code?: string;
+};
+
+class EmptyAiResponseError extends Error {
+  constructor(model: string) {
+    super(`Risposta vuota dal modello ${model}`);
+    this.name = 'EmptyAiResponseError';
+  }
+}
+
+function reasoningOptions(model: string) {
+  if (model.startsWith('openai/gpt-oss-')) {
+    return {
+      reasoning_effort: 'low' as const,
+      reasoning_format: 'hidden' as const,
+    };
+  }
+
+  if (model.startsWith('qwen/')) {
+    return {
+      reasoning_effort: 'none' as const,
+      reasoning_format: 'hidden' as const,
+    };
+  }
+
+  return {};
+}
+
+function shouldTryFallback(error: unknown) {
+  if (error instanceof EmptyAiResponseError) return true;
+
+  const e = error as AiError;
+  if (!e.status || e.status === 408 || e.status === 409 || e.status === 429 || e.status >= 500) {
+    return true;
+  }
+
+  // Groq può restituire 400/404 quando un model ID viene ritirato.
+  const message = e.message?.toLowerCase() ?? '';
+  return (
+    e.status === 404 ||
+    message.includes('decommission') ||
+    message.includes('deprecated') ||
+    message.includes('model_not_found')
+  );
+}
+
+function logFallback(error: unknown, model: string, fallbackModel: string) {
+  const e = error as AiError;
+  console.warn(
+    JSON.stringify({
+      level: 'warning',
+      msg: 'ai_model_fallback',
+      model,
+      fallbackModel,
+      status: e.status ?? null,
+      code: e.code ?? null,
+      reason: (e.message ?? String(error)).slice(0, 180),
+    })
+  );
+}
 
 /**
- * Chiamata Groq con un fallback automatico su un secondo modello se il primo
- * fallisce (rate-limit/timeout/decommissionato). Restituisce sempre testo.
+ * Chiamata Groq con rotazione automatica dei modelli in caso di quota,
+ * timeout, errore temporaneo o dismissione. Il timeout dell'SDK interrompe
+ * davvero la richiesta, evitando che continui a consumare token in background.
  */
 async function complete(
-  model: string,
+  models: readonly string[],
   messages: ChatMessage[],
-  opts: { temperature?: number; maxTokens?: number; timeoutMs?: number; json?: boolean } = {}
+  opts: CompleteOptions = {}
 ): Promise<string> {
   const { temperature = 0.7, maxTokens = 1024, timeoutMs = 12000, json = false } = opts;
 
-  const response = await Promise.race([
-    groq.chat.completions.create({
-      model,
-      messages,
-      temperature,
-      max_tokens: maxTokens,
-      stream: false,
-      ...(json ? { response_format: { type: 'json_object' } } : {}),
-    }),
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('timeout')), timeoutMs)
-    ),
-  ]);
+  let lastError: unknown;
+  for (let index = 0; index < models.length; index++) {
+    const model = models[index];
+    try {
+      const response = await groq.chat.completions.create(
+        {
+          model,
+          messages,
+          temperature,
+          max_completion_tokens: maxTokens,
+          stream: false,
+          ...reasoningOptions(model),
+          ...(json ? { response_format: { type: 'json_object' as const } } : {}),
+        },
+        {
+          timeout: timeoutMs,
+          // La rotazione qui gestisce i retry senza insistere sul modello
+          // che ha già esaurito la propria quota giornaliera.
+          maxRetries: 0,
+        }
+      );
 
-  return response.choices[0]?.message?.content ?? '';
+      const content = response.choices[0]?.message?.content?.trim() ?? '';
+      if (!content) throw new EmptyAiResponseError(model);
+      return content;
+    } catch (error) {
+      lastError = error;
+      const fallbackModel = models[index + 1];
+      if (!fallbackModel || !shouldTryFallback(error)) throw error;
+      logFallback(error, model, fallbackModel);
+    }
+  }
+
+  throw lastError ?? new Error('Nessun modello AI disponibile');
 }
 
 export async function generateAI(prompt: string, timeoutMs = 10000): Promise<string> {
-  return complete(MODEL_FAST, [{ role: 'user', content: prompt }], {
+  return complete(MODELS_FAST, [{ role: 'user', content: prompt }], {
     temperature: 0.5,
     maxTokens: 1024,
     timeoutMs,
@@ -55,8 +148,8 @@ export async function generateAI(prompt: string, timeoutMs = 10000): Promise<str
 
 /**
  * Genera output JSON in modo robusto: forza response_format json, temperatura
- * bassa, e ritenta una volta sul modello veloce in caso di errore. Lancia se
- * non riesce a produrre JSON valido (il chiamante gestisce il fallback).
+ * bassa e ruota sui modelli di riserva in caso di errore temporaneo o quota.
+ * Lancia se nessun modello riesce a produrre JSON valido.
  */
 export async function generateAIJson<T = unknown>(
   systemPrompt: string,
@@ -69,22 +162,12 @@ export async function generateAIJson<T = unknown>(
     { role: 'user', content: userPrompt },
   ];
 
-  let raw = '';
-  try {
-    raw = await complete(MODEL_FAST, messages, {
-      temperature: 0.2,
-      maxTokens,
-      timeoutMs,
-      json: true,
-    });
-  } catch {
-    // Un solo retry, senza json mode (alcuni edge case di rate-limit).
-    raw = await complete(MODEL_FAST, messages, {
-      temperature: 0.2,
-      maxTokens,
-      timeoutMs,
-    });
-  }
+  const raw = await complete(MODELS_FAST, messages, {
+    temperature: 0.2,
+    maxTokens,
+    timeoutMs,
+    json: true,
+  });
 
   const match = raw.match(/\{[\s\S]*\}/);
   if (!match) throw new Error('JSON non trovato nella risposta AI');
@@ -121,25 +204,15 @@ export async function generateAIChat(
 
   const fullMessages: ChatMessage[] = [
     { role: 'system', content: systemWithContext },
-    ...messages,
+    // Sei turni completi sono sufficienti per la continuità e impediscono che
+    // chat lunghe esauriscano rapidamente i limiti TPM/TPD del provider.
+    ...messages.slice(-12),
   ];
 
-  // Modello primario stabile. Se l'utente chiede esplicitamente la ricerca web
-  // si usa compound-beta, ma con fallback automatico al modello stabile.
-  const primary = opts.web ? MODEL_CHAT_WEB : MODEL_CHAT;
-  try {
-    return await complete(primary, fullMessages, {
-      temperature: 0.6,
-      maxTokens: 1500,
-      timeoutMs: opts.web ? 22000 : 15000,
-    });
-  } catch (err) {
-    if (primary === MODEL_CHAT) throw err;
-    // Fallback: web fallito → riprova sul modello stabile.
-    return complete(MODEL_CHAT, fullMessages, {
-      temperature: 0.6,
-      maxTokens: 1500,
-      timeoutMs: 15000,
-    });
-  }
+  return complete(opts.web ? MODELS_CHAT_WEB : MODELS_CHAT, fullMessages, {
+    temperature: 0.6,
+    maxTokens: 1500,
+    // Quattro tentativi web da 10s restano entro i 45s della funzione Vercel.
+    timeoutMs: 10000,
+  });
 }

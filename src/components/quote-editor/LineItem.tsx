@@ -428,7 +428,7 @@ export function LineItem({
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ description }),
-            signal: AbortSignal.timeout(9000),
+            signal: AbortSignal.timeout(20000),
           });
           if (!res.ok) return;
           const { suggestion } = await res.json();
@@ -454,7 +454,7 @@ export function LineItem({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ description: item.description }),
-        signal: AbortSignal.timeout(9000),
+        signal: AbortSignal.timeout(20000),
       });
       if (res.status === 429) {
         const data = await res.json().catch(() => ({}));

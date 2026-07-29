@@ -10,6 +10,21 @@
     },
     "src/app/api/quotes/import/route.ts": {
       "maxDuration": 60
+    },
+    "src/app/api/ai/chat/route.ts": {
+      "maxDuration": 45
+    },
+    "src/app/api/ai/suggest-price/route.ts": {
+      "maxDuration": 45
+    },
+    "src/app/api/ai/improve-description/route.ts": {
+      "maxDuration": 45
+    },
+    "src/app/api/ai/learn-items/route.ts": {
+      "maxDuration": 45
+    },
+    "src/app/api/ai/search/route.ts": {
+      "maxDuration": 45
     }
   },
   "crons": [

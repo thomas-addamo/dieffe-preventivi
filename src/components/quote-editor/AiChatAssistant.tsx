@@ -51,7 +51,7 @@ export function AiChatAssistant() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: newMessages }),
-        signal: AbortSignal.timeout(20000),
+        signal: AbortSignal.timeout(45000),
       });
       const data = await res.json();
       if (res.ok && data.reply) {
@@ -62,10 +62,16 @@ export function AiChatAssistant() {
           { role: "assistant", content: "Si è verificato un errore. Riprova." },
         ]);
       }
-    } catch {
+    } catch (error) {
       setMessages((m) => [
         ...m,
-        { role: "assistant", content: "Timeout. Riprova con una domanda più breve." },
+        {
+          role: "assistant",
+          content:
+            error instanceof DOMException && error.name === "TimeoutError"
+              ? "L'AI sta impiegando troppo tempo. Riprova tra poco."
+              : "Connessione all'AI non riuscita. Riprova.",
+        },
       ]);
     } finally {
       setLoading(false);
