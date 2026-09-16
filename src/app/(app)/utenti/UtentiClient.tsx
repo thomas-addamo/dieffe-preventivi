@@ -425,7 +425,7 @@ export function UtentiClient({
 
       {/* Create dialog */}
       <Dialog open={showCreate} onOpenChange={(o) => { if (!o) { setShowCreate(false); setShowPw(false); setCopiedPw(false); } }}>
-        <DialogContent className="max-w-sm w-full">
+        <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Nuovo utente</DialogTitle>
           </DialogHeader>
@@ -524,7 +524,7 @@ export function UtentiClient({
 
       {/* Access log modal */}
       <Dialog open={!!accessLogUser} onOpenChange={(o) => !o && setAccessLogUser(null)}>
-        <DialogContent className="max-w-lg w-full">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Storico accessi — {accessLogUser?.name}</DialogTitle>
           </DialogHeader>
@@ -568,7 +568,7 @@ export function UtentiClient({
 
       {/* Edit dialog */}
       <Dialog open={!!editing} onOpenChange={(o) => { if (!o) { setEditing(null); setShowPw(false); setCopiedPw(false); } }}>
-        <DialogContent className="max-w-sm w-full">
+        <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Modifica utente</DialogTitle>
           </DialogHeader>

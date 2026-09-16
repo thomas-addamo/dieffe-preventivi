@@ -176,7 +176,7 @@ export function ImportQuoteModal({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
-      <DialogContent className="max-w-2xl w-full max-h-[90dvh] flex flex-col">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-violet-500" />

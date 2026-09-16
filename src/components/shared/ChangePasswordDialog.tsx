@@ -88,7 +88,7 @@ export function ChangePasswordDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-sm w-full">
+      <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <KeyRound className="w-4 h-4 text-primary" />

@@ -4,6 +4,11 @@ import type { CompanySettings } from "@/lib/db/schema";
 import { calcQuoteTotals, calcSectionSubtotal, calcSectionTotal } from "@/lib/calculations";
 import { formatDate } from "@/lib/utils";
 
+/** Percentuale leggibile: "10%", "12,5%" — senza decimali inutili. */
+function fmtPercent(n: number) {
+  return `${new Intl.NumberFormat("it-IT", { maximumFractionDigits: 2 }).format(n)}%`;
+}
+
 export async function exportToExcel(
   quote: QuoteWithRelations,
   settings: CompanySettings | null
@@ -197,7 +202,11 @@ export async function exportToExcel(
     ["Subtotale", totals.subtotalBeforeDiscount, '#,##0.00 "€"'],
   ];
   if (totals.discountAmount > 0) {
-    totalsData.push(["Sconto", -totals.discountAmount, '#,##0.00 "€"']);
+    const discountLabel =
+      quote.discountType === "percent" && quote.discountValue
+        ? `Sconto ${fmtPercent(quote.discountValue)}`
+        : "Sconto (importo fisso)";
+    totalsData.push([discountLabel, -totals.discountAmount, '#,##0.00 "€"']);
     totalsData.push(["Imponibile", totals.taxableAmount, '#,##0.00 "€"']);
   }
   totalsData.push([`IVA ${quote.vatRate}%`, totals.vatAmount, '#,##0.00 "€"']);

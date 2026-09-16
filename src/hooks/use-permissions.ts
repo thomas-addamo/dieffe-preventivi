@@ -16,6 +16,7 @@ export function usePermissions() {
       exportQuoteAdvanced: can.exportQuoteAdvanced(role),
       importQuote: can.importQuote(role),
       manageClients: can.manageClients(role),
+      viewStats: can.viewStats(role),
       manageTemplates: can.manageTemplates(role),
       manageQuoteImages: can.manageQuoteImages(role),
       manageUsers: can.manageUsers(role),

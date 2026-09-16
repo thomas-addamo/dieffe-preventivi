@@ -168,14 +168,21 @@ export function StatisticheClient({ quotes }: { quotes: QuoteData[] }) {
   }, [filtered]);
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <div className="flex items-center gap-3">
-          <BarChart2 className="w-6 h-6 text-muted-foreground" />
-          <h1 className="text-2xl font-bold">Statistiche</h1>
+    <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">
+      <div className="mb-4 md:mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="hidden sm:flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            <BarChart2 className="w-4.5 h-4.5" />
+          </span>
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold lg:text-xl lg:font-semibold">Statistiche</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {totalCount} preventiv{totalCount === 1 ? "o" : "i"} nel periodo selezionato
+            </p>
+          </div>
         </div>
         <Select value={period} onValueChange={setPeriod}>
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="w-full sm:w-48 shrink-0">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -187,7 +194,7 @@ export function StatisticheClient({ quotes }: { quotes: QuoteData[] }) {
       </div>
 
       {/* KPI cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4 mb-6 md:mb-8">
         <KpiCard label="Totale preventivi" value={totalCount.toString()} />
         <KpiCard label="Valore accettati" value={fmtCurrency(totalAcceptedValue)} />
         <KpiCard label="Tasso conversione" value={fmtPct(conversionRate)} />
@@ -201,10 +208,10 @@ export function StatisticheClient({ quotes }: { quotes: QuoteData[] }) {
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <div className="border rounded-xl p-4">
-          <h2 className="font-semibold mb-4">Preventivi per mese (ultimi 12 mesi)</h2>
-          <ResponsiveContainer width="100%" height={240}>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
+        <div className="border rounded-xl bg-card p-4 shadow-xs">
+          <h2 className="font-semibold text-sm mb-3 md:mb-4">Preventivi per mese (ultimi 12 mesi)</h2>
+          <ResponsiveContainer width="100%" height={220}>
             <BarChart data={monthlyData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" tick={{ fontSize: 11 }} />
@@ -218,9 +225,9 @@ export function StatisticheClient({ quotes }: { quotes: QuoteData[] }) {
           </ResponsiveContainer>
         </div>
 
-        <div className="border rounded-xl p-4">
-          <h2 className="font-semibold mb-4">Valore mensile preventivi accettati</h2>
-          <ResponsiveContainer width="100%" height={240}>
+        <div className="border rounded-xl bg-card p-4 shadow-xs">
+          <h2 className="font-semibold text-sm mb-3 md:mb-4">Valore mensile preventivi accettati</h2>
+          <ResponsiveContainer width="100%" height={220}>
             <LineChart data={monthlyValueData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" tick={{ fontSize: 11 }} />
@@ -231,9 +238,9 @@ export function StatisticheClient({ quotes }: { quotes: QuoteData[] }) {
           </ResponsiveContainer>
         </div>
 
-        <div className="border rounded-xl p-4">
-          <h2 className="font-semibold mb-4">Distribuzione stati</h2>
-          <ResponsiveContainer width="100%" height={240}>
+        <div className="border rounded-xl bg-card p-4 shadow-xs">
+          <h2 className="font-semibold text-sm mb-3 md:mb-4">Distribuzione stati</h2>
+          <ResponsiveContainer width="100%" height={220}>
             <PieChart>
               <Pie data={statusDist} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}>
                 {statusDist.map((entry) => (
@@ -247,9 +254,9 @@ export function StatisticheClient({ quotes }: { quotes: QuoteData[] }) {
       </div>
 
       {/* Tables */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="border rounded-xl p-4">
-          <h2 className="font-semibold mb-3">Top 5 clienti (per valore accettato)</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+        <div className="border rounded-xl bg-card p-4 shadow-xs">
+          <h2 className="font-semibold text-sm mb-3">Top 5 clienti (per valore accettato)</h2>
           {topClients.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nessun dato</p>
           ) : (
@@ -267,8 +274,8 @@ export function StatisticheClient({ quotes }: { quotes: QuoteData[] }) {
           )}
         </div>
 
-        <div className="border rounded-xl p-4">
-          <h2 className="font-semibold mb-3">Top 5 utenti (per numero preventivi)</h2>
+        <div className="border rounded-xl bg-card p-4 shadow-xs">
+          <h2 className="font-semibold text-sm mb-3">Top 5 utenti (per numero preventivi)</h2>
           {topUsers.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nessun dato</p>
           ) : (
@@ -292,9 +299,9 @@ export function StatisticheClient({ quotes }: { quotes: QuoteData[] }) {
 
 function KpiCard({ label, value, sub, subColor }: { label: string; value: string; sub?: string; subColor?: string }) {
   return (
-    <div className="border rounded-xl p-4">
-      <p className="text-xs text-muted-foreground mb-1">{label}</p>
-      <p className="text-xl font-bold">{value}</p>
+    <div className="border rounded-xl bg-card p-3.5 md:p-4 shadow-xs">
+      <p className="text-[11px] md:text-xs text-muted-foreground mb-1 leading-tight">{label}</p>
+      <p className="text-lg md:text-xl font-bold tabular-nums">{value}</p>
       {sub && <p className={`text-xs mt-1 ${subColor ?? "text-muted-foreground"}`}>{sub}</p>}
     </div>
   );

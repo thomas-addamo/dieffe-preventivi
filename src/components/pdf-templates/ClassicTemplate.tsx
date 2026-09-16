@@ -26,6 +26,11 @@ function fmtNum(n: number): string {
   }).format(n);
 }
 
+/** Percentuale leggibile: "10%", "12,5%" — senza decimali inutili. */
+function fmtPercent(n: number): string {
+  return `${new Intl.NumberFormat("it-IT", { maximumFractionDigits: 2 }).format(n)}%`;
+}
+
 const PRIMARY = "#1e40af";
 const SECTION_BG = "#dbeafe";
 const OPTIONAL_BG = "#f3e8ff";
@@ -455,7 +460,7 @@ function SectionRows({
                 {section.lumpSum ? "—" : fmtCurrency(item.unitPrice)}
               </Text>
               <Text style={s.colDisc}>
-                {!section.lumpSum && item.discount > 0 ? `${item.discount}%` : "—"}
+                {!section.lumpSum && item.discount > 0 ? fmtPercent(item.discount) : "—"}
               </Text>
               <Text style={s.colTotal}>
                 {section.lumpSum ? "—" : fmtCurrency(item.total)}
@@ -497,6 +502,13 @@ export function ClassicTemplate({ quote, settings, logoUrl }: ClassicTemplatePro
     quote.discountType,
     quote.discountValue
   );
+
+  // Etichetta sconto: deve rendere esplicita la percentuale applicata
+  // (es. "Sconto 10%"), oppure segnalare che è un importo fisso.
+  const discountLabel =
+    quote.discountType === "percent" && quote.discountValue
+      ? `Sconto ${fmtPercent(quote.discountValue)}`
+      : "Sconto (importo fisso)";
 
   const normalSections = quote.sections.filter((s) => !s.isOptional);
   const optionalSections = quote.sections.filter((s) => !!s.isOptional);
@@ -603,7 +615,7 @@ export function ClassicTemplate({ quote, settings, logoUrl }: ClassicTemplatePro
           {totals.discountAmount > 0 && (
             <>
               <View style={s.totalRow}>
-                <Text style={s.totalLabel}>Sconto</Text>
+                <Text style={s.totalLabel}>{discountLabel}</Text>
                 <Text style={[s.totalValue, { color: "#ef4444" }]}>
                   -{fmtCurrency(totals.discountAmount)}
                 </Text>

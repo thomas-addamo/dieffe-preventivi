@@ -43,6 +43,7 @@ const TABS: TabItem[] = [
     match: (p) =>
       p.startsWith("/altro") ||
       p.startsWith("/listino") ||
+      p.startsWith("/statistiche") ||
       p.startsWith("/template") ||
       p.startsWith("/cestino") ||
       p.startsWith("/impostazioni") ||

@@ -93,7 +93,7 @@ export function ImageUploader({
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-xl w-full">
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Immagini voce</DialogTitle>
         </DialogHeader>

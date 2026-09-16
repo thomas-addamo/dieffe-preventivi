@@ -292,6 +292,27 @@ function ListinoAutocomplete({
   );
 }
 
+/**
+ * Campo mobile con etichetta sopra: senza etichette i quattro input numerici
+ * della riga (U.M. / Qtà / Prezzo / Sconto) erano indistinguibili da telefono.
+ */
+function MobileField({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="min-w-0 space-y-1">
+      <span className="block truncate text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+        {label}
+      </span>
+      {children}
+    </div>
+  );
+}
+
 interface LineItemProps {
   item: ItemWithImages;
   itemNumber: string;
@@ -692,13 +713,13 @@ export function LineItem({
       </div>
 
       {/* ── Mobile card layout (< md) ── */}
-      <div className="md:hidden px-3 py-3 space-y-2.5 border-b last:border-b-0">
-        {/* Row 1: number + description */}
+      <div className="md:hidden px-3 py-3 space-y-3 border-b last:border-b-0">
+        {/* Riga 1: numero voce + descrizione */}
         <div className="flex gap-2 items-start">
           <div className="flex items-center gap-1 pt-2 shrink-0">
             <GripVertical
               {...(!isViewer ? { ...attributes, ...listeners } : {})}
-              className="w-3.5 h-3.5 text-muted-foreground cursor-grab"
+              className="w-4 h-4 text-muted-foreground cursor-grab touch-none"
             />
             <span className="font-mono text-xs text-muted-foreground tabular-nums">
               {itemNumber}
@@ -707,58 +728,74 @@ export function LineItem({
           {descriptionBlock(descMobileRef, true)}
         </div>
 
-        {/* Row 2: U.M. | Qty | Prezzo | Sconto */}
+        {/* Riga 2: campi numerici, ognuno con la propria etichetta */}
         <div className="grid grid-cols-4 gap-2">
-          <Select
-            value={item.unitOfMeasure}
-            onValueChange={(v) => onUpdate({ unitOfMeasure: v })}
-            disabled={isViewer}
-          >
-            <SelectTrigger className="h-10 text-xs border-muted">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {UNIT_OF_MEASURES.map((um) => (
-                <SelectItem key={um} value={um} className="text-xs">{um}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Input
-            type="number"
-            value={item.quantity}
-            onChange={(e) => onUpdate({ quantity: Number(e.target.value) || 0 })}
-            disabled={isViewer}
-            className="h-10 text-sm text-right tabular-nums border-muted"
-            placeholder="Qtà"
-            step="0.01"
-          />
-          <Input
-            type="number"
-            value={item.unitPrice}
-            onChange={(e) => onUpdate({ unitPrice: Number(e.target.value) || 0 })}
-            disabled={isViewer}
-            className="h-10 text-sm text-right tabular-nums border-muted"
-            placeholder="€"
-            step="0.01"
-          />
-          <Input
-            type="number"
-            value={item.discount}
-            onChange={(e) => onUpdate({ discount: Number(e.target.value) || 0 })}
-            disabled={isViewer}
-            className="h-10 text-sm text-right tabular-nums border-muted"
-            placeholder="Sc.%"
-            step="0.5"
-            min="0"
-            max="100"
-          />
+          <MobileField label="U.M.">
+            <Select
+              value={item.unitOfMeasure}
+              onValueChange={(v) => onUpdate({ unitOfMeasure: v })}
+              disabled={isViewer}
+            >
+              <SelectTrigger className="h-11 px-2 text-sm border-muted">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {UNIT_OF_MEASURES.map((um) => (
+                  <SelectItem key={um} value={um}>{um}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </MobileField>
+          <MobileField label="Qtà">
+            <Input
+              type="number"
+              inputMode="decimal"
+              value={item.quantity}
+              onChange={(e) => onUpdate({ quantity: Number(e.target.value) || 0 })}
+              disabled={isViewer}
+              className="h-11 px-2 text-sm text-right tabular-nums border-muted"
+              placeholder="0"
+              step="0.01"
+            />
+          </MobileField>
+          <MobileField label="Prezzo €">
+            <Input
+              type="number"
+              inputMode="decimal"
+              value={item.unitPrice}
+              onChange={(e) => onUpdate({ unitPrice: Number(e.target.value) || 0 })}
+              disabled={isViewer}
+              className="h-11 px-2 text-sm text-right tabular-nums border-muted"
+              placeholder="0"
+              step="0.01"
+            />
+          </MobileField>
+          <MobileField label="Sconto %">
+            <Input
+              type="number"
+              inputMode="decimal"
+              value={item.discount}
+              onChange={(e) => onUpdate({ discount: Number(e.target.value) || 0 })}
+              disabled={isViewer}
+              className="h-11 px-2 text-sm text-right tabular-nums border-muted"
+              placeholder="0"
+              step="0.5"
+              min="0"
+              max="100"
+            />
+          </MobileField>
         </div>
 
-        {/* Row 3: total + actions */}
-        <div className="flex items-center justify-between">
-          <span className="text-base font-semibold tabular-nums">
-            {formatCurrency(item.total)}
-          </span>
+        {/* Riga 3: totale voce + azioni */}
+        <div className="flex items-center justify-between rounded-xl bg-muted/40 px-3 py-1.5">
+          <div className="min-w-0">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+              Totale voce
+            </p>
+            <span className="text-base font-semibold tabular-nums">
+              {formatCurrency(item.total)}
+            </span>
+          </div>
           <div className="flex items-center gap-1">
             {(perms.manageQuoteImages || item.images.length > 0) && (
               <Button

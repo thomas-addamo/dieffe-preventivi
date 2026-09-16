@@ -219,6 +219,11 @@ function fmtNum(n: number) {
   return new Intl.NumberFormat("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
 }
 
+/** Percentuale leggibile: "10%", "12,5%" — senza decimali inutili. */
+function fmtPercent(n: number) {
+  return `${new Intl.NumberFormat("it-IT", { maximumFractionDigits: 2 }).format(n)}%`;
+}
+
 function fmtDate(str: string | null | undefined) {
   if (!str) return "";
   try {
@@ -861,7 +866,15 @@ function QuoteView({
             )}
             <TotalRow label="Subtotale" value={fmtCurrency(totals.subtotalBeforeDiscount)} />
             {totals.discountAmount > 0 && (
-              <TotalRow label="Sconto" value={`-${fmtCurrency(totals.discountAmount)}`} valueColor="#ef4444" />
+              <TotalRow
+                label={
+                  quote.discountType === "percent" && quote.discountValue
+                    ? `Sconto ${fmtPercent(quote.discountValue)}`
+                    : "Sconto (importo fisso)"
+                }
+                value={`-${fmtCurrency(totals.discountAmount)}`}
+                valueColor="#ef4444"
+              />
             )}
             {totals.discountAmount > 0 && (
               <TotalRow label="Imponibile" value={fmtCurrency(totals.taxableAmount)} />
@@ -989,7 +1002,7 @@ function SectionBlock({ section, isOptional, primary }: { section: QuoteSection;
             <div className="public-quote-item-field" data-label="Unità" style={{ fontSize: 12, textAlign: "right" }}>{item.unitOfMeasure}</div>
             <div className="public-quote-item-field" data-label="Quantità" style={{ fontSize: 12, textAlign: "right" }}>{fmtNum(item.quantity)}</div>
             <div className="public-quote-item-field" data-label="Prezzo unitario" style={{ fontSize: 12, textAlign: "right" }}>{isLumpSum ? "—" : fmtCurrency(item.unitPrice)}</div>
-            <div className="public-quote-item-field" data-label="Sconto" style={{ fontSize: 12, textAlign: "right" }}>{!isLumpSum && item.discount > 0 ? `${item.discount}%` : "—"}</div>
+            <div className="public-quote-item-field" data-label="Sconto" style={{ fontSize: 12, textAlign: "right" }}>{!isLumpSum && item.discount > 0 ? fmtPercent(item.discount) : "—"}</div>
             <div className="public-quote-item-field public-quote-item-total" data-label="Totale" style={{ fontSize: 12, textAlign: "right", fontWeight: 700 }}>{isLumpSum ? "—" : fmtCurrency(item.total)}</div>
           </div>
           {item.images.length > 0 && (

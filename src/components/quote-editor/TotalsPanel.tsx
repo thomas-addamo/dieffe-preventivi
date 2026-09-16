@@ -72,7 +72,7 @@ export function TotalsPanel({
 
   return (
     <div className="space-y-4">
-      <h3 className="font-semibold text-sm">Riepilogo</h3>
+      <h3 className="hidden md:block font-semibold text-sm">Riepilogo</h3>
 
       {/* Normal section subtotals */}
       {totals.sectionSubtotals.length > 0 && (
@@ -155,22 +155,23 @@ export function TotalsPanel({
             }}
             disabled={isViewer}
           >
-            <SelectTrigger className="w-24 h-7 text-xs">
+            <SelectTrigger className="w-28 md:w-24 h-10 md:h-7 text-sm md:text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="none" className="text-xs">Nessuno</SelectItem>
-              <SelectItem value="percent" className="text-xs">%</SelectItem>
-              <SelectItem value="fixed" className="text-xs">€ fisso</SelectItem>
+              <SelectItem value="none">Nessuno</SelectItem>
+              <SelectItem value="percent">Percentuale %</SelectItem>
+              <SelectItem value="fixed">Importo fisso €</SelectItem>
             </SelectContent>
           </Select>
           {discountType && (
             <Input
               type="number"
+              inputMode="decimal"
               value={discountValue ?? 0}
               onChange={(e) => onChangeDiscount(discountType, Number(e.target.value))}
               disabled={isViewer}
-              className="flex-1 h-7 text-xs text-right"
+              className="flex-1 h-10 md:h-7 text-sm md:text-xs text-right tabular-nums"
               min="0"
               step="0.01"
             />
@@ -178,7 +179,11 @@ export function TotalsPanel({
         </div>
         {totals.discountAmount > 0 && (
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Sconto</span>
+            <span>
+              {discountType === "percent" && discountValue
+                ? `Sconto ${discountValue}%`
+                : "Sconto (importo fisso)"}
+            </span>
             <span className="tabular-nums text-destructive">
               -{formatCurrency(totals.discountAmount)}
             </span>
@@ -204,14 +209,14 @@ export function TotalsPanel({
           onValueChange={(v) => onChangeVat(Number(v))}
           disabled={isViewer}
         >
-          <SelectTrigger className="h-7 text-xs">
+          <SelectTrigger className="h-10 md:h-7 text-sm md:text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="0" className="text-xs">Esente (0%)</SelectItem>
-            <SelectItem value="4" className="text-xs">Ridotta (4%)</SelectItem>
-            <SelectItem value="10" className="text-xs">Agevolata (10%)</SelectItem>
-            <SelectItem value="22" className="text-xs">Ordinaria (22%)</SelectItem>
+            <SelectItem value="0">Esente (0%)</SelectItem>
+            <SelectItem value="4">Ridotta (4%)</SelectItem>
+            <SelectItem value="10">Agevolata (10%)</SelectItem>
+            <SelectItem value="22">Ordinaria (22%)</SelectItem>
           </SelectContent>
         </Select>
         <div className="flex justify-between text-xs text-muted-foreground">

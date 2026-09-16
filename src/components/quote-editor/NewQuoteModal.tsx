@@ -45,6 +45,7 @@ export function NewQuoteModal({
   onCreated,
   clients,
 }: NewQuoteModalProps) {
+  const [clientId, setClientId] = useState("none");
   const {
     register,
     handleSubmit,
@@ -68,22 +69,27 @@ export function NewQuoteModal({
       return;
     }
     reset();
+    setClientId("none");
     onCreated(json.id);
   }
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-md w-full">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Nuovo Preventivo</DialogTitle>
+          <DialogTitle>Nuovo preventivo</DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            Bastano titolo e cliente: il resto si compila nell&apos;editor.
+          </p>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-2">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="title">
               Titolo <span className="text-destructive">*</span>
             </Label>
             <Input
               id="title"
+              autoFocus
               placeholder="Es: Ristrutturazione appartamento..."
               {...register("title")}
             />
@@ -94,11 +100,18 @@ export function NewQuoteModal({
 
           <div className="space-y-1.5">
             <Label>Cliente</Label>
-            <Select onValueChange={(v) => setValue("clientId", v)}>
+            <Select
+              value={clientId}
+              onValueChange={(v) => {
+                setClientId(v);
+                setValue("clientId", v === "none" ? "" : v);
+              }}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Seleziona cliente (opzionale)" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="none">Nessun cliente</SelectItem>
                 {clients.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.name}
@@ -118,10 +131,15 @@ export function NewQuoteModal({
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              className="w-full sm:w-auto"
+            >
               Annulla
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
               {isSubmitting && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}

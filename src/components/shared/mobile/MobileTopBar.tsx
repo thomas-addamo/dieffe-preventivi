@@ -13,13 +13,13 @@ function titleFor(path: string): string {
   if (path.startsWith("/profilo")) return "Profilo";
   if (path.startsWith("/altro")) return "Altro";
   if (path.startsWith("/listino")) return "Listino";
+  if (path.startsWith("/statistiche")) return "Statistiche";
   if (path.startsWith("/template")) return "Template";
   if (path.startsWith("/cestino")) return "Cestino";
   if (path.startsWith("/impostazioni")) return "Impostazioni";
   if (path.startsWith("/utenti")) return "Utenti";
   if (path.startsWith("/admin/notifiche")) return "Invia notifica";
   if (path.startsWith("/admin/audit-log")) return "Audit Log";
-  if (path.startsWith("/admin/statistiche")) return "Statistiche";
   if (path.startsWith("/admin/sessioni")) return "Sessioni";
   if (path.startsWith("/admin")) return "Amministrazione";
   return "Dieffe";

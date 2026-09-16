@@ -778,31 +778,64 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
       )}
 
       {/* Toolbar */}
-      <div className="sticky top-0 lg:top-[2.375rem] z-10 bg-background/85 backdrop-blur-xl lg:bg-background lg:backdrop-blur-none border-b px-3 md:px-6 pb-2.5 pt-[calc(env(safe-area-inset-top)+0.625rem)] lg:py-2.5 flex items-center gap-2 md:gap-3">
+      <div className="sticky top-0 lg:top-[2.375rem] z-10 bg-background/85 backdrop-blur-xl lg:bg-background lg:backdrop-blur-none border-b px-2 md:px-6 pb-2.5 pt-[calc(env(safe-area-inset-top)+0.625rem)] lg:py-2.5 flex items-center gap-1.5 md:gap-3">
         <Button
           variant="ghost"
           size="sm"
-          className="gap-1.5 text-muted-foreground px-2"
+          aria-label="Torna alla dashboard"
+          className="gap-1.5 text-muted-foreground px-2 shrink-0"
           onClick={() => router.push("/dashboard")}
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="w-5 h-5 md:w-4 md:h-4" />
           <span className="hidden sm:inline">Dashboard</span>
         </Button>
 
-        <div className="w-px h-4 bg-border" />
+        <div className="hidden md:block w-px h-4 bg-border" />
 
+        {/* Codice + titolo: su mobile è l'unico punto in cui si capisce
+            quale preventivo si sta modificando. */}
         <div className="flex-1 min-w-0">
-          <h1 className="font-semibold text-sm truncate">{quote.code}</h1>
+          <h1 className="font-semibold text-sm truncate leading-tight">{quote.code}</h1>
+          <p className="md:hidden truncate text-[11px] leading-tight text-muted-foreground">
+            {quote.title}
+          </p>
         </div>
 
         {!isViewer && (
-          <span className="hidden sm:block text-xs text-muted-foreground shrink-0">
-            {saveState === "saving"
-              ? "Salvataggio..."
-              : saveState === "saved"
-              ? "✓ Salvato"
-              : "Non salvato"}
-          </span>
+          <>
+            <span className="hidden sm:block text-xs text-muted-foreground shrink-0">
+              {saveState === "saving"
+                ? "Salvataggio..."
+                : saveState === "saved"
+                ? "✓ Salvato"
+                : "Non salvato"}
+            </span>
+            {/* Su mobile lo stato di salvataggio è un pallino: occupa nulla
+                ma resta leggibile a colpo d'occhio. */}
+            <span
+              aria-label={
+                saveState === "saving"
+                  ? "Salvataggio in corso"
+                  : saveState === "saved"
+                  ? "Salvato"
+                  : "Non salvato"
+              }
+              title={
+                saveState === "saving"
+                  ? "Salvataggio..."
+                  : saveState === "saved"
+                  ? "Salvato"
+                  : "Non salvato"
+              }
+              className={`sm:hidden h-2 w-2 shrink-0 rounded-full ${
+                saveState === "saving"
+                  ? "bg-amber-400 animate-pulse"
+                  : saveState === "saved"
+                  ? "bg-emerald-500"
+                  : "bg-muted-foreground/40"
+              }`}
+            />
+          </>
         )}
 
         {perms.changeQuoteStatus ? (
@@ -909,20 +942,60 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
           )}
         </div>
 
+        {/* Condivisione: prima era raggiungibile solo da desktop */}
+        {perms.editQuote && (
+          <div className="md:hidden shrink-0">
+            <SharePopover
+              quoteId={quote.id}
+              quoteStatus={quote.status}
+              publicToken={quote.publicToken ?? null}
+              publicTokenExpiresAt={quote.publicTokenExpiresAt ?? null}
+              onTokenChange={(token, expiresAt) =>
+                setQuote((prev) => ({
+                  ...prev,
+                  publicToken: token,
+                  publicTokenExpiresAt: expiresAt as never,
+                }))
+              }
+            />
+          </div>
+        )}
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-9 w-9 md:hidden">
-              <MoreVertical className="w-4 h-4" />
+            <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 md:hidden">
+              <MoreVertical className="w-5 h-5" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuItem onClick={() => exportQuote("pdf")}>
-              <Download className="w-3.5 h-3.5 mr-2" /> Apri PDF
+              <Download className="w-4 h-4 mr-2" /> Apri PDF
             </DropdownMenuItem>
             {perms.exportQuoteAdvanced && (
-              <DropdownMenuItem onClick={() => exportQuote("excel")}>
-                <Download className="w-3.5 h-3.5 mr-2" /> Excel
-              </DropdownMenuItem>
+              <>
+                <DropdownMenuItem onClick={() => exportQuote("excel")}>
+                  <Download className="w-4 h-4 mr-2" /> Excel (.xlsx)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportQuote("csv")}>
+                  <Download className="w-4 h-4 mr-2" /> CSV
+                </DropdownMenuItem>
+              </>
+            )}
+            {isAdmin && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={toggleLock} disabled={locking}>
+                  {quote.isLocked ? (
+                    <Unlock className="w-4 h-4 mr-2" />
+                  ) : (
+                    <Lock className="w-4 h-4 mr-2" />
+                  )}
+                  {quote.isLocked ? "Sblocca modifiche" : "Blocca modifiche"}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowReassignModal(true)}>
+                  <UserCog className="w-4 h-4 mr-2" /> Riassegna
+                </DropdownMenuItem>
+              </>
             )}
             {perms.deleteQuote && (
               <>
@@ -931,7 +1004,7 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
                   className="text-destructive focus:text-destructive"
                   onClick={deleteQuote}
                 >
-                  <Trash2 className="w-3.5 h-3.5 mr-2" /> Elimina preventivo
+                  <Trash2 className="w-4 h-4 mr-2" /> Elimina preventivo
                 </DropdownMenuItem>
               </>
             )}
@@ -1014,12 +1087,19 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
               className="absolute inset-0 bg-black/40 backdrop-blur-sm"
               onClick={() => setMobileTotalsOpen(false)}
             />
-            <div className="animate-slide-up relative bg-background rounded-t-2xl max-h-[80vh] overflow-y-auto">
-              <div className="sticky top-0 bg-background px-5 py-3 border-b flex items-center justify-between">
-                <h3 className="font-semibold">Riepilogo preventivo</h3>
-                <button onClick={() => setMobileTotalsOpen(false)}>
-                  <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                </button>
+            <div className="animate-slide-up relative bg-background rounded-t-2xl max-h-[85dvh] overflow-y-auto overscroll-contain">
+              <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-xl px-5 pb-3 pt-2 border-b">
+                <div aria-hidden className="mx-auto mb-2 h-1 w-9 rounded-full bg-muted-foreground/25" />
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold">Riepilogo preventivo</h3>
+                  <button
+                    onClick={() => setMobileTotalsOpen(false)}
+                    aria-label="Chiudi riepilogo"
+                    className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-transform active:scale-90"
+                  >
+                    <ChevronDown className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
               <div className="p-5 pb-[calc(2rem+env(safe-area-inset-bottom))]">
                 <TotalsPanel

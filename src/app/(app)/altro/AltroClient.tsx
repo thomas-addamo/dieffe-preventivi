@@ -79,6 +79,13 @@ export function AltroClient({ userRole, trashCount }: AltroClientProps) {
       iconClass: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
     },
     {
+      href: "/statistiche",
+      label: "Statistiche",
+      description: "Andamento preventivi e conversioni",
+      icon: BarChart2,
+      iconClass: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+    },
+    {
       href: "/template",
       label: "Template",
       description: "Modelli di preventivo riutilizzabili",
@@ -105,13 +112,6 @@ export function AltroClient({ userRole, trashCount }: AltroClientProps) {
       description: "Comunicazioni agli utenti",
       icon: BellRing,
       iconClass: "bg-pink-500/10 text-pink-600 dark:text-pink-400",
-    },
-    {
-      href: "/admin/statistiche",
-      label: "Statistiche",
-      description: "Andamento preventivi e conversioni",
-      icon: BarChart2,
-      iconClass: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
     },
     {
       href: "/admin/audit-log",

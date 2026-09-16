@@ -10,6 +10,9 @@ export const can = {
   exportQuoteAdvanced: (role: UserRole) => role === 'admin' || role === 'editor',
   importQuote: (role: UserRole) => role === 'admin' || role === 'editor',
 
+  // Le statistiche aggregate sono consultabili da tutti i ruoli.
+  viewStats: (_role: UserRole) => true,
+
   viewClients: (_role: UserRole) => true,
   manageClients: (role: UserRole) => role === 'admin' || role === 'editor',
 

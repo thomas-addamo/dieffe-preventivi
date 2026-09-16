@@ -194,7 +194,7 @@ export function AuditLogClient({ initialRows }: { initialRows: AuditRow[] }) {
       )}
 
       <Dialog open={!!detailRow} onOpenChange={(open) => !open && setDetailRow(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Dettaglio evento</DialogTitle>
           </DialogHeader>

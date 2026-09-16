@@ -34,12 +34,12 @@ const navItems = [
   { href: "/clienti", label: "Clienti", icon: Users },
   { href: "/template", label: "Template", icon: LayoutTemplate },
   { href: "/listino", label: "Listino", icon: List },
+  { href: "/statistiche", label: "Statistiche", icon: BarChart2 },
 ];
 
 const adminItems = [
   { href: "/admin/notifiche", label: "Invia notifica", icon: BellRing },
   { href: "/admin/audit-log", label: "Audit Log", icon: ScrollText },
-  { href: "/admin/statistiche", label: "Statistiche", icon: BarChart2 },
   { href: "/admin/sessioni", label: "Sessioni attive", icon: Activity },
   { href: "/utenti", label: "Utenti", icon: UserCog },
 ];

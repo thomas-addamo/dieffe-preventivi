@@ -19,7 +19,7 @@ const SelectTrigger = React.forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      "flex h-10 w-full items-center justify-between rounded-lg border border-input bg-card px-3 py-2 text-sm shadow-2xs data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
+      "flex h-11 md:h-10 w-full items-center justify-between gap-2 rounded-lg border border-input bg-card px-3 py-2 text-base md:text-sm shadow-2xs data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
       className
     )}
     {...props}
@@ -39,7 +39,7 @@ const SelectScrollUpButton = React.forwardRef<
   <SelectPrimitive.ScrollUpButton
     ref={ref}
     className={cn(
-      "flex cursor-default items-center justify-center py-1",
+      "flex shrink-0 cursor-default items-center justify-center bg-popover py-1 text-muted-foreground",
       className
     )}
     {...props}
@@ -56,7 +56,7 @@ const SelectScrollDownButton = React.forwardRef<
   <SelectPrimitive.ScrollDownButton
     ref={ref}
     className={cn(
-      "flex cursor-default items-center justify-center py-1",
+      "flex shrink-0 cursor-default items-center justify-center bg-popover py-1 text-muted-foreground",
       className
     )}
     {...props}
@@ -70,33 +70,50 @@ SelectScrollDownButton.displayName =
 const SelectContent = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
->(({ className, children, position = "popper", ...props }, ref) => (
-  <SelectPrimitive.Portal>
-    <SelectPrimitive.Content
-      ref={ref}
-      className={cn(
-        "relative z-50 max-h-[--radix-select-content-available-height] min-w-[8rem] overflow-y-auto overflow-x-hidden rounded-xl border bg-popover text-popover-foreground shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-select-content-transform-origin]",
-        position === "popper" &&
-          "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
-        className
-      )}
-      position={position}
-      {...props}
-    >
-      <SelectScrollUpButton />
-      <SelectPrimitive.Viewport
+>(
+  (
+    {
+      className,
+      children,
+      position = "popper",
+      collisionPadding = 12,
+      sideOffset = 6,
+      ...props
+    },
+    ref
+  ) => (
+    <SelectPrimitive.Portal>
+      <SelectPrimitive.Content
+        ref={ref}
         className={cn(
-          "p-1",
+          // `flex flex-col` + viewport `flex-1` è ciò che rende la tendina
+          // scorrevole: il contenuto non può superare l'altezza disponibile
+          // calcolata da Radix, e l'eccedenza scorre dentro il viewport.
+          "relative z-50 flex max-h-[var(--radix-select-content-available-height)] min-w-[8rem] flex-col overflow-hidden rounded-xl border bg-popover text-popover-foreground shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[var(--radix-select-content-transform-origin)]",
           position === "popper" &&
-            "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]"
+            "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
+          className
         )}
+        position={position}
+        sideOffset={sideOffset}
+        collisionPadding={collisionPadding}
+        {...props}
       >
-        {children}
-      </SelectPrimitive.Viewport>
-      <SelectScrollDownButton />
-    </SelectPrimitive.Content>
-  </SelectPrimitive.Portal>
-))
+        <SelectScrollUpButton />
+        <SelectPrimitive.Viewport
+          className={cn(
+            "min-h-0 flex-1 overflow-y-auto overscroll-contain p-1.5",
+            position === "popper" &&
+              "w-full min-w-[var(--radix-select-trigger-width)]"
+          )}
+        >
+          {children}
+        </SelectPrimitive.Viewport>
+        <SelectScrollDownButton />
+      </SelectPrimitive.Content>
+    </SelectPrimitive.Portal>
+  )
+)
 SelectContent.displayName = SelectPrimitive.Content.displayName
 
 const SelectLabel = React.forwardRef<
@@ -118,7 +135,8 @@ const SelectItem = React.forwardRef<
   <SelectPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex w-full cursor-default select-none items-center rounded-md py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      // Touch target ≥ 40px su mobile, compatto da desktop.
+      "relative flex w-full cursor-default select-none items-center rounded-md py-2.5 pl-8 pr-2 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[state=checked]:font-medium md:py-1.5",
       className
     )}
     {...props}

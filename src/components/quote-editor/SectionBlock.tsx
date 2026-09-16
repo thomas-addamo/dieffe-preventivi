@@ -166,32 +166,32 @@ export function SectionBlock({
       <div className={cn("flex items-center gap-2 px-3 md:px-4 py-3 border-b", headerBg)}>
         <GripVertical
           {...(!isViewer ? { ...attributes, ...listeners } : {})}
-          className="w-4 h-4 text-muted-foreground shrink-0 cursor-grab"
+          className="w-4 h-4 text-muted-foreground shrink-0 cursor-grab touch-none"
         />
 
         <Input
           value={section.code}
           onChange={(e) => onUpdate({ code: e.target.value.toUpperCase().slice(0, 3) })}
           disabled={isViewer}
-          className="w-14 h-7 text-center font-mono font-bold bg-transparent border-none shadow-none focus-visible:ring-0 text-sm p-1"
+          className="w-12 sm:w-14 h-9 md:h-7 text-center font-mono font-bold bg-transparent border-none shadow-none focus-visible:ring-0 text-sm p-1"
         />
 
         <Input
           value={section.title}
           onChange={(e) => onUpdate({ title: e.target.value })}
           disabled={isViewer}
-          className="flex-1 h-7 font-semibold bg-transparent border-none shadow-none focus-visible:ring-0 text-sm min-w-0"
+          className="flex-1 h-9 md:h-7 font-semibold bg-transparent border-none shadow-none focus-visible:ring-0 text-sm min-w-0 px-1"
           placeholder="Titolo sezione"
         />
 
         {isOptional && (
-          <span className="hidden sm:inline-flex shrink-0 items-center rounded-sm px-1.5 py-0.5 text-xs font-medium bg-violet-100 text-violet-600">
-            OPZIONALE
+          <span className="shrink-0 inline-flex items-center rounded-sm px-1.5 py-0.5 text-[10px] sm:text-xs font-medium bg-violet-100 text-violet-600">
+            OPZ.
           </span>
         )}
 
         {isLumpSum && (
-          <span className="hidden sm:inline-flex shrink-0 items-center rounded-sm px-1.5 py-0.5 text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400">
+          <span className="shrink-0 inline-flex items-center rounded-sm px-1.5 py-0.5 text-[10px] sm:text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400">
             A CORPO
           </span>
         )}
@@ -323,6 +323,7 @@ export function SectionBlock({
             type="number"
             min={0}
             step="0.01"
+            inputMode="decimal"
             value={section.lumpSumPrice ?? ""}
             onChange={(e) =>
               onUpdate({
@@ -330,7 +331,7 @@ export function SectionBlock({
               })
             }
             disabled={isViewer}
-            className="w-32 h-8 text-right tabular-nums bg-background"
+            className="w-32 h-10 md:h-8 text-right tabular-nums bg-background"
           />
           <span className="text-xs text-muted-foreground">
             Le voci elencate descrivono i lavori: i loro prezzi non concorrono al
@@ -352,16 +353,6 @@ export function SectionBlock({
               <span className="text-right">Sc.%</span>
               <span className="text-right">Totale</span>
               <span />
-            </div>
-          )}
-
-          {/* Mobile column hint */}
-          {section.items.length > 0 && (
-            <div className="md:hidden flex gap-2 px-3 py-1 bg-muted/30 text-xs text-muted-foreground border-b">
-              <span className="w-16">U.M.</span>
-              <span className="flex-1 text-center">Qtà</span>
-              <span className="flex-1 text-center">Prezzo</span>
-              <span className="flex-1 text-center">Sc.%</span>
             </div>
           )}
 
