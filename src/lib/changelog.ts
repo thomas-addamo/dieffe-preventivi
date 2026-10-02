@@ -34,6 +34,23 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.14.1",
+    date: "2026-10-02",
+    headline: "Aggiornamenti ancora più affidabili.",
+    highlights: [
+      {
+        icon: "zap",
+        title: "Aggiornamento automatico",
+        description: "Da questa versione l'app scarica e installa da sola le novità: basta «Riavvia per aggiornare».",
+      },
+      {
+        icon: "desktop",
+        title: "Finestra sempre disponibile",
+        description: "Se chiudi la finestra, riaprendo l'app dal Dock o dal Launchpad torna subito.",
+      },
+    ],
+  },
+  {
     version: "3.14.0",
     date: "2026-10-02",
     headline: "L'app si aggiorna da sola.",

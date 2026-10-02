@@ -46,7 +46,10 @@ if (!app.requestSingleInstanceLock()) {
 }
 app.on('second-instance', () => {
   const win = getWindow();
-  if (!win) return;
+  if (!win) {
+    if (app.isReady()) createWindow();
+    return;
+  }
   if (win.isMinimized()) win.restore();
   win.show();
   win.focus();

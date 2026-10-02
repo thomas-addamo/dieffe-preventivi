@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, net, shell } from 'electron';
 import { execFile, spawn } from 'child_process';
 import { createHash } from 'crypto';
-import { createWriteStream, existsSync, mkdtempSync, rmSync, writeFileSync, accessSync, constants } from 'fs';
+import { appendFileSync, createWriteStream, existsSync, mkdtempSync, rmSync, writeFileSync, accessSync, constants } from 'fs';
 import { tmpdir } from 'os';
 import { dirname, join } from 'path';
 import { promisify } from 'util';
@@ -80,7 +80,19 @@ export function isNewer(a: string, b: string): boolean {
   return false;
 }
 
+/** Registro in ~/Library/Application Support/Dieffe Preventivi/updates.log (assistenza). */
+function log(message: string) {
+  try {
+    appendFileSync(join(app.getPath('userData'), 'updates.log'), `${new Date().toISOString()} ${message}\n`);
+  } catch {
+    // registro non scrivibile: ignora
+  }
+}
+
 function setStatus(next: UpdateStatus) {
+  if (next.state !== status.state || next.version !== status.version) {
+    log(`stato ${next.state}${next.version ? ` ${next.version}` : ''}${next.error ? ` — ${next.error}` : ''}`);
+  }
   status = next;
   const win = getWin();
   if (win && !win.isDestroyed()) win.webContents.send('update-status', status);
@@ -275,6 +287,7 @@ function spawnWindowsInstaller(installer: string, relaunch: boolean): boolean {
 
 function startInstall(relaunch: boolean): boolean {
   if (!readyPayload) return false;
+  log(`installazione avviata (riapertura: ${relaunch})`);
   const ok = isMac ? spawnMacInstaller(readyPayload, relaunch) : isWindows ? spawnWindowsInstaller(readyPayload, relaunch) : false;
   if (ok) {
     // Da qui in poi i file temporanei li gestisce l'aiutante.
@@ -313,7 +326,10 @@ async function check(): Promise<Release | null> {
 /** Controllo silenzioso all'avvio e poi periodico. */
 export function startUpdateChecks(getWindow: () => BrowserWindow | null) {
   getWin = getWindow;
-  const tick = () => check().catch(() => {});
+  const tick = () =>
+    check()
+      .then((r) => log(r ? `trovata ${r.version} (auto: ${!!r.asset && canAutoInstall()})` : `nessun aggiornamento (attuale ${app.getVersion()})`))
+      .catch((e) => log(`controllo fallito: ${(e as Error).message}`));
   setTimeout(tick, 8000);
   setInterval(tick, CHECK_EVERY_MS);
 }
