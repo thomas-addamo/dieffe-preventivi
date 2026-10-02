@@ -7,7 +7,8 @@
 //   PATCH → fix piccoli e ritocchi
 //
 // IMPORTANTE: aggiornare ad OGNI push, scegliendo il livello in base
-// all'entità delle modifiche. Tenere allineato anche "version" in package.json.
+// all'entità delle modifiche. Tenere allineato anche "version" in package.json
+// e aggiungere le novità in src/lib/changelog.ts (banner "Novità").
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const APP_VERSION = "3.11.0";
+export const APP_VERSION = "3.12.0";

@@ -9,6 +9,7 @@ import { MobileTabBar } from "./mobile/MobileTabBar";
 import { NotificationToaster } from "./NotificationToaster";
 import { PushRegistrar } from "./PushRegistrar";
 import { UserRoleProvider } from "./UserRoleContext";
+import { WhatsNewBanner } from "./WhatsNewBanner";
 import type { UserRole } from "@/lib/permissions/types";
 import { cn } from "@/lib/utils";
 
@@ -81,6 +82,9 @@ export function AppShell({ children, userRole, userName, userEmail, trashCount =
           </div>
 
           {isImpersonated && <ImpersonationBanner userName={userName} userRole={userRole} />}
+
+          {/* Novità della versione corrente (chiudibile, una volta per versione) */}
+          <WhatsNewBanner />
 
           <main
             className={cn(
