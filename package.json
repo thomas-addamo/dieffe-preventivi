@@ -1,6 +1,6 @@
 {
   "name": "dieffe-preventivi",
-  "version": "3.10.0",
+  "version": "3.11.0",
   "private": true,
   "description": "Gestione preventivi edili — Dieffe Ristrutturazioni",
   "author": "Dieffe Ristrutturazioni <impresa.dieffe@gmail.com>",
@@ -47,6 +47,9 @@
     "@react-email/render": "^2.0.8",
     "@react-pdf/renderer": "^4.5.1",
     "@tanstack/react-query": "^5.100.9",
+    "@tiptap/pm": "^3.31.4",
+    "@tiptap/react": "^3.31.4",
+    "@tiptap/starter-kit": "^3.31.4",
     "argon2": "^0.44.0",
     "better-auth": "^1.6.9",
     "class-variance-authority": "^0.7.1",
@@ -81,13 +84,13 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@electron/notarize": "^2.0.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/react-signature-canvas": "^1.0.7",
     "@types/web-push": "^3.6.4",
-    "@electron/notarize": "^2.0.0",
     "babel-plugin-react-compiler": "1.0.0",
     "concurrently": "^8.0.0",
     "drizzle-kit": "^0.31.10",

@@ -344,7 +344,7 @@ export function SectionBlock({
         <>
           {/* Column headers — desktop only */}
           {section.items.length > 0 && (
-            <div className="hidden md:grid grid-cols-[3rem_1fr_5rem_5.5rem_6rem_4rem_6rem_5.5rem] gap-1 px-4 py-1.5 bg-muted/30 text-xs font-medium text-muted-foreground border-b">
+            <div className="hidden md:grid grid-cols-[3rem_minmax(0,1fr)_6.5rem_5.5rem_6rem_4rem_6rem_5.5rem] gap-1 px-4 py-1.5 bg-muted/30 text-xs font-medium text-muted-foreground border-b">
               <span>N.</span>
               <span>Descrizione</span>
               <span>U.M.</span>

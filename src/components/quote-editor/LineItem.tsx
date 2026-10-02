@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   ChevronDown,
   Info,
+  EyeOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +33,10 @@ import type { ItemWithImages } from "@/types";
 import type { PriceListItem } from "@/lib/db/schema";
 import { UNIT_OF_MEASURES, formatCurrency } from "@/lib/utils";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useMediaQuery } from "@/hooks/use-media-query";
+import { useEditorPref } from "@/lib/editor-prefs";
+import { toPlainText } from "@/lib/rich-text";
+import { RichDescriptionEditor } from "./RichDescriptionEditor";
 import { toast } from "sonner";
 
 interface AiSuggestion {
@@ -62,7 +67,7 @@ interface SaveToListinoModalProps {
 
 function SaveToListinoModal({ item, categories, onClose, onSaved }: SaveToListinoModalProps) {
   const [form, setForm] = useState({
-    description: item.description,
+    description: toPlainText(item.description),
     unitOfMeasure: item.unitOfMeasure,
     unitPrice: String(item.unitPrice),
     category: "",
@@ -77,7 +82,7 @@ function SaveToListinoModal({ item, categories, onClose, onSaved }: SaveToListin
     fetch("/api/price-list/check-similar", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ description: item.description }),
+      body: JSON.stringify({ description: toPlainText(item.description) }),
     })
       .then((r) => r.json())
       .then((d) => setSimilar(d.similar ?? []))
@@ -218,10 +223,12 @@ function ListinoAutocomplete({
   anchorRef,
   items,
   onPick,
+  onDisable,
 }: {
-  anchorRef: React.RefObject<HTMLTextAreaElement | null>;
+  anchorRef: React.RefObject<HTMLElement | null>;
   items: PriceListItem[];
   onPick: (p: PriceListItem) => void;
+  onDisable: () => void;
 }) {
   const [pos, setPos] = useState<{ left: number; top: number; width: number; flipUp: boolean } | null>(null);
 
@@ -267,8 +274,19 @@ function ListinoAutocomplete({
           : { top: pos.top + 4 }),
       }}
     >
-      <div className="px-3 py-1.5 text-muted-foreground font-medium bg-muted/30 sticky top-0">
-        Dal listino:
+      <div className="px-3 py-1.5 text-muted-foreground font-medium bg-muted sticky top-0 flex items-center justify-between gap-2">
+        <span>Dal listino:</span>
+        <button
+          type="button"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            onDisable();
+          }}
+          className="flex items-center gap-1 font-normal text-[11px] hover:text-foreground"
+          title="Non mostrare più il listino mentre scrivi (riattivabile da Impostazioni)"
+        >
+          <EyeOff className="w-3 h-3" /> Non mostrare più
+        </button>
       </div>
       {items.map((p) => (
         <button
@@ -313,6 +331,11 @@ function MobileField({
   );
 }
 
+/** Segna l'ora dell'ultima chiamata AI (anti-raffica tra miglioramento e suggerimento). */
+function markAiCall(ref: React.RefObject<number>) {
+  ref.current = Date.now();
+}
+
 interface LineItemProps {
   item: ItemWithImages;
   itemNumber: string;
@@ -334,8 +357,13 @@ export function LineItem({
 }: LineItemProps) {
   const [showImages, setShowImages] = useState(false);
   const { isViewer, can: perms } = usePermissions();
-  const descDesktopRef = useRef<HTMLTextAreaElement>(null);
-  const descMobileRef = useRef<HTMLTextAreaElement>(null);
+  const descAnchorRef = useRef<HTMLDivElement>(null);
+  // Un solo layout montato alla volta: ogni voce ha UN editor rich-text.
+  const isDesktop = useMediaQuery("(min-width: 768px)", true);
+
+  // Preferenze personali (Impostazioni → Assistenza alla scrittura)
+  const [listinoEnabled, setListinoEnabled] = useEditorPref("listinoAutocomplete");
+  const [aiEnabled, setAiEnabled] = useEditorPref("aiPriceSuggestions");
 
   // Autocomplete state
   const [showAutocomplete, setShowAutocomplete] = useState(false);
@@ -369,50 +397,55 @@ export function LineItem({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  function autoResize(el: HTMLTextAreaElement | null) {
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
-  }
-
-  useEffect(() => {
-    autoResize(descDesktopRef.current);
-    autoResize(descMobileRef.current);
-  }, [item.description]);
-
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-    }
-    if (e.key === "Escape") {
+  /** Voci del listino che contengono almeno una parola del testo scritto. */
+  function matchListino(plain: string) {
+    if (!listinoEnabled || plain.length < 3 || priceListItems.length === 0) {
       setShowAutocomplete(false);
+      return;
     }
+    const words = plain.toLowerCase().split(/\s+/).filter((w) => w.length > 2);
+    const matches = priceListItems
+      .filter((p) => {
+        const desc = p.description.toLowerCase();
+        return words.some((w) => desc.includes(w));
+      })
+      .slice(0, 5);
+    setAutocompleteItems(matches);
+    setShowAutocomplete(matches.length > 0);
   }
 
-  // Autocomplete filtering
   function handleDescriptionChange(value: string) {
     onUpdate({ description: value });
     setSuggestionIgnored(false);
     setAiSuggestion(null);
     setSuggestionExpanded(false);
 
-    if (value.length >= 3 && priceListItems.length > 0) {
-      const lower = value.toLowerCase();
-      const words = lower.split(" ").filter((w) => w.length > 2);
-      const matches = priceListItems.filter((p) => {
-        const desc = p.description.toLowerCase();
-        return words.some((w) => desc.includes(w));
-      }).slice(0, 5);
-      setAutocompleteItems(matches);
-      setShowAutocomplete(matches.length > 0);
-    } else {
-      setShowAutocomplete(false);
-    }
-
-    // AI suggest debounce
+    // Listino e AI lavorano sul testo in chiaro, senza marcatori di formato.
+    const plain = toPlainText(value);
+    matchListino(plain);
     if (!isViewer) {
-      scheduleAiSuggest(value);
+      scheduleAiSuggest(plain);
     }
+  }
+
+  function disableListino() {
+    setListinoEnabled(false);
+    setShowAutocomplete(false);
+    toast("Listino nascosto durante la scrittura", {
+      description: "Puoi riattivarlo da Impostazioni → Assistenza alla scrittura.",
+      action: { label: "Annulla", onClick: () => setListinoEnabled(true) },
+    });
+  }
+
+  function disableAiSuggestions() {
+    setAiEnabled(false);
+    setAiSuggestion(null);
+    setSuggestionExpanded(false);
+    if (aiDebounceRef.current) clearTimeout(aiDebounceRef.current);
+    toast("Suggerimenti di prezzo disattivati", {
+      description: "Puoi riattivarli da Impostazioni → Assistenza alla scrittura.",
+      action: { label: "Annulla", onClick: () => setAiEnabled(true) },
+    });
   }
 
   function applyFromListino(p: PriceListItem) {
@@ -425,18 +458,10 @@ export function LineItem({
     setAiSuggestion(null);
   }
 
-  function getAiEnabled() {
-    try {
-      return localStorage.getItem("ai_suggestions_enabled") !== "false";
-    } catch {
-      return true;
-    }
-  }
-
   const scheduleAiSuggest = useCallback(
     (description: string) => {
       if (aiDebounceRef.current) clearTimeout(aiDebounceRef.current);
-      if (description.length < 10 || !getAiEnabled()) return;
+      if (description.length < 10 || !aiEnabled) return;
       if (item.unitPrice > 0 && item.unitOfMeasure !== "n°") return;
 
       aiDebounceRef.current = setTimeout(async () => {
@@ -463,18 +488,25 @@ export function LineItem({
         }
       }, 2000);
     },
-    [item.unitPrice, item.unitOfMeasure]
+    [item.unitPrice, item.unitOfMeasure, aiEnabled]
   );
 
+  // Se l'utente spegne i suggerimenti mentre uno è in attesa, annullalo.
+  useEffect(() => {
+    if (!aiEnabled && aiDebounceRef.current) clearTimeout(aiDebounceRef.current);
+  }, [aiEnabled]);
+
+  const plainDescription = toPlainText(item.description);
+
   async function handleAiImprove() {
-    if (!item.description || item.description.length < 3) return;
+    if (plainDescription.length < 3) return;
     setAiImproving(true);
-    lastAiCallRef.current = Date.now();
+    markAiCall(lastAiCallRef);
     try {
       const res = await fetch("/api/ai/improve-description", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description: item.description }),
+        body: JSON.stringify({ description: plainDescription }),
         signal: AbortSignal.timeout(20000),
       });
       if (res.status === 429) {
@@ -529,44 +561,32 @@ export function LineItem({
 
   const showAiBanner =
     !!aiSuggestion &&
+    aiEnabled &&
     !suggestionIgnored &&
-    !showAutocomplete &&
+    !(showAutocomplete && listinoEnabled) &&
     !isViewer;
 
-  const descriptionBlock = (ref: React.RefObject<HTMLTextAreaElement | null>, isMobile: boolean) => (
-    <div className={isMobile ? "flex-1 relative" : "pt-0.5 relative"}>
-      <div className={isMobile ? "flex items-start gap-1" : "flex items-start gap-1"}>
-        <textarea
-          ref={ref}
-          value={item.description}
-          onChange={(e) => handleDescriptionChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onBlur={() => setTimeout(() => setShowAutocomplete(false), 200)}
-          onFocus={() => {
-            if (item.description.length >= 3) {
-              const lower = item.description.toLowerCase();
-              const words = lower.split(" ").filter((w) => w.length > 2);
-              const matches = priceListItems.filter((p) => {
-                const desc = p.description.toLowerCase();
-                return words.some((w) => desc.includes(w));
-              }).slice(0, 5);
-              if (matches.length > 0) {
-                setAutocompleteItems(matches);
-                setShowAutocomplete(true);
-              }
-            }
-          }}
-          readOnly={isViewer}
-          placeholder="Descrizione voce..."
-          rows={1}
-          className={`flex-1 resize-none bg-transparent text-sm outline-none focus:outline-none placeholder:text-muted-foreground/60 overflow-hidden leading-5 py-1 ${isMobile ? "min-h-[44px]" : ""}`}
-        />
+  const descriptionBlock = (isMobile: boolean) => (
+    <div className="relative min-w-0 flex-1">
+      <div className="flex items-start gap-1">
+        <div className="min-w-0 flex-1">
+          <RichDescriptionEditor
+            anchorRef={descAnchorRef}
+            value={item.description}
+            onChange={handleDescriptionChange}
+            readOnly={isViewer}
+            minHeightClass={isMobile ? "min-h-[44px]" : "min-h-7"}
+            onFocus={() => matchListino(plainDescription)}
+            onBlur={() => setTimeout(() => setShowAutocomplete(false), 200)}
+            onEscape={() => setShowAutocomplete(false)}
+          />
+        </div>
         {!isViewer && (
           <button
             type="button"
             onClick={handleAiImprove}
-            disabled={aiImproving || !item.description || item.description.length < 3}
-            title={item.description.length < 3 ? "Scrivi prima una descrizione" : "Migliora con AI"}
+            disabled={aiImproving || plainDescription.length < 3}
+            title={plainDescription.length < 3 ? "Scrivi prima una descrizione" : "Migliora con AI"}
             className="shrink-0 mt-1 p-0.5 rounded-sm text-violet-400 hover:text-violet-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
             {aiImproving ? (
@@ -579,11 +599,12 @@ export function LineItem({
       </div>
 
       {/* Autocomplete dropdown (portal: non viene tagliato dalla card) */}
-      {showAutocomplete && autocompleteItems.length > 0 && (
+      {listinoEnabled && showAutocomplete && autocompleteItems.length > 0 && (
         <ListinoAutocomplete
-          anchorRef={ref}
+          anchorRef={descAnchorRef}
           items={autocompleteItems}
           onPick={applyFromListino}
+          onDisable={disableListino}
         />
       )}
 
@@ -599,9 +620,13 @@ export function LineItem({
   );
 
   return (
-    <div ref={setNodeRef} style={dragStyle}>
-      {/* ── Desktop layout (md+) ── */}
-      <div className="hidden md:grid grid-cols-[3rem_1fr_5rem_5.5rem_6rem_4rem_6rem_5.5rem] gap-1 px-4 py-2.5 hover:bg-muted/20 group items-start">
+    <div ref={setNodeRef} style={dragStyle} className="@container">
+      {/* ── Desktop layout (md+) ──
+          Riga larga (≥ 64rem): tutto su una riga, descrizione in colonna 1fr.
+          Riga stretta: la descrizione occupa TUTTA la larghezza sulla prima
+          riga e i campi numerici scendono sotto, allineati alle intestazioni. */}
+      {isDesktop && (
+      <div className="grid grid-cols-[3rem_minmax(0,1fr)_6.5rem_5.5rem_6rem_4rem_6rem_5.5rem] gap-x-1 gap-y-1.5 px-4 py-2.5 hover:bg-muted/20 group items-start">
         {/* Drag + number */}
         <div className="flex items-center gap-1 pt-1.5">
           <GripVertical
@@ -614,14 +639,16 @@ export function LineItem({
         </div>
 
         {/* Description */}
-        {descriptionBlock(descDesktopRef, false)}
+        <div className="col-start-2 col-span-6 @5xl:col-span-1 min-w-0 flex">
+          {descriptionBlock(false)}
+        </div>
 
         <Select
           value={item.unitOfMeasure}
           onValueChange={(v) => onUpdate({ unitOfMeasure: v })}
           disabled={isViewer}
         >
-          <SelectTrigger className={`h-7 text-xs border-muted ${aiLoading ? "animate-pulse" : ""}`}>
+          <SelectTrigger className={`col-start-3 h-7 text-xs border-muted ${aiLoading ? "animate-pulse" : ""}`}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -666,7 +693,7 @@ export function LineItem({
           </span>
         </div>
 
-        <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100">
+        <div className="col-start-8 row-start-1 flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
           {item.images.length > 0 && (
             <Button
               variant="ghost"
@@ -712,8 +739,11 @@ export function LineItem({
         </div>
       </div>
 
+      )}
+
       {/* ── Mobile card layout (< md) ── */}
-      <div className="md:hidden px-3 py-3 space-y-3 border-b last:border-b-0">
+      {!isDesktop && (
+      <div className="px-3 py-3 space-y-3">
         {/* Riga 1: numero voce + descrizione */}
         <div className="flex gap-2 items-start">
           <div className="flex items-center gap-1 pt-2 shrink-0">
@@ -725,7 +755,7 @@ export function LineItem({
               {itemNumber}
             </span>
           </div>
-          {descriptionBlock(descMobileRef, true)}
+          {descriptionBlock(true)}
         </div>
 
         {/* Riga 2: campi numerici, ognuno con la propria etichetta */}
@@ -840,6 +870,8 @@ export function LineItem({
         </div>
       </div>
 
+      )}
+
       {/* ── AI Suggestion Banner ── */}
       {showAiBanner && (
         <div className="mx-4 mb-2 border border-violet-200 dark:border-violet-800 bg-violet-50/80 dark:bg-violet-950/30 rounded-lg px-3 py-2 text-xs">
@@ -893,6 +925,16 @@ export function LineItem({
                 onClick={() => { setSuggestionIgnored(true); setAiSuggestion(null); setSuggestionExpanded(false); }}
               >
                 Ignora
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 w-6 p-0 text-muted-foreground"
+                onClick={disableAiSuggestions}
+                title="Non suggerire più prezzi mentre scrivo (riattivabile da Impostazioni)"
+                aria-label="Disattiva suggerimenti di prezzo"
+              >
+                <EyeOff className="w-3 h-3" />
               </Button>
             </div>
           </div>

@@ -5,6 +5,8 @@ import dynamic from "next/dynamic";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { CheckCircle, XCircle, AlertCircle, Download, X } from "lucide-react";
+import { RichText } from "@/components/shared/RichText";
+import { PdfExportSheet, prefersPdfSheet } from "@/components/shared/PdfExportSheet";
 
 // ─── Privacy Modal ────────────────────────────────────────────────────────────
 
@@ -753,6 +755,7 @@ function QuoteView({
     signedAt: Date;
   } | null>(null);
   const [showPrivacy, setShowPrivacy] = useState(false);
+  const [pdfSheetOpen, setPdfSheetOpen] = useState(false);
 
   const totals = calcTotals(quote);
   const normalSections = quote.sections.filter((s) => !s.isOptional);
@@ -909,6 +912,13 @@ function QuoteView({
             href={pdfUrl}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={(e) => {
+              // Da telefono: pannello con Condividi / Salva su File / Scarica.
+              if (prefersPdfSheet()) {
+                e.preventDefault();
+                setPdfSheetOpen(true);
+              }
+            }}
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -926,6 +936,9 @@ function QuoteView({
             <Download size={16} /> Scarica PDF
           </a>
         </div>
+        {pdfSheetOpen && (
+          <PdfExportSheet url={pdfUrl} title={quote.code} onClose={() => setPdfSheetOpen(false)} />
+        )}
 
         {/* Signature block or result */}
         {signedInfo ? (
@@ -996,7 +1009,7 @@ function SectionBlock({ section, isOptional, primary }: { section: QuoteSection;
           <div className="public-quote-item-row" style={{ borderTop: "1px solid #f0f0f0", background: idx % 2 === 1 ? "#f9fafb" : "#fff" }}>
             <div className="public-quote-item-number" style={{ fontSize: 12, color: "#6b7280" }}>{section.code}.{idx + 1}</div>
             <div className="public-quote-item-description" style={{ fontSize: 13 }}>
-              {item.description}
+              <RichText value={item.description} />
               {item.notes && <div style={{ fontSize: 11, color: "#6b7280", fontStyle: "italic", marginTop: 2 }}>{item.notes}</div>}
             </div>
             <div className="public-quote-item-field" data-label="Unità" style={{ fontSize: 12, textAlign: "right" }}>{item.unitOfMeasure}</div>

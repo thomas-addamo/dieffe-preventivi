@@ -17,6 +17,7 @@ import { calcItemTotal } from "@/lib/calculations";
 import type { QuoteTemplate } from "@/lib/db/schema";
 import type { TemplateData } from "@/types";
 import { usePermissions } from "@/hooks/use-permissions";
+import { toPlainText } from "@/lib/rich-text";
 
 const eur = (n: number) =>
   new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(n);
@@ -167,7 +168,7 @@ export function TemplateClient({
                               className="text-xs text-muted-foreground flex justify-between gap-2"
                             >
                               <span className="truncate">
-                                {it.description || "—"}{" "}
+                                {toPlainText(it.description ?? "") || "—"}{" "}
                                 <span className="opacity-60">
                                   ({it.quantity ?? 1} {it.unitOfMeasure || "n°"})
                                 </span>

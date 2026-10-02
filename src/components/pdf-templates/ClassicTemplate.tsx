@@ -10,6 +10,7 @@ import type { QuoteWithRelations } from "@/types";
 import type { CompanySettings } from "@/lib/db/schema";
 import { calcQuoteTotals, calcSectionTotal } from "@/lib/calculations";
 import { formatDate } from "@/lib/utils";
+import { PdfRichText } from "./PdfRichText";
 
 function fmtCurrency(n: number): string {
   return new Intl.NumberFormat("it-IT", {
@@ -453,7 +454,7 @@ function SectionRows({
               <Text style={s.colNum}>
                 {section.code}.{iIdx + 1}
               </Text>
-              <Text style={s.colDesc}>{item.description}</Text>
+              <PdfRichText style={s.colDesc} value={item.description} />
               <Text style={s.colUm}>{item.unitOfMeasure}</Text>
               <Text style={s.colQty}>{fmtNum(item.quantity)}</Text>
               <Text style={s.colPrice}>

@@ -1,5 +1,6 @@
 import type { QuoteWithRelations } from "@/types";
 import { formatDate } from "@/lib/utils";
+import { toPlainText } from "@/lib/rich-text";
 
 function escapeCsv(val: string | number | null | undefined): string {
   if (val === null || val === undefined) return "";
@@ -45,7 +46,7 @@ export function exportToCsv(quote: QuoteWithRelations): string {
         section.isOptional ? "1" : "0",
         section.isOptionalIncluded ? "1" : "0",
         `${section.code}.${idx + 1}`,
-        item.description,
+        toPlainText(item.description),
         item.unitOfMeasure,
         String(item.quantity),
         String(item.unitPrice),

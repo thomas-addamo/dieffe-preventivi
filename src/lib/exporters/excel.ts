@@ -3,6 +3,7 @@ import type { QuoteWithRelations } from "@/types";
 import type { CompanySettings } from "@/lib/db/schema";
 import { calcQuoteTotals, calcSectionSubtotal, calcSectionTotal } from "@/lib/calculations";
 import { formatDate } from "@/lib/utils";
+import { toPlainText } from "@/lib/rich-text";
 
 /** Percentuale leggibile: "10%", "12,5%" — senza decimali inutili. */
 function fmtPercent(n: number) {
@@ -138,7 +139,7 @@ export async function exportToExcel(
       const cells = section.lumpSum
         ? [
             `${section.code}.${idx + 1}`,
-            item.description,
+            toPlainText(item.description),
             item.unitOfMeasure,
             item.quantity,
             "",
@@ -147,7 +148,7 @@ export async function exportToExcel(
           ]
         : [
             `${section.code}.${idx + 1}`,
-            item.description,
+            toPlainText(item.description),
             item.unitOfMeasure,
             item.quantity,
             item.unitPrice,
@@ -264,7 +265,7 @@ export async function exportToExcel(
         const cells = section.lumpSum
           ? [
               `${section.code}.${idx + 1}`,
-              item.description,
+              toPlainText(item.description),
               item.unitOfMeasure,
               item.quantity,
               "",
@@ -273,7 +274,7 @@ export async function exportToExcel(
             ]
           : [
               `${section.code}.${idx + 1}`,
-              item.description,
+              toPlainText(item.description),
               item.unitOfMeasure,
               item.quantity,
               item.unitPrice,

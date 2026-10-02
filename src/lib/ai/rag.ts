@@ -1,6 +1,7 @@
 import { db } from '../db/client';
 import { quotes, quoteSections, quoteItems, clients, priceListItems } from '../db/schema';
 import { ilike, or, eq, isNull, desc, and } from 'drizzle-orm';
+import { toPlainText } from '../rich-text';
 
 export type QuoteItemResult = {
   description: string;
@@ -145,7 +146,11 @@ export async function buildPriceIntel(description: string): Promise<PriceIntel> 
 
   return {
     listino: listino.map((l) => ({ ...l, unitPrice: parseFloat(l.unitPrice) })),
-    history: history.map((h) => ({ ...h, date: h.date?.substring(0, 10) ?? null })),
+    history: history.map((h) => ({
+      ...h,
+      description: toPlainText(h.description),
+      date: h.date?.substring(0, 10) ?? null,
+    })),
     stats,
   };
 }
@@ -207,7 +212,7 @@ export async function buildSearchContext(query: string): Promise<string> {
         rejected: 'rifiutato', archived: 'archiviato',
       };
       context +=
-        `- "${item.description}" | ${item.unitOfMeasure} | €${item.unitPrice}/u.m. | ` +
+        `- "${toPlainText(item.description)}" | ${item.unitOfMeasure} | €${item.unitPrice}/u.m. | ` +
         `qtà: ${item.quantity} | totale riga: €${item.total?.toFixed(2)} | ` +
         `Preventivo ${item.quoteCode} "${item.quoteTitle}" | ` +
         `Cliente: ${item.clientName ?? 'N/D'} | Data: ${date} | ` +

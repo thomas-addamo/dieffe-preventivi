@@ -37,6 +37,7 @@ import {
   Monitor,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useEditorPref } from "@/lib/editor-prefs";
 import { cn } from "@/lib/utils";
 import type { CompanySettings } from "@/lib/db/schema";
 import { APP_VERSION } from "@/lib/version";
@@ -155,11 +156,11 @@ export function ImpostazioniClient({
   const [resetConfirmText, setResetConfirmText] = useState("");
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resetting, setResetting] = useState(false);
-  const [aiSuggestEnabled, setAiSuggestEnabled] = useState(true);
+  const [aiSuggestEnabled, setAiSuggestEnabled] = useEditorPref("aiPriceSuggestions");
+  const [listinoEnabled, setListinoEnabled] = useEditorPref("listinoAutocomplete");
   const [aiAutoImprove, setAiAutoImprove] = useState(false);
 
   useEffect(() => {
-    setAiSuggestEnabled(localStorage.getItem("ai_suggestions_enabled") !== "false");
     setAiAutoImprove(localStorage.getItem("ai_auto_improve") === "true");
   }, []);
 
@@ -358,24 +359,48 @@ export function ImpostazioniClient({
             </div>
           </Section>
 
-          <Section id="ai-personale" title="Assistente AI" icon={Sparkles}>
+          <Section id="ai-personale" title="Assistenza alla scrittura" icon={Sparkles}>
             <div className="flex items-center gap-2 -mt-1">
               <ShieldCheck className="w-3.5 h-3.5 text-muted-foreground" />
               <p className="text-xs text-muted-foreground">
-                Preferenze salvate su questo dispositivo.
+                Preferenze personali, salvate su questo dispositivo.
               </p>
             </div>
             <div className="space-y-3">
               <SettingToggle
+                checked={listinoEnabled}
+                onChange={(next) => {
+                  setListinoEnabled(next);
+                  toast.success(next ? "Voci del listino mostrate mentre scrivi" : "Voci del listino nascoste mentre scrivi");
+                }}
+                title="Voci simili dal listino"
+                description="Mostra la tendina «Dal listino» sopra/sotto la descrizione mentre scrivi una voce"
+              />
+              <div className="border-t" />
+              <SettingToggle
                 checked={aiSuggestEnabled}
                 onChange={(next) => {
                   setAiSuggestEnabled(next);
-                  localStorage.setItem("ai_suggestions_enabled", String(next));
-                  toast.success(next ? "Suggerimenti AI attivati" : "Suggerimenti AI disattivati");
+                  toast.success(next ? "Suggerimenti di prezzo attivati" : "Suggerimenti di prezzo disattivati");
                 }}
-                title="Suggerimenti AI automatici"
-                description="Suggerisce U.M. e prezzo mentre scrivi la descrizione"
+                title="Suggerimenti di prezzo AI"
+                description="Propone U.M., prezzo e quantità mentre scrivi la descrizione"
               />
+              <div className="border-t" />
+              <button
+                type="button"
+                onClick={() => {
+                  const quiet = listinoEnabled || aiSuggestEnabled;
+                  setListinoEnabled(!quiet);
+                  setAiSuggestEnabled(!quiet);
+                  toast.success(quiet ? "Modalità scrittura libera attiva: nessun suggerimento" : "Suggerimenti riattivati");
+                }}
+                className="w-full rounded-lg border border-dashed px-3 py-2 text-left text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              >
+                {listinoEnabled || aiSuggestEnabled
+                  ? "Scrittura libera: disattiva listino e suggerimenti in un colpo"
+                  : "Riattiva listino e suggerimenti"}
+              </button>
               <div className="border-t" />
               <SettingToggle
                 checked={aiAutoImprove}

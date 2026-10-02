@@ -27,6 +27,8 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { TotalsPanel } from "./TotalsPanel";
+import { PdfExportSheet, prefersPdfSheet } from "@/components/shared/PdfExportSheet";
+import { toPlainText } from "@/lib/rich-text";
 import { QuoteHeaderForm } from "./QuoteHeaderForm";
 import type { QuoteWithRelations, SectionWithItems, ItemWithImages } from "@/types";
 import type { PriceListItem } from "@/lib/db/schema";
@@ -347,7 +349,7 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
         const learnableItems = allItems
           .filter((i) => i.description.trim().length >= 15 && i.unitPrice > 0)
           .map((i) => ({
-            description: i.description,
+            description: toPlainText(i.description),
             unitOfMeasure: i.unitOfMeasure,
             unitPrice: i.unitPrice,
           }));
@@ -687,14 +689,19 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
     }
   }
 
+  const [pdfSheetOpen, setPdfSheetOpen] = useState(false);
+
   async function exportQuote(format: string) {
     const url = `/api/export/${format}/${quote.id}`;
     if (format === "pdf") {
-      window.open(url, "_blank");
+      // Touch (iPhone/iPad/Android): pannello con Condividi/Scarica, perché
+      // la nuova finestra sulla web-app installata non ha comandi.
+      if (prefersPdfSheet()) setPdfSheetOpen(true);
+      else window.open(url, "_blank");
       return;
     }
     const a = document.createElement("a");
-    a.href = url;
+    a.href = format === "pdf-download" ? `/api/export/pdf/${quote.id}?download=1` : url;
     a.download = "";
     a.click();
   }
@@ -893,7 +900,8 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => exportQuote("pdf")}>PDF</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportQuote("pdf")}>PDF — anteprima</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportQuote("pdf-download")}>PDF — scarica</DropdownMenuItem>
               {perms.exportQuoteAdvanced && (
                 <>
                   <DropdownMenuItem onClick={() => exportQuote("excel")}>Excel (.xlsx)</DropdownMenuItem>
@@ -969,7 +977,7 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuItem onClick={() => exportQuote("pdf")}>
-              <Download className="w-4 h-4 mr-2" /> Apri PDF
+              <Download className="w-4 h-4 mr-2" /> PDF (salva o condividi)
             </DropdownMenuItem>
             {perms.exportQuoteAdvanced && (
               <>
@@ -1016,7 +1024,7 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
       <div className="flex flex-1 gap-0 min-h-0">
         {/* Editor column */}
         <div className="flex-1 overflow-y-auto pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-6">
-          <div className="max-w-4xl mx-auto p-3 md:p-6 space-y-4 md:space-y-6">
+          <div className="max-w-6xl mx-auto p-3 md:p-6 space-y-4 md:space-y-6">
             <QuoteHeaderForm
               quote={quote}
               clients={clients}
@@ -1176,6 +1184,14 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
             </div>
           </div>
         </div>
+      )}
+
+      {pdfSheetOpen && (
+        <PdfExportSheet
+          url={`/api/export/pdf/${quote.id}`}
+          title={`${quote.code}${quote.title ? ` — ${quote.title}` : ""}`}
+          onClose={() => setPdfSheetOpen(false)}
+        />
       )}
     </div>
   );

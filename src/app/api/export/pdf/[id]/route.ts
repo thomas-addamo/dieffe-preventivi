@@ -11,7 +11,7 @@ import { generateExportFilename } from "@/lib/utils";
 import { cloudinary } from "@/lib/cloudinary";
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getCurrentUser();
@@ -62,7 +62,9 @@ export async function GET(
   return new NextResponse(buffer as unknown as BodyInit, {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `inline; filename="${filename}"`,
+      // ?download=1 → allegato (Safari/iOS lo salva invece di aprire un
+      // visualizzatore senza comandi, tipico della web-app installata).
+      "Content-Disposition": `${new URL(req.url).searchParams.get("download") === "1" ? "attachment" : "inline"}; filename="${filename}"`,
     },
   });
 }
