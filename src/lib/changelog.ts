@@ -13,7 +13,9 @@ export type ChangelogIcon =
   | "settings"
   | "sparkles"
   | "shield"
-  | "zap";
+  | "zap"
+  | "desktop"
+  | "keyboard";
 
 export interface ChangelogHighlight {
   icon: ChangelogIcon;
@@ -31,6 +33,33 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: "3.13.0",
+    date: "2026-10-02",
+    headline: "La nuova app per Mac e Windows.",
+    highlights: [
+      {
+        icon: "desktop",
+        title: "Design nativo per Mac",
+        description: "Sidebar traslucida, barra integrata e font di sistema: sembra un'app Apple.",
+      },
+      {
+        icon: "shield",
+        title: "Installazione sicura",
+        description: "Risolto l'avviso «malware» di macOS: l'app ora ha una firma propria.",
+      },
+      {
+        icon: "keyboard",
+        title: "Menu e scorciatoie",
+        description: "⌘N nuovo preventivo, ⌘1–7 per le sezioni, menu contestuale e badge nel Dock.",
+      },
+      {
+        icon: "zap",
+        title: "Più leggera",
+        description: "Pacchetto ridotto di un terzo e avviso chiaro quando esce una nuova versione.",
+      },
+    ],
+  },
   {
     version: "3.12.0",
     date: "2026-10-02",

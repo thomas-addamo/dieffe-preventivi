@@ -27,6 +27,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       const mq = window.matchMedia("(prefers-color-scheme: dark)");
       root.classList.toggle("dark", mq.matches);
     }
+    // App desktop: materiali e controlli nativi (sidebar, menu) seguono il tema scelto.
+    window.electron?.setTheme?.(theme);
   }, [theme]);
 
   const setTheme = (t: Theme) => {

@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:" />
+    <title>Dieffe Preventivi — Offline</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --fg: #16181d;
+        --muted: #6b7280;
+        --card: rgba(255, 255, 255, 0.72);
+        --ring: rgba(16, 24, 40, 0.08);
+        --primary: #1e40af;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --fg: #f4f5f7;
+          --muted: #9ca1ab;
+          --card: rgba(30, 31, 36, 0.66);
+          --ring: rgba(255, 255, 255, 0.08);
+          --primary: #3b82f6;
+        }
+      }
+      html, body {
+        margin: 0;
+        height: 100%;
+        background: transparent;
+        font: 13px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+        color: var(--fg);
+        -webkit-font-smoothing: antialiased;
+        user-select: none;
+        cursor: default;
+      }
+      /* Barra trascinabile: con la title bar integrata è l'unico modo di spostare la finestra */
+      .drag { position: fixed; inset: 0 0 auto 0; height: 52px; -webkit-app-region: drag; }
+      main { height: 100%; display: grid; place-items: center; padding: 24px; box-sizing: border-box; }
+      /* Radius annidati: card 20px, padding 6px → icona 14px */
+      .card {
+        width: min(380px, 100%);
+        padding: 28px 28px 24px;
+        border-radius: 20px;
+        background: var(--card);
+        box-shadow: 0 0 0 0.5px var(--ring), 0 12px 40px rgba(16, 24, 40, 0.12);
+        backdrop-filter: blur(30px) saturate(1.6);
+        text-align: center;
+      }
+      .icon {
+        width: 56px; height: 56px; margin: 0 auto 16px; border-radius: 14px;
+        display: grid; place-items: center;
+        background: color-mix(in srgb, var(--primary) 12%, transparent);
+        color: var(--primary);
+      }
+      h1 { font-size: 17px; font-weight: 600; margin: 0 0 6px; letter-spacing: -0.01em; }
+      p { margin: 0; color: var(--muted); }
+      .actions { margin-top: 20px; display: flex; gap: 8px; justify-content: center; }
+      button {
+        -webkit-app-region: no-drag;
+        font: inherit; font-weight: 500;
+        height: 28px; padding: 0 14px; border-radius: 7px; border: 0;
+        background: var(--primary); color: white; cursor: default;
+        box-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.2);
+      }
+      button:active { filter: brightness(0.92); }
+      .status { margin-top: 14px; font-size: 11px; color: var(--muted); min-height: 16px; }
+      .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #f59e0b; margin-right: 6px; vertical-align: 1px; }
+    </style>
+  </head>
+  <body>
+    <div class="drag"></div>
+    <main>
+      <div class="card">
+        <div class="icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 20h.01" /><path d="M8.5 16.43a5 5 0 0 1 7 0" /><path d="M5 12.86a10 10 0 0 1 5.17-2.69" />
+            <path d="M19 12.86a10 10 0 0 0-2-1.43" /><path d="M2 8.82a15 15 0 0 1 4.17-2.65" /><path d="M10.66 5c4.01-.36 8.14.9 11.34 3.76" /><path d="m2 2 20 20" />
+          </svg>
+        </div>
+        <h1>Nessuna connessione</h1>
+        <p>Dieffe Preventivi ha bisogno di Internet per aprire i tuoi preventivi. Riproveremo appena torni online.</p>
+        <div class="actions"><button id="retry" type="button">Riprova</button></div>
+        <div class="status" id="status"><span class="dot"></span>In attesa della connessione…</div>
+      </div>
+    </main>
+    <script>
+      var target = new URLSearchParams(location.search).get('target');
+      function retry() {
+        if (target && /^https?:\/\//.test(target)) location.replace(target);
+        else history.back();
+      }
+      document.getElementById('retry').addEventListener('click', retry);
+      window.addEventListener('online', function () {
+        document.getElementById('status').textContent = 'Connessione ripristinata, riapro…';
+        setTimeout(retry, 600);
+      });
+    </script>
+  </body>
+</html>

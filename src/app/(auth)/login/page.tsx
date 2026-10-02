@@ -15,11 +15,13 @@ export default async function LoginPage() {
     .from(users);
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center bg-background p-4 overflow-hidden">
+    <div className="relative min-h-screen flex items-center justify-center bg-background p-4 overflow-hidden mac:bg-transparent">
+      {/* App Mac: senza barra del titolo la finestra si trascina da qui */}
+      <div aria-hidden className="desktop-drag-strip" />
       {/* Glow decorativo */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 w-[640px] h-[420px] rounded-full bg-primary/10 blur-3xl"
+        className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 w-[640px] h-[420px] rounded-full bg-primary/10 blur-3xl mac:hidden"
       />
 
       <div className="relative w-full max-w-sm">
@@ -35,7 +37,7 @@ export default async function LoginPage() {
           </p>
         </div>
 
-        <div className="bg-card border rounded-2xl p-6 shadow-md">
+        <div className="bg-card border rounded-2xl p-6 shadow-md mac:bg-card/80 mac:backdrop-blur-2xl mac:border-border/60 mac:shadow-xl">
           <LoginForm isFirstRun={userCount === 0} />
         </div>
       </div>

@@ -135,10 +135,12 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
   const linkClass = (active: boolean) =>
     cn(
       "group relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 min-h-[44px]",
-      !expanded && "justify-center px-0",
+      // App desktop: righe compatte da lista di sistema (Finder/Mail)
+      "desktop:min-h-8 desktop:py-1.5 desktop:px-2.5 desktop:gap-2.5 desktop:rounded-md desktop:text-[13px] desktop:transition-none",
+      !expanded && "justify-center px-0 desktop:px-0",
       active
-        ? "bg-primary/10 text-primary shadow-2xs"
-        : "text-muted-foreground hover:bg-accent hover:text-foreground"
+        ? "bg-primary/10 text-primary shadow-2xs desktop:shadow-none desktop:bg-foreground/[0.08] desktop:text-foreground dark:desktop:bg-white/[0.1] desktop:[&>svg]:text-primary"
+        : "text-muted-foreground hover:bg-accent hover:text-foreground desktop:text-foreground/80 desktop:hover:bg-foreground/[0.05] desktop:[&>svg]:text-primary/80"
     );
 
   const labelClass = cn(
@@ -147,7 +149,7 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
   );
 
   const activeIndicator = (
-    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-full bg-primary" />
+    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-full bg-primary desktop:hidden" />
   );
 
   const renderLink = (
@@ -185,25 +187,26 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
     <div
       className={cn(
         "group relative flex items-center rounded-lg transition-all duration-150 min-h-[44px]",
+        "desktop:min-h-8 desktop:rounded-md desktop:transition-none",
         preventiviActive
-          ? "bg-primary/10 text-primary shadow-2xs"
-          : "text-muted-foreground hover:bg-accent hover:text-foreground"
+          ? "bg-primary/10 text-primary shadow-2xs desktop:shadow-none desktop:bg-foreground/[0.08] desktop:text-foreground dark:desktop:bg-white/[0.1]"
+          : "text-muted-foreground hover:bg-accent hover:text-foreground desktop:text-foreground/80 desktop:hover:bg-foreground/[0.05]"
       )}
     >
       {preventiviActive && activeIndicator}
       <Link
         href="/preventivi"
         onClick={onClose}
-        className="flex flex-1 min-w-0 items-center gap-3 px-3 py-2.5 text-sm font-medium"
+        className="flex flex-1 min-w-0 items-center gap-3 px-3 py-2.5 text-sm font-medium desktop:py-1.5 desktop:px-2.5 desktop:gap-2.5 desktop:text-[13px]"
       >
-        <FileText className="w-4 h-4 shrink-0" />
+        <FileText className="w-4 h-4 shrink-0 desktop:text-primary/80" />
         <span className="truncate">Preventivi</span>
       </Link>
       <button
         onClick={openQuotesPanel}
         aria-label="Mostra elenco preventivi"
         title="Elenco preventivi"
-        className="flex items-center self-stretch rounded-r-lg px-2 text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground"
+        className="flex items-center self-stretch rounded-r-lg px-2 text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground desktop:rounded-r-md"
       >
         <ChevronRight className="w-4 h-4" />
       </button>
@@ -219,15 +222,19 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
       className={cn(
         "flex flex-col shrink-0 border-r bg-[var(--sidebar-bg)] border-[var(--sidebar-border)] h-screen top-0",
         "transition-[width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
-        expanded ? "w-60" : "w-16",
+        expanded ? "w-60 mac:w-[248px]" : "w-16 mac:w-[92px]",
         isDrawer ? "sticky" : "fixed left-0 z-30",
-        overlaying && "shadow-2xl"
+        overlaying && "shadow-2xl",
+        // Mac: compressa+hover diventa un pannello flottante con materiale opaco
+        overlaying && "mac:bg-[var(--background)]/95 mac:backdrop-blur-xl mac:rounded-r-2xl mac:border-r mac:border-border/60"
       )}
     >
       {/* Logo + toggle */}
       <div
         className={cn(
-          "flex items-center gap-3 h-14 border-b border-[var(--sidebar-border)] shrink-0",
+          "desktop-titlebar flex items-center gap-3 h-14 border-b border-[var(--sidebar-border)] shrink-0",
+          // Mac: spazio per i semafori (posizionati da electron/main.ts) e niente logo qui
+          "mac:h-[var(--desk-titlebar-h)] mac:pl-[84px] mac:pr-3 mac:justify-end",
           expanded ? "px-4" : "px-0 justify-center"
         )}
       >
@@ -237,10 +244,10 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
           width={32}
           height={32}
           priority
-          className="h-8 w-8 shrink-0"
+          className="h-8 w-8 shrink-0 mac:hidden"
         />
         {expanded && (
-          <div className="flex-1 leading-tight overflow-hidden">
+          <div className="flex-1 leading-tight overflow-hidden mac:hidden">
             <span className="block font-semibold text-sm tracking-tight truncate">
               Dieffe Preventivi
             </span>
@@ -258,7 +265,7 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
         {!isDrawer && expanded && (
           <button
             onClick={toggleCollapsed}
-            className="p-1.5 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+            className="p-1.5 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors mac:hover:bg-foreground/[0.06]"
             aria-label={collapsed ? "Espandi barra laterale" : "Riduci barra laterale"}
             title={collapsed ? "Espandi" : "Riduci"}
           >
@@ -274,10 +281,20 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
           style={{ width: "200%", transform: quotesPanel ? "translateX(-50%)" : "translateX(0)" }}
         >
           {/* ── Pannello 1: navigazione ── */}
-          <nav className="w-1/2 h-full overflow-y-auto overflow-x-hidden py-4 px-3 space-y-0.5">
+          <nav className="w-1/2 h-full overflow-y-auto overflow-x-hidden py-4 px-3 space-y-0.5 mac:pt-1 mac:px-2.5">
+            {/* App Mac: marchio sotto i semafori, come il titolo delle app di sistema */}
+            {expanded && (
+              <div className="hidden mac:flex items-center gap-2.5 px-2 pb-4">
+                <Image src="/icona_dieffe.svg" alt="" width={28} height={28} className="h-7 w-7 shrink-0 drop-shadow-sm" />
+                <div className="min-w-0 leading-tight">
+                  <span className="block truncate text-[13px] font-semibold tracking-tight">Dieffe Preventivi</span>
+                  <span className="block truncate text-[11px] text-muted-foreground">Dieffe Ristrutturazioni</span>
+                </div>
+              </div>
+            )}
             {expanded ? (
               <div className="pb-1 px-3">
-                <span className="text-[11px] font-medium text-muted-foreground/80 uppercase tracking-wider">
+                <span className="text-[11px] font-medium text-muted-foreground/80 uppercase tracking-wider desktop:normal-case desktop:tracking-normal desktop:font-semibold desktop:text-muted-foreground/70">
                   Operatività
                 </span>
               </div>
@@ -300,7 +317,7 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
               <>
                 {expanded ? (
                   <div className="pt-4 pb-1 px-3">
-                    <span className="text-[11px] font-medium text-muted-foreground/80 uppercase tracking-wider flex items-center gap-1">
+                    <span className="text-[11px] font-medium text-muted-foreground/80 uppercase tracking-wider flex items-center gap-1 desktop:normal-case desktop:tracking-normal desktop:font-semibold desktop:text-muted-foreground/70">
                       <Shield className="w-3 h-3" /> Amministrazione
                     </span>
                   </div>
@@ -316,7 +333,7 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
 
           {/* ── Pannello 2: elenco preventivi ── */}
           <div className="w-1/2 h-full flex flex-col">
-            <div className="flex items-center gap-1.5 px-2 h-11 border-b border-[var(--sidebar-border)] shrink-0">
+            <div className="flex items-center gap-1.5 px-2 h-11 border-b border-[var(--sidebar-border)] shrink-0 mac:h-9">
               <button
                 onClick={() => setQuotesPanel(false)}
                 className="p-1.5 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
@@ -339,7 +356,7 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
                   value={quoteSearch}
                   onChange={(e) => setQuoteSearch(e.target.value)}
                   placeholder="Cerca preventivo..."
-                  className="w-full h-8 pl-8 pr-2 rounded-md border bg-background text-sm outline-none focus:ring-2 focus:ring-ring/40"
+                  className="w-full h-8 pl-8 pr-2 rounded-md border bg-background text-sm outline-none focus:ring-2 focus:ring-ring/40 mac:h-7 mac:border-0 mac:bg-foreground/[0.06] mac:text-[13px]"
                 />
               </div>
             </div>
@@ -362,8 +379,8 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
                       onClick={() => openQuote(q.id)}
                       title={q.title}
                       className={cn(
-                        "w-full text-left rounded-lg px-2.5 py-2 transition-colors",
-                        active ? "bg-primary/10" : "hover:bg-accent"
+                        "w-full text-left rounded-lg px-2.5 py-2 transition-colors desktop:rounded-md desktop:py-1.5",
+                        active ? "bg-primary/10 desktop:bg-foreground/[0.08]" : "hover:bg-accent desktop:hover:bg-foreground/[0.05]"
                       )}
                     >
                       <div className="flex items-center gap-1.5">
@@ -395,7 +412,7 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
       </div>
 
       {/* Footer — Impostazioni (TUTTI gli utenti) */}
-      <div className="px-3 py-3 border-t border-[var(--sidebar-border)] shrink-0">
+      <div className="px-3 py-3 border-t border-[var(--sidebar-border)] shrink-0 mac:px-2.5">
         {renderLink("/impostazioni", "Impostazioni", Settings, pathname.startsWith("/impostazioni"))}
         {!isDrawer && collapsed && (
           <button
@@ -418,7 +435,7 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
       <div
         className={cn(
           "h-screen shrink-0 transition-[width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
-          collapsed ? "w-16" : "w-60"
+          collapsed ? "w-16 mac:w-[92px]" : "w-60 mac:w-[248px]"
         )}
         aria-hidden
       />

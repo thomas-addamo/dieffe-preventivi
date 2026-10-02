@@ -1,13 +1,15 @@
-name: Build Electron App
+name: Build app desktop
 
+# Parte a ogni tag di versione (es. v3.13.0) e pubblica i pacchetti nella Release.
 on:
   push:
     tags:
-      - 'v*' # Si attiva solo sui tag tipo v1.0.0
+      - 'v*'
 
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: macos-latest
@@ -17,81 +19,63 @@ jobs:
 
     runs-on: ${{ matrix.os }}
 
-    # Necessario a softprops/action-gh-release per creare/aggiornare la Release.
     permissions:
-      contents: write
+      contents: write # necessario per creare/aggiornare la Release
 
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v3
+      - uses: pnpm/action-setup@v4
         with:
           version: 10
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'pnpm'
 
-      - name: Install dependencies
-        run: pnpm install
+      - name: Installa dipendenze
+        run: pnpm install --frozen-lockfile
 
-      # Incorpora il token di sola lettura per l'auto-update da repo privato.
-      # Se il secret non c'è, la build esce senza token (nessun auto-update auth).
-      - name: Inject update token
-        shell: bash
-        run: |
-          if [ -n "${{ secrets.UPDATE_TOKEN }}" ]; then
-            sed -i.bak "s/__UPDATE_TOKEN__/${{ secrets.UPDATE_TOKEN }}/" electron/update-token.ts
-            rm -f electron/update-token.ts.bak
-            echo "Token di update iniettato."
-          else
-            echo "Nessun secret UPDATE_TOKEN: build senza token di auto-update."
-          fi
+      # Il pacchetto contiene solo il wrapper (electron/): l'interfaccia è la web
+      # app pubblicata, quindi qui non serve "next build" né alcun segreto del DB.
+      - name: Prepara il wrapper desktop
+        run: pnpm desktop:prepare
 
-      # NB: niente "next build" qui. L'app desktop è un wrapper che carica la web app
-      # remota (Vercel) e NON impacchetta .next, quindi non servono i secret del DB ecc.
-      - name: Compile Electron TypeScript
-        run: npx tsc --project electron/tsconfig.json
-
-      # electron-builder solo impacchetta. --publish never evita che crei una release
-      # "draft" in conflitto con lo step "Release" qui sotto (softprops).
-      - name: Build Electron (${{ matrix.platform }})
-        run: npx electron-builder --${{ matrix.platform }} --publish never
+      # Senza certificato Apple l'app viene firmata ad-hoc (scripts/desktop/after-pack.cjs).
+      # Con i secret CSC_LINK / CSC_KEY_PASSWORD (Developer ID) + APPLE_ID /
+      # APPLE_APP_SPECIFIC_PASSWORD / APPLE_TEAM_ID viene firmata e notarizzata.
+      - name: Crea i pacchetti (${{ matrix.platform }})
+        run: npx electron-builder --${{ matrix.platform }} --config electron-builder.config.cjs --publish never
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Per notarizzazione macOS (opzionale, richiede Apple Developer)
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: dieffe-preventivi-${{ matrix.platform }}
-          path: |
-            dist-electron/*.dmg
-            dist-electron/*.zip
-            dist-electron/*.exe
-            dist-electron/*.msi
-            dist-electron/*.blockmap
-            dist-electron/latest*.yml
-          retention-days: 30
+      # Controllo di sicurezza: la firma dell'app deve essere valida e NON revocata.
+      - name: Verifica firma macOS
+        if: matrix.platform == 'mac'
+        shell: bash
+        run: |
+          for app in dist-electron/mac*/"Dieffe Preventivi.app"; do
+            codesign --verify --deep --strict --verbose=2 "$app"
+            codesign -dv "$app" 2>&1 | grep -E "Identifier|Signature|TeamIdentifier"
+            if spctl -a -vvv "$app" 2>&1 | grep -qi revoked; then
+              echo "::error::Firma revocata da Apple per $app"; exit 1
+            fi
+          done
 
-      # IMPORTANTE: solo i distributabili (file al top di dist-electron), NON il glob
-      # ricorsivo **/* che caricherebbe anche il contenuto interno del bundle .app
-      # (locale.pak, Electron Framework, app.asar, ...) facendo fallire la release.
-      - name: Release
+      - name: Pubblica nella Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             dist-electron/*.dmg
-            dist-electron/*.zip
             dist-electron/*.exe
-            dist-electron/*.msi
-            dist-electron/*.blockmap
-            dist-electron/latest*.yml
           draft: false
           prerelease: false
+          fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

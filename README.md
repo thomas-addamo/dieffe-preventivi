@@ -1,186 +1,132 @@
+<div align="center">
+
+<img src="public/icona_dieffe.svg" alt="Dieffe Preventivi" width="88" height="88" />
+
 # Dieffe Preventivi
 
-Applicazione web per la gestione di preventivi edili — Dieffe Ristrutturazioni.
+**Preventivi edili professionali, dal sopralluogo alla firma del cliente.**
 
-Ospitata su Vercel, database su Neon (PostgreSQL), immagini su Cloudinary.
+Web app, app per iPhone (installabile da Safari) e app desktop per macOS e Windows.
 
-## Accesso
+[Sito](https://dieffe-preventivi.vercel.app) · [Scarica l'app desktop](https://github.com/thomas-addamo/dieffe-preventivi/releases/latest) · [Novità](#novità-e-versioni)
 
-URL produzione: fornito da Vercel dopo il primo deploy.
-
-Credenziali default (cambiarle dopo il primo accesso):
-- Email: `admin@dieffe.it`
-- Password: `admin123`
+</div>
 
 ---
 
-## Sviluppo locale
+## Cos'è
 
-### Prerequisiti
+Dieffe Preventivi è il gestionale con cui **Dieffe Ristrutturazioni** prepara, invia e
+archivia i preventivi dei propri cantieri. Sostituisce fogli Excel e documenti sparsi
+con un unico strumento, disponibile ovunque: in ufficio, in cantiere, dal telefono.
 
-- Node.js 20 o superiore
-- pnpm (`npm install -g pnpm`)
-- Account Neon (database) e Cloudinary (immagini)
+## Funzionalità
 
-### Configurazione
+| | |
+|---|---|
+| **Editor di preventivi** | Sezioni e voci trascinabili, quantità, sconti, prezzi a corpo, sezioni opzionali, più preventivi aperti in schede. |
+| **Descrizioni formattate** | Grassetto, corsivo, sottolineato ed elenchi direttamente nelle voci, riportati fedelmente nel PDF. |
+| **Listino prezzi** | Listino aziendale con codici e categorie, che si arricchisce imparando dai preventivi già fatti. |
+| **Assistente AI** | Suggerimenti di prezzo spiegati (listino, storico, mercato), miglioramento dei testi e import di preventivi da PDF, Word ed Excel. |
+| **Condivisione e firma** | Link pubblico per il cliente, protetto da PIN opzionale, con accettazione e firma online. |
+| **Export** | PDF impaginato con immagini, Excel con formule, CSV e backup JSON. Da iPhone il PDF si condivide o si salva su File. |
+| **Clienti e template** | Anagrafica clienti con lo storico dei preventivi e template riutilizzabili. |
+| **Statistiche** | Andamento di valore, conversione e stati dei preventivi. |
+| **Ruoli e controllo** | Amministratore, editor e sola lettura; registro attività, sessioni attive, blocco dei preventivi, cestino con ripristino. |
+| **Notifiche** | Centro notifiche in app e notifiche push su iPhone, Mac e browser. |
 
-```bash
-cp .env.example .env.local
-# Compilare .env.local con le credenziali Neon e Cloudinary
-```
+## App desktop
 
-### Avvio
+L'app desktop offre l'esperienza di un'applicazione nativa:
 
-```bash
-pnpm install
-pnpm db:migrate   # applica migrazioni sul database Neon
-pnpm db:seed      # inserisce dati esempio (solo prima volta)
-pnpm dev          # avvia su http://localhost:3847
-```
-
----
-
-## Setup Neon (database PostgreSQL)
-
-1. Creare un account su [neon.tech](https://neon.tech)
-2. Creare un nuovo progetto (regione: EU Central o EU West)
-3. Dalla dashboard, copiare la **Connection String** (formato `postgresql://...`)
-4. Incollarla in `.env.local` come `DATABASE_URL`
-
----
-
-## Setup Cloudinary (storage immagini)
-
-1. Creare un account su [cloudinary.com](https://cloudinary.com)
-2. Dalla dashboard, copiare Cloud Name, API Key e API Secret
-3. Andare in **Settings → Upload → Upload presets** e creare un preset:
-   - Nome: `dieffe-quotes`
-   - Signing mode: **Signed**
-4. Compilare in `.env.local`:
-   ```
-   CLOUDINARY_CLOUD_NAME=...
-   CLOUDINARY_API_KEY=...
-   CLOUDINARY_API_SECRET=...
-   NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=...
-   ```
-
----
-
-## Deploy su Vercel
-
-1. Pubblicare il repository su GitHub (privato)
-2. Su [vercel.com](https://vercel.com): **New Project** → selezionare il repo
-3. Configurare le variabili d'ambiente (stesse di `.env.local`) nella sezione **Environment Variables**
-4. Impostare il **Build Command** su:
-   ```
-   pnpm db:migrate && pnpm build
-   ```
-5. Cliccare **Deploy**
-6. Dopo il primo deploy, copiare l'URL Vercel e impostare `BETTER_AUTH_URL` (se usato) o aggiornare la configurazione auth con l'URL effettivo, poi fare redeploy
-
----
-
-## Aggiornamenti
-
-Ogni `git push` su `main` avvia automaticamente un nuovo deploy su Vercel, con esecuzione delle eventuali nuove migrazioni database.
-
-```bash
-git add .
-git commit -m "Descrizione modifica"
-git push
-```
-
----
-
-## App Desktop (macOS + Windows)
-
-L'app desktop è un wrapper Electron che carica la stessa web app (la versione
-pubblicata su Vercel in produzione, `localhost:3847` in sviluppo). Aggiunge menu
-nativi, finestra ridimensionabile con dimensioni persistenti, banner offline e
-aggiornamenti automatici.
+- **macOS** — barra del titolo integrata, sidebar traslucida con i materiali di sistema,
+  font SF, modalità chiara/scura sincronizzata, badge delle notifiche nel Dock.
+- **Menu e scorciatoie** — `⌘N` nuovo preventivo, `⌘1…7` per le sezioni, `⌘[` / `⌘]`
+  avanti e indietro, `⌘,` impostazioni; menu contestuale di sistema con correzione ortografica.
+- **Sempre aggiornata** — l'interfaccia si aggiorna da sola; quando esce una nuova
+  versione dell'app, viene segnalata con il link diretto al pacchetto giusto.
 
 ### Download
 
-Vai su [GitHub Releases](https://github.com/thomas-addamo/dieffe-preventivi/releases)
-e scarica l'ultima versione:
-- **macOS**: `Dieffe-Preventivi-x.x.x.dmg`
-- **Windows**: `Dieffe-Preventivi-Setup-x.x.x.exe`
+| Sistema | Pacchetto |
+|---|---|
+| Mac con chip Apple (M1 e successivi) | [Dieffe-Preventivi-mac-arm64.dmg](https://github.com/thomas-addamo/dieffe-preventivi/releases/latest/download/Dieffe-Preventivi-mac-arm64.dmg) |
+| Mac con processore Intel | [Dieffe-Preventivi-mac-x64.dmg](https://github.com/thomas-addamo/dieffe-preventivi/releases/latest/download/Dieffe-Preventivi-mac-x64.dmg) |
+| Windows 10 / 11 (x64) | [Dieffe-Preventivi-Setup-x64.exe](https://github.com/thomas-addamo/dieffe-preventivi/releases/latest/download/Dieffe-Preventivi-Setup-x64.exe) |
 
-### Installazione macOS
+### Primo avvio
 
-1. Apri il file `.dmg`
-2. Trascina l'app nella cartella Applicazioni
-3. Al primo avvio: tasto destro → Apri → Apri comunque
-   (necessario solo la prima volta se l'app non è notarizzata)
+L'app non è ancora notarizzata da Apple né firmata da Microsoft, quindi la prima
+apertura va confermata una volta sola.
 
-### Installazione Windows
+**macOS** (12 Monterey o successivo)
+1. Apri il `.dmg` e trascina **Dieffe Preventivi** in **Applicazioni**.
+2. Apri l'app: macOS avvisa che non può verificare lo sviluppatore. Premi **Fine**.
+3. Apri **Impostazioni di Sistema → Privacy e sicurezza** e premi **Apri comunque**.
 
-1. Esegui il file `.exe` o `.msi`
-2. Segui l'installazione guidata
+**Windows**
+1. Avvia l'installer.
+2. Se compare *«Windows ha protetto il PC»*, premi **Ulteriori informazioni → Esegui comunque**.
 
-### Sviluppo desktop
+## Tecnologie
+
+- **Web app** — Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, componenti Radix
+- **Dati** — PostgreSQL (Neon) con Drizzle ORM, immagini su Cloudinary
+- **Documenti** — @react-pdf/renderer (PDF), ExcelJS (Excel), Tiptap (testo formattato)
+- **App desktop** — Electron con firma del pacchetto e build automatiche su GitHub Actions
+- **Hosting** — Vercel
+
+## Sviluppo
+
+> Il progetto è sviluppato per uso interno. Le istruzioni qui sotto servono a chi
+> lavora al codice; nessuna credenziale è inclusa nel repository.
+
+**Requisiti:** Node.js 22, pnpm 10.
 
 ```bash
 pnpm install
-pnpm electron:dev   # compila il wrapper, avvia Next su :3847 e apre la finestra Electron
+cp .env.example .env.local   # compila le variabili richieste
+pnpm db:migrate              # applica le migrazioni
+pnpm dev                     # http://localhost:3847
 ```
 
-Build locale dei pacchetti distribuibili:
+| Comando | Descrizione |
+|---|---|
+| `pnpm dev` | Server di sviluppo |
+| `pnpm build` | Build di produzione |
+| `pnpm lint` | Controlli ESLint |
+| `pnpm db:generate` / `pnpm db:migrate` | Genera / applica le migrazioni del database |
+| `pnpm electron:dev` | App desktop collegata al server di sviluppo |
+| `pnpm electron:build:mac` / `pnpm electron:build:win` | Pacchetti desktop locali in `dist-electron/` |
 
-```bash
-pnpm electron:build:mac   # solo macOS (.dmg + .zip)
-pnpm electron:build:win   # solo Windows (.exe + .msi)
-pnpm electron:dist        # entrambi
+### Struttura
+
+```
+src/app/          pagine e API (App Router)
+src/components/   interfaccia (editor, PDF, componenti condivisi)
+src/lib/          dominio: calcoli, AI, export, permessi, database
+electron/         app desktop (finestra, menu, aggiornamenti)
+scripts/desktop/  preparazione e firma dei pacchetti desktop
 ```
 
-### Funzionalità offline
+### Design
 
-Quando non c'è connessione internet:
-- Un banner arancione in alto avvisa della modalità offline
-- I preventivi già visualizzati in precedenza sono consultabili (cache del renderer)
-- Le modifiche sono disabilitate finché non torni online
-- Al ripristino della connessione, l'app si riconnette automaticamente
+Un unico sistema di token (colori, ombre, raggi) in `src/app/globals.css`, con la regola
+dei **raggi annidati**: il raggio di un elemento interno è quello del contenitore meno
+il suo padding. L'app desktop usa lo stesso sistema con un proprio design, attivato solo
+al suo interno: il sito resta invariato.
 
-### Aggiornamenti automatici
+## Novità e versioni
 
-L'app controlla automaticamente gli aggiornamenti all'avvio e ogni ora.
-Quando un aggiornamento è disponibile, viene scaricato in background.
-Al termine del download, appare un banner in basso a destra con il bottone
-"Riavvia" per installare l'aggiornamento.
+Il numero di versione segue il versionamento semantico e si trova in `src/lib/version.ts`
+(allineato a `package.json`). Le novità di ogni versione sono in `src/lib/changelog.ts`
+e compaiono agli utenti nel riquadro **Novità** in cima all'app.
 
-### Release nuova versione (per admin)
+Per pubblicare una nuova versione dell'app desktop si crea il tag corrispondente
+(`git tag vX.Y.Z && git push origin vX.Y.Z`): GitHub Actions crea i pacchetti macOS e
+Windows e li pubblica nella [pagina delle release](https://github.com/thomas-addamo/dieffe-preventivi/releases).
 
-1. Aggiorna la versione in `package.json` **e** in `src/lib/version.ts` (devono restare allineate)
-2. Crea un tag git: `git tag v3.x.x && git push origin v3.x.x`
-3. GitHub Actions builderà automaticamente macOS + Windows
-4. I file appaiono in GitHub Releases dopo ~10 minuti
-5. Tutti gli utenti con l'app installata ricevono notifica automatica
+## Licenza
 
----
-
-## Export preventivi
-
-Dall'editor preventivo, menu **Esporta**:
-- **PDF** — template classico con immagini
-- **Excel (.xlsx)** — con formule, modificabile
-- **CSV** — flat export di tutte le voci
-- **JSON** — backup completo, reimportabile
-
-## Backup dati
-
-Dall'editor preventivo, usare **Esporta → JSON** per ogni preventivo. Il file JSON contiene tutti i dati ed e reimportabile in qualsiasi momento.
-
-Per un backup completo del database, usare il tool di export di Neon dalla dashboard.
-
----
-
-## Stack tecnico
-
-- **Framework**: Next.js 16 (App Router) + TypeScript strict
-- **Database**: PostgreSQL su Neon + Drizzle ORM
-- **Storage immagini**: Cloudinary
-- **Hosting**: Vercel
-- **UI**: Tailwind CSS v4 + shadcn/ui
-- **PDF**: @react-pdf/renderer
-- **Excel**: ExcelJS
-- **Auth**: sessioni custom con argon2 + cookie httpOnly
+© 2026 Dieffe Ristrutturazioni. Tutti i diritti riservati.
+Codice consultabile pubblicamente; non è concesso il riutilizzo senza autorizzazione scritta.

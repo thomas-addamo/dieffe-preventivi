@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
@@ -70,6 +70,11 @@ export function NotificationBell() {
 
   const unreadCount = data?.unreadCount ?? 0;
   const items = data?.notifications ?? [];
+
+  // App desktop: numero di notifiche non lette sull'icona nel Dock / barra applicazioni.
+  useEffect(() => {
+    window.electron?.setBadgeCount?.(unreadCount);
+  }, [unreadCount]);
 
   const handleClick = useCallback(
     (n: NotificationItem) => {

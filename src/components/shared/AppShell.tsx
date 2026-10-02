@@ -10,6 +10,7 @@ import { NotificationToaster } from "./NotificationToaster";
 import { PushRegistrar } from "./PushRegistrar";
 import { UserRoleProvider } from "./UserRoleContext";
 import { WhatsNewBanner } from "./WhatsNewBanner";
+import { DesktopBridge } from "./DesktopBridge";
 import type { UserRole } from "@/lib/permissions/types";
 import { cn } from "@/lib/utils";
 
@@ -60,6 +61,7 @@ export function AppShell({ children, userRole, userName, userEmail, trashCount =
       {/* Montati una sola volta: toast in-app + registrazione service worker push */}
       <NotificationToaster />
       <PushRegistrar />
+      <DesktopBridge />
       <div className="lg:flex lg:h-screen lg:overflow-hidden">
         {/* Sidebar desktop — invariata */}
         <div className="hidden lg:block">
@@ -73,6 +75,8 @@ export function AppShell({ children, userRole, userName, userEmail, trashCount =
         <div
           className={cn(
             "lg:flex lg:flex-1 lg:flex-col lg:overflow-hidden lg:min-w-0",
+            // App Mac: pannello arrotondato staccato dalla finestra (globals.css)
+            "desktop-panel",
             !immersive && "pt-topbar lg:pt-0"
           )}
         >
@@ -88,7 +92,7 @@ export function AppShell({ children, userRole, userName, userEmail, trashCount =
 
           <main
             className={cn(
-              "bg-background lg:flex-1 lg:overflow-y-auto",
+              "bg-background lg:flex-1 lg:overflow-y-auto mac:bg-transparent",
               !immersive && "pb-tabbar lg:pb-0"
             )}
           >

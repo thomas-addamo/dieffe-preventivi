@@ -48,6 +48,10 @@ export default function RootLayout({
   return (
     <html lang="it" suppressHydrationWarning>
       <head>
+        {/* App desktop (Electron): lo User-Agent contiene "DieffeDesktop/x.y.z (mac|win)".
+            Marca <html> prima del primo paint: il design desktop è solo CSS
+            (varianti desktop:/mac: in globals.css), quindi nessun mismatch SSR. */}
+        <script dangerouslySetInnerHTML={{ __html: `(function(){var m=navigator.userAgent.match(/DieffeDesktop\\/([\\d.]+) \\((\\w+)\\)/);if(m){var d=document.documentElement;d.setAttribute('data-shell','desktop');d.setAttribute('data-platform',m[2]);}})()` }} />
         {/* Inline script: applica il tema PRIMA del render per evitare il flash */}
         <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||((!t||t==='system')&&window.matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.classList.add('dark');}}catch(e){}})()` }} />
       </head>

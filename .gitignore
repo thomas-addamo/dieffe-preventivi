@@ -43,6 +43,7 @@ next-env.d.ts
 # Electron
 /dist-electron/
 /electron-dist/
+/desktop-app/
 # Output grezzo del generatore icone (teniamo solo assets/icon.{png,icns,ico})
 /assets/icons/
 
@@ -52,3 +53,6 @@ next-env.d.ts
 *.sqlite-journal
 *.sqlite-shm
 *.sqlite-wal
+
+# Modello variabili d'ambiente (senza valori)
+!.env.example

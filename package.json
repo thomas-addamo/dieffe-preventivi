@@ -1,10 +1,9 @@
 {
   "name": "dieffe-preventivi",
-  "version": "3.12.0",
+  "version": "3.13.0",
   "private": true,
   "description": "Gestione preventivi edili — Dieffe Ristrutturazioni",
   "author": "Dieffe Ristrutturazioni <impresa.dieffe@gmail.com>",
-  "main": "electron-dist/main.js",
   "scripts": {
     "dev": "next dev -p 3847",
     "build": "next build",
@@ -15,12 +14,10 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:studio": "drizzle-kit studio",
     "icons": "node scripts/gen-icons.mjs",
-    "electron:compile": "tsc --project electron/tsconfig.json",
-    "electron:dev": "pnpm electron:compile && concurrently \"pnpm dev\" \"wait-on http://localhost:3847 && electron .\"",
-    "electron:build": "pnpm build && pnpm electron:compile && electron-builder",
-    "electron:build:mac": "pnpm build && pnpm electron:compile && electron-builder --mac",
-    "electron:build:win": "pnpm build && pnpm electron:compile && electron-builder --win",
-    "electron:dist": "pnpm build && pnpm electron:compile && electron-builder --mac --win",
+    "desktop:prepare": "node scripts/desktop/prepare.mjs",
+    "electron:dev": "pnpm desktop:prepare && concurrently -k \"pnpm dev\" \"wait-on http://localhost:3847 && electron desktop-app\"",
+    "electron:build:mac": "pnpm desktop:prepare && electron-builder --mac --config electron-builder.config.cjs --publish never",
+    "electron:build:win": "pnpm desktop:prepare && electron-builder --win --config electron-builder.config.cjs --publish never",
     "electron:icons": "electron-icon-builder --input=assets/icon.png --output=assets"
   },
   "dependencies": {
@@ -58,8 +55,6 @@
     "date-fns": "^4.1.0",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
-    "electron-store": "^8.0.0",
-    "electron-updater": "^6.0.0",
     "exceljs": "^4.4.0",
     "groq-sdk": "^1.2.1",
     "lucide-react": "^1.14.0",
@@ -84,7 +79,6 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
-    "@electron/notarize": "^2.0.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -94,9 +88,8 @@
     "babel-plugin-react-compiler": "1.0.0",
     "concurrently": "^8.0.0",
     "drizzle-kit": "^0.31.10",
-    "electron": "^31.0.0",
-    "electron-builder": "^24.0.0",
-    "electron-devtools-installer": "^3.2.0",
+    "electron": "^44.5.1",
+    "electron-builder": "^26.15.3",
     "electron-icon-builder": "^2.0.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",

@@ -2,6 +2,11 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
+/* App desktop (Electron) — attributi impostati su <html> da layout.tsx.
+   desktop: = macOS + Windows · mac: = solo macOS · win: = solo Windows */
+@custom-variant desktop (&:where([data-shell="desktop"], [data-shell="desktop"] *));
+@custom-variant mac (&:where([data-platform="mac"], [data-platform="mac"] *));
+@custom-variant win (&:where([data-platform="win"], [data-platform="win"] *));
 
 /* ─────────────────────────────────────────────────────────────────────────────
    DESIGN TOKENS — Dieffe Preventivi
@@ -157,19 +162,19 @@ body {
   );
 }
 
-/* Scrollbar styling */
-::-webkit-scrollbar {
+/* Scrollbar styling — non sull'app Mac, che usa le scrollbar overlay di sistema */
+:root:not([data-platform="mac"]) ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
-::-webkit-scrollbar-track {
+:root:not([data-platform="mac"]) ::-webkit-scrollbar-track {
   background: transparent;
 }
-::-webkit-scrollbar-thumb {
+:root:not([data-platform="mac"]) ::-webkit-scrollbar-thumb {
   background: var(--border);
   border-radius: 3px;
 }
-::-webkit-scrollbar-thumb:hover {
+:root:not([data-platform="mac"]) ::-webkit-scrollbar-thumb:hover {
   background: var(--muted-foreground);
 }
 
@@ -375,4 +380,95 @@ body {
   a, button, [role="button"] {
     -webkit-tap-highlight-color: transparent;
   }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   APP DESKTOP (Electron) — design distinto dal sito web.
+
+   Attivo solo quando <html data-shell="desktop">, cioè dentro l'app scaricabile
+   (vedi electron/main.ts). Il sito web non è toccato.
+
+   macOS: finestra con barra integrata. La sidebar è trasparente sopra il
+   materiale di sistema (vibrancy "sidebar" di NSVisualEffectView); il
+   contenuto vive in un pannello arrotondato staccato dai bordi della finestra.
+   Radius annidati:  finestra (~24px) − margine 8px → pannello 16px
+                     pannello 16px  − padding 4px  → elementi interni 12px
+   ───────────────────────────────────────────────────────────────────────────── */
+
+[data-shell="desktop"] {
+  --desk-gap: 0.5rem;          /* 8px  — distanza pannello ↔ bordo finestra */
+  --desk-radius: 1rem;         /* 16px — pannello contenuti                  */
+  --desk-titlebar-h: 3.25rem;  /* 52px — altezza barra integrata             */
+  overscroll-behavior: none;
+}
+
+/* Font di sistema (SF Pro su Mac, Segoe UI Variable su Windows) */
+[data-shell="desktop"] body {
+  --font-inter: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text",
+    "Segoe UI", system-ui, sans-serif;
+  font-feature-settings: normal;
+  overscroll-behavior: none;
+}
+
+/* Comportamento da app, non da pagina web: niente cursore "manina" sui
+   controlli e niente selezione accidentale del testo dell'interfaccia. */
+[data-shell="desktop"] :is(button, [role="button"], [role="menuitem"], [role="menuitemradio"],
+  [role="menuitemcheckbox"], [role="option"], [role="tab"], [role="switch"], [role="checkbox"],
+  summary, label, aside a) {
+  cursor: default;
+}
+[data-shell="desktop"] :is(aside, header, nav, button, [role="menuitem"], [role="tab"], label) {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ── macOS: superfici ──────────────────────────────────────────────────────── */
+[data-platform="mac"],
+[data-platform="mac"] body {
+  background: transparent;
+}
+[data-platform="mac"] {
+  --sidebar-bg: transparent;
+  --sidebar-border: transparent;
+}
+
+/* Barra integrata: trascina la finestra; i controlli restano cliccabili. */
+[data-platform="mac"] .desktop-titlebar {
+  -webkit-app-region: drag;
+}
+[data-platform="mac"] .desktop-titlebar :is(button, a, input, select, textarea, [role="button"], [data-no-drag]) {
+  -webkit-app-region: no-drag;
+}
+/* Pagine senza sidebar/header (login, errori): striscia trascinabile in alto. */
+[data-platform="mac"] .desktop-drag-strip {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: var(--desk-titlebar-h);
+  -webkit-app-region: drag;
+  z-index: 1;
+}
+
+/* Pannello contenuti: carta opaca staccata dalla finestra, come Mail/Note. */
+[data-platform="mac"] .desktop-panel {
+  margin: var(--desk-gap) var(--desk-gap) var(--desk-gap) 0;
+  border-radius: var(--desk-radius);
+  background: var(--background);
+  box-shadow:
+    0 0 0 0.5px rgb(0 0 0 / 0.10),
+    0 1px 2px rgb(0 0 0 / 0.04),
+    0 4px 16px rgb(0 0 0 / 0.04);
+}
+[data-platform="mac"].dark .desktop-panel {
+  box-shadow:
+    0 0 0 0.5px rgb(255 255 255 / 0.09),
+    0 1px 2px rgb(0 0 0 / 0.3),
+    0 8px 24px rgb(0 0 0 / 0.25);
+}
+
+/* Sidebar Mac senza linee di separazione (come Finder/Mail): il materiale di
+   sistema e il pannello bastano a separare le aree. Regola fuori dai layer
+   perché "* { border-color }" qui sopra vincerebbe sulle utility. */
+[data-platform="mac"] aside,
+[data-platform="mac"] aside > div {
+  border-color: transparent;
 }

@@ -34,7 +34,7 @@ export function Header({ userName, userEmail, title, onMenuClick }: HeaderProps)
   const ThemeIcon = theme === "dark" ? Moon : theme === "light" ? Sun : Monitor;
 
   return (
-    <header className="flex items-center justify-between h-14 px-4 md:px-6 border-b bg-background/80 backdrop-blur-md sticky top-0 z-20 shrink-0">
+    <header className="desktop-titlebar flex items-center justify-between h-14 px-4 md:px-6 border-b bg-background/80 backdrop-blur-md sticky top-0 z-20 shrink-0 mac:h-[var(--desk-titlebar-h)] mac:px-5 mac:bg-transparent mac:backdrop-blur-none mac:border-border/60">
       <div className="flex items-center gap-3">
         {/* Hamburger — visible only on mobile */}
         <Button
@@ -47,7 +47,7 @@ export function Header({ userName, userEmail, title, onMenuClick }: HeaderProps)
           <Menu className="h-5 w-5" />
         </Button>
 
-        <div className="text-sm font-medium text-foreground">
+        <div className="text-sm font-medium text-foreground mac:font-semibold mac:text-[13px]">
           {title ?? "Dieffe Ristrutturazioni"}
         </div>
       </div>

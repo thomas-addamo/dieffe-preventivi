@@ -47,7 +47,7 @@ async function seed() {
   await db.insert(companySettings).values({
     companyName: "Dieffe Ristrutturazioni",
     address: "Via Pastrengo 21, 10024 Moncalieri (TO)",
-    vatNumber: "IT10908150013",
+    vatNumber: "IT13460330015",
     email: "impresa.dieffe@gmail.com",
     phone: "+39 011 000 0000",
     website: "diefferistrutturazioni.it",

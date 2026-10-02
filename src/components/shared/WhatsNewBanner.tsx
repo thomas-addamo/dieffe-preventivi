@@ -3,7 +3,9 @@
 import { useSyncExternalStore } from "react";
 import {
   FileText,
+  Keyboard,
   LayoutPanelLeft,
+  Monitor,
   Settings2,
   ShieldCheck,
   Sparkles,
@@ -29,6 +31,8 @@ const ICONS: Record<ChangelogIcon, LucideIcon> = {
   sparkles: Sparkles,
   shield: ShieldCheck,
   zap: Zap,
+  desktop: Monitor,
+  keyboard: Keyboard,
 };
 
 function readDismissed(): string | null {

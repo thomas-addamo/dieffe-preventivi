@@ -1,184 +1,238 @@
-import { app, BrowserWindow, shell, ipcMain, Menu } from 'electron';
+import { app, BrowserWindow, ipcMain, nativeTheme, net, session, shell } from 'electron';
 import { join } from 'path';
-import Store from 'electron-store';
-import { setupOfflineCache } from './offline';
-import { setupAutoUpdater, installUpdate } from './updater';
+import {
+  APP_URL,
+  RELEASES_URL,
+  SHELL_PLATFORM,
+  START_PATH,
+  WEBSITE_URL,
+  isAppUrl,
+  isDev,
+  isMac,
+  isWindows,
+} from './config';
+import { loadWindowState, trackWindowState } from './window-state';
+import { buildAppMenu, navigate } from './menu';
+import { attachContextMenu } from './context-menu';
+import { checkForUpdatesInteractive, getKnownUpdate, startUpdateChecks } from './updates';
 
-const store = new Store();
-// In sviluppo l'app NON è pacchettizzata: idioma Electron più affidabile di NODE_ENV.
-const isDev = !app.isPackaged;
-const NEXT_URL = isDev ? 'http://localhost:3847' : 'https://dieffe-preventivi.vercel.app';
+// ─────────────────────────────────────────────────────────────────────────────
+// Dieffe Preventivi — app desktop (macOS / Windows)
+//
+// Wrapper della web app pubblicata. Aggiunge ciò che il browser non può dare:
+// finestra nativa con barra integrata e materiali di sistema (vibrancy su
+// macOS, Mica su Windows 11), menu e scorciatoie, menu contestuale, badge
+// nel Dock, dialog di sistema, pagina offline.
+//
+// La web app riconosce questa shell dallo User-Agent ("DieffeDesktop/x.y.z
+// (mac|win)") e applica il proprio design desktop (vedi globals.css).
+// ─────────────────────────────────────────────────────────────────────────────
+
+app.setName('Dieffe Preventivi');
+app.userAgentFallback = `${app.userAgentFallback} DieffeDesktop/${app.getVersion()} (${SHELL_PLATFORM})`;
 
 let mainWindow: BrowserWindow | null = null;
+const getWindow = () => (mainWindow && !mainWindow.isDestroyed() ? mainWindow : null);
+
+// Una sola istanza: un secondo avvio riporta in primo piano la finestra esistente.
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+}
+app.on('second-instance', () => {
+  const win = getWindow();
+  if (!win) return;
+  if (win.isMinimized()) win.restore();
+  win.show();
+  win.focus();
+});
+
+function offlinePageUrl(target: string) {
+  const file = join(__dirname, 'offline.html');
+  return `file://${file}?target=${encodeURIComponent(target)}`;
+}
 
 function createWindow() {
-  // Dimensioni salvate dalla sessione precedente
-  const windowBounds = store.get('windowBounds', {
-    width: 1280,
-    height: 800,
-    x: undefined,
-    y: undefined,
-  }) as { width: number; height: number; x?: number; y?: number };
+  const state = loadWindowState();
 
-  mainWindow = new BrowserWindow({
-    width: windowBounds.width,
-    height: windowBounds.height,
-    x: windowBounds.x,
-    y: windowBounds.y,
-    minWidth: 800,
-    minHeight: 600,
+  const win = new BrowserWindow({
+    width: state.width,
+    height: state.height,
+    x: state.x,
+    y: state.y,
+    // Sotto i 1024px la web app passa al layout da telefono: non serve in una finestra desktop.
+    minWidth: 1040,
+    minHeight: 640,
     title: 'Dieffe Preventivi',
-    // Icona app
-    icon: join(__dirname, '../assets/icon.png'),
+    show: false,
+    ...(isMac
+      ? {
+          // Barra del titolo integrata: i semafori stanno nella sidebar, come in Note/Mail.
+          titleBarStyle: 'hiddenInset' as const,
+          trafficLightPosition: { x: 18, y: 18 },
+          // Materiale di sistema dietro la sidebar (NSVisualEffectView).
+          vibrancy: 'sidebar' as const,
+          visualEffectState: 'followWindow' as const,
+          backgroundColor: '#00000000',
+        }
+      : {
+          backgroundMaterial: 'mica' as const,
+          backgroundColor: '#f7f8fa',
+          autoHideMenuBar: false,
+          icon: join(__dirname, 'icon.png'),
+        }),
     webPreferences: {
       preload: join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: true,
       webSecurity: true,
+      spellcheck: true,
+      plugins: true, // visore PDF integrato
     },
-    // Title bar nativa standard: aggiunge in alto una barra trascinabile e tiene i
-    // semafori (rosso/giallo/verde) nel loro spazio, senza sovrapporsi al contenuto.
-    // (hiddenInset li faceva finire sopra logo/testi della web app caricata.)
-    titleBarStyle: 'default',
-    backgroundColor: '#ffffff',
-    show: false, // mostra solo quando pronto
+  });
+  mainWindow = win;
+
+  if (state.maximized) win.maximize();
+  trackWindowState(win);
+  attachContextMenu(win);
+
+  win.loadURL(new URL(START_PATH, APP_URL).toString());
+  win.once('ready-to-show', () => win.show());
+
+  // Rete assente o server irraggiungibile → pagina offline locale (con riprova automatica).
+  win.webContents.on('did-fail-load', (_e, errorCode, _desc, validatedURL, isMainFrame) => {
+    // -3 = navigazione annullata (normale durante i redirect)
+    if (!isMainFrame || errorCode === -3 || !validatedURL.startsWith('http')) return;
+    win.loadURL(offlinePageUrl(validatedURL));
   });
 
-  // Carica l'app
-  mainWindow.loadURL(NEXT_URL);
+  // Dopo ogni caricamento ripropone l'eventuale aggiornamento già trovato.
+  win.webContents.on('did-finish-load', () => {
+    const update = getKnownUpdate();
+    if (update) win.webContents.send('update-available', update);
+  });
 
-  // Mostra finestra quando pronta (evita flash bianco)
-  mainWindow.once('ready-to-show', () => {
-    mainWindow?.show();
+  // Navigazione: dentro l'app solo la web app; tutto il resto nel browser.
+  win.webContents.on('will-navigate', (event, url) => {
+    if (isAppUrl(url) || url.startsWith('file://')) return;
+    event.preventDefault();
+    if (/^(https?|mailto|tel):/.test(url)) shell.openExternal(url);
+  });
 
-    // Controlla aggiornamenti (solo in produzione)
-    if (!isDev) {
-      setupAutoUpdater(mainWindow!);
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    // Anteprime della web app (es. PDF): finestra figlia standard.
+    if (isAppUrl(url)) {
+      return {
+        action: 'allow',
+        overrideBrowserWindowOptions: {
+          width: 980,
+          height: 860,
+          titleBarStyle: 'default',
+          vibrancy: undefined,
+          backgroundColor: '#ffffff',
+          // plugins: visore PDF integrato di Chromium
+          webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, plugins: true },
+        },
+      };
     }
+    if (/^(https?|mailto|tel):/.test(url)) shell.openExternal(url);
+    return { action: 'deny' };
   });
 
-  // Salva dimensioni finestra
-  mainWindow.on('close', () => {
-    if (mainWindow) {
-      store.set('windowBounds', mainWindow.getBounds());
+  // Gesti di navigazione: swipe a due dita (Mac) e tasti avanti/indietro del mouse (Windows).
+  win.on('swipe', (_e, direction) => {
+    const history = win.webContents.navigationHistory;
+    if (direction === 'right' && history.canGoBack()) history.goBack();
+    if (direction === 'left' && history.canGoForward()) history.goForward();
+  });
+  win.on('app-command', (_e, cmd) => {
+    const history = win.webContents.navigationHistory;
+    if (cmd === 'browser-backward' && history.canGoBack()) history.goBack();
+    if (cmd === 'browser-forward' && history.canGoForward()) history.goForward();
+  });
+
+  // Stato connessione per il banner offline della web app.
+  let online = net.isOnline();
+  const poll = setInterval(() => {
+    const now = net.isOnline();
+    if (now !== online) {
+      online = now;
+      win.webContents.send('online-status-changed', online);
     }
-  });
+  }, 5000);
 
-  // Link esterni si aprono nel browser di sistema
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith('https://') && !url.includes('dieffe-preventivi.vercel.app')) {
-      shell.openExternal(url);
-      return { action: 'deny' };
-    }
-    return { action: 'allow' };
+  win.on('closed', () => {
+    clearInterval(poll);
+    if (mainWindow === win) mainWindow = null;
   });
-
-  // Gestione offline
-  setupOfflineCache(mainWindow);
 }
 
-// Menu applicazione macOS
-function createMenu() {
-  const template: Electron.MenuItemConstructorOptions[] = [
-    {
-      label: 'Dieffe Preventivi',
-      submenu: [
-        { label: 'Informazioni su Dieffe Preventivi', role: 'about' },
-        { type: 'separator' },
-        {
-          label: 'Preferenze...',
-          accelerator: 'Cmd+,',
-          click: () => {
-            mainWindow?.loadURL(`${NEXT_URL}/impostazioni`);
-          },
-        },
-        { type: 'separator' },
-        { label: 'Nascondi', role: 'hide' },
-        { label: 'Nascondi altre', role: 'hideOthers' },
-        { type: 'separator' },
-        { label: 'Esci', role: 'quit' },
-      ],
-    },
-    {
-      label: 'File',
-      submenu: [
-        {
-          label: 'Nuovo preventivo',
-          accelerator: 'CmdOrCtrl+N',
-          click: () => {
-            mainWindow?.loadURL(`${NEXT_URL}/preventivi/nuovo`);
-          },
-        },
-        {
-          label: 'Dashboard',
-          accelerator: 'CmdOrCtrl+D',
-          click: () => {
-            mainWindow?.loadURL(`${NEXT_URL}/dashboard`);
-          },
-        },
-        { type: 'separator' },
-        { label: 'Chiudi finestra', role: 'close' },
-      ],
-    },
-    {
-      label: 'Modifica',
-      submenu: [
-        { role: 'undo', label: 'Annulla' },
-        { role: 'redo', label: 'Ripristina' },
-        { type: 'separator' },
-        { role: 'cut', label: 'Taglia' },
-        { role: 'copy', label: 'Copia' },
-        { role: 'paste', label: 'Incolla' },
-        { role: 'selectAll', label: 'Seleziona tutto' },
-      ],
-    },
-    {
-      label: 'Visualizza',
-      submenu: [
-        { role: 'reload', label: 'Ricarica' },
-        { role: 'toggleDevTools', label: 'Strumenti sviluppatore' },
-        { type: 'separator' },
-        { role: 'resetZoom', label: 'Dimensione originale' },
-        { role: 'zoomIn', label: 'Ingrandisci' },
-        { role: 'zoomOut', label: 'Riduci' },
-        { type: 'separator' },
-        { role: 'togglefullscreen', label: 'Schermo intero' },
-      ],
-    },
-    {
-      label: 'Finestra',
-      submenu: [
-        { role: 'minimize', label: 'Minimizza' },
-        { role: 'zoom', label: 'Zoom' },
-        { type: 'separator' },
-        { role: 'front', label: 'Porta in primo piano' },
-      ],
-    },
-  ];
+function configureSession() {
+  const ses = session.defaultSession;
 
-  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+  // Permessi minimi: notifiche, appunti in scrittura e schermo intero.
+  const allowed = new Set(['notifications', 'clipboard-sanitized-write', 'fullscreen']);
+  ses.setPermissionRequestHandler((wc, permission, callback) => {
+    callback(allowed.has(permission) && isAppUrl(wc.getURL()));
+  });
+  ses.setPermissionCheckHandler((_wc, permission, origin) => allowed.has(permission) && isAppUrl(origin));
+
+  // macOS usa il correttore di sistema; su Windows impostiamo l'italiano.
+  if (!isMac) ses.setSpellCheckerLanguages(['it-IT']);
 }
+
+app.setAboutPanelOptions({
+  applicationName: 'Dieffe Preventivi',
+  applicationVersion: app.getVersion(),
+  version: '',
+  copyright: `© ${new Date().getFullYear()} Dieffe Ristrutturazioni`,
+  credits: 'Gestione preventivi edili.',
+  website: WEBSITE_URL,
+});
 
 app.whenReady().then(() => {
-  createMenu();
+  if (isWindows) app.setAppUserModelId('it.impresadieffe.preventivi');
+  configureSession();
+  buildAppMenu(getWindow);
   createWindow();
+  if (!isDev) startUpdateChecks(getWindow);
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (!getWindow()) createWindow();
+    else getWindow()!.show();
   });
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
+  if (!isMac) app.quit();
 });
 
-// IPC handlers
+// ─── IPC (vedi preload.ts) ───────────────────────────────────────────────────
+
 ipcMain.handle('get-app-version', () => app.getVersion());
-ipcMain.handle('open-external', (_, url: string) => shell.openExternal(url));
 ipcMain.handle('get-platform', () => process.platform);
 
-// Riavvio per installare l'aggiornamento scaricato (richiesto dal preload).
-// Su macOS usa l'updater custom (swap del bundle), su Windows electron-updater.
-ipcMain.on('install-update', () => {
-  installUpdate();
+// Solo protocolli sicuri: la pagina non può far aprire file o app arbitrarie.
+ipcMain.handle('open-external', (_e, url: unknown) => {
+  if (typeof url === 'string' && /^(https?|mailto|tel):/.test(url)) return shell.openExternal(url);
+});
+
+// Tema scelto nella web app → materiali e controlli nativi coerenti.
+ipcMain.on('set-theme', (_e, theme: unknown) => {
+  if (theme === 'light' || theme === 'dark' || theme === 'system') nativeTheme.themeSource = theme;
+});
+
+// Notifiche non lette → badge sull'icona del Dock / barra applicazioni.
+ipcMain.on('set-badge-count', (_e, count: unknown) => {
+  const n = typeof count === 'number' && Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0;
+  app.setBadgeCount(n);
+});
+
+ipcMain.handle('check-for-updates', () => checkForUpdatesInteractive(getWindow()));
+ipcMain.handle('get-known-update', () => getKnownUpdate());
+ipcMain.on('open-releases', () => shell.openExternal(RELEASES_URL));
+
+// Usato dai menu quando la pagina chiede di aprire una sezione.
+ipcMain.on('navigate', (_e, path: unknown) => {
+  if (typeof path === 'string' && path.startsWith('/')) navigate(getWindow(), path);
 });

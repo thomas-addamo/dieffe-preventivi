@@ -27,6 +27,13 @@ import { APP_VERSION } from "@/lib/version";
 
 const GITHUB_URL = "https://github.com/thomas-addamo/dieffe-preventivi";
 const RELEASES_URL = `${GITHUB_URL}/releases/latest`;
+// Nomi stabili definiti in electron-builder.config.cjs (artifactName)
+const DL = `${RELEASES_URL}/download`;
+const DOWNLOADS = {
+  macArm: `${DL}/Dieffe-Preventivi-mac-arm64.dmg`,
+  macIntel: `${DL}/Dieffe-Preventivi-mac-x64.dmg`,
+  win: `${DL}/Dieffe-Preventivi-Setup-x64.exe`,
+};
 
 /* ── Icone brand (inline) ────────────────────────────────────────────────── */
 function AppleIcon({ className }: { className?: string }) {
@@ -79,7 +86,7 @@ const FEATURES = [
   { icon: Sparkles, color: "bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400", title: "AI integrata", body: "Descrizioni professionali e suggerimenti di prezzo generati dall'intelligenza artificiale." },
   { icon: BarChart3, color: "bg-green-50 text-green-600 dark:bg-green-500/10 dark:text-green-400", title: "SAL e avanzamento", body: "Traccia lo stato di ogni cantiere e le milestone di pagamento, sempre aggiornate." },
   { icon: ShieldCheck, color: "bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400", title: "3 livelli di accesso", body: "Admin, Editor e Viewer. Ogni membro del team vede solo quello che deve vedere." },
-  { icon: MonitorSmartphone, color: "bg-sky-50 text-sky-600 dark:bg-sky-500/10 dark:text-sky-400", title: "Desktop + Browser", body: "App nativa per macOS e Windows, con aggiornamenti automatici. E sempre dal browser." },
+  { icon: MonitorSmartphone, color: "bg-sky-50 text-sky-600 dark:bg-sky-500/10 dark:text-sky-400", title: "Desktop + Browser", body: "App nativa per macOS e Windows, con menu e scorciatoie di sistema. E sempre dal browser." },
 ];
 
 const STEPS = [
@@ -316,30 +323,82 @@ export function LandingClient() {
         <div className="reveal-on-scroll mx-auto mb-10 max-w-2xl text-center">
           <p className="mb-2 text-sm font-semibold text-primary">Download</p>
           <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">Scarica l&apos;app.</h2>
-          <p className="mt-3 text-muted-foreground">Per macOS e Windows. Sempre aggiornata automaticamente.</p>
+          <p className="mt-3 text-muted-foreground">Per macOS e Windows. L&apos;interfaccia si aggiorna da sola, ogni giorno.</p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          {[
-            { Icon: AppleIcon, title: "Dieffe per Mac", sub: "Intel & Apple Silicon", btn: "Scarica .dmg", req: "macOS 12+", iconCls: "h-9 w-9" },
-            { Icon: WindowsIcon, title: "Dieffe per Windows", sub: "x64", btn: "Scarica .exe", req: "Windows 10+", iconCls: "h-8 w-8" },
-          ].map((d) => (
-            <div key={d.title} className="reveal-on-scroll flex flex-col items-center rounded-2xl border bg-card p-8 text-center shadow-2xs transition-shadow hover:shadow-md">
-              <d.Icon className={cn("mb-4 text-foreground", d.iconCls)} />
-              <h3 className="text-lg font-semibold tracking-tight">{d.title}</h3>
-              <p className="mt-1 text-sm text-muted-foreground">{d.sub}</p>
-              <Button asChild className="mt-5">
-                <a href={RELEASES_URL} target="_blank" rel="noopener noreferrer">
-                  <Download className="h-4 w-4" /> {d.btn}
+          {/* Mac: due pacchetti (Apple Silicon / Intel) */}
+          <div className="reveal-on-scroll flex flex-col items-center rounded-2xl border bg-card p-8 text-center shadow-2xs transition-shadow hover:shadow-md">
+            <AppleIcon className="mb-4 h-9 w-9 text-foreground" />
+            <h3 className="text-lg font-semibold tracking-tight">Dieffe per Mac</h3>
+            <p className="mt-1 text-sm text-muted-foreground">Design nativo macOS</p>
+            <div className="mt-5 flex flex-wrap justify-center gap-2">
+              <Button asChild>
+                <a href={DOWNLOADS.macArm}>
+                  <Download className="h-4 w-4" /> Apple Silicon
                 </a>
               </Button>
-              <p className="mt-3 text-xs text-muted-foreground">v{APP_VERSION} · Richiede {d.req}</p>
+              <Button asChild variant="outline">
+                <a href={DOWNLOADS.macIntel}>Intel</a>
+              </Button>
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">v{APP_VERSION} · Richiede macOS 12+ · Chip M1 o successivi → Apple Silicon</p>
+          </div>
+          <div className="reveal-on-scroll flex flex-col items-center rounded-2xl border bg-card p-8 text-center shadow-2xs transition-shadow hover:shadow-md">
+            <WindowsIcon className="mb-4 h-8 w-8 text-foreground" />
+            <h3 className="text-lg font-semibold tracking-tight">Dieffe per Windows</h3>
+            <p className="mt-1 text-sm text-muted-foreground">Installer x64</p>
+            <Button asChild className="mt-5">
+              <a href={DOWNLOADS.win}>
+                <Download className="h-4 w-4" /> Scarica .exe
+              </a>
+            </Button>
+            <p className="mt-3 text-xs text-muted-foreground">v{APP_VERSION} · Richiede Windows 10+</p>
+          </div>
+        </div>
+
+        {/* Primo avvio: l'app non è ancora notarizzata da Apple / firmata Microsoft */}
+        <div className="reveal-on-scroll mt-6 grid gap-4 sm:grid-cols-2">
+          {[
+            {
+              title: "Primo avvio su Mac",
+              steps: [
+                "Apri il .dmg e trascina Dieffe Preventivi in Applicazioni.",
+                "Aprila: macOS avvisa che non può verificare lo sviluppatore. Premi Fine.",
+                "Vai in Impostazioni di Sistema → Privacy e sicurezza e premi «Apri comunque».",
+              ],
+            },
+            {
+              title: "Primo avvio su Windows",
+              steps: [
+                "Avvia l’installer scaricato.",
+                "Se compare «Windows ha protetto il PC», premi «Ulteriori informazioni».",
+                "Premi «Esegui comunque» e completa l’installazione.",
+              ],
+            },
+          ].map((g) => (
+            <div key={g.title} className="rounded-2xl border bg-muted/40 p-1.5">
+              <div className="rounded-[14px] bg-card px-5 py-4">
+                <h4 className="text-sm font-semibold">{g.title}</h4>
+                <ol className="mt-2 space-y-1.5 text-sm text-muted-foreground">
+                  {g.steps.map((st, i) => (
+                    <li key={i} className="flex gap-2.5">
+                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">{i + 1}</span>
+                      <span>{st}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
             </div>
           ))}
         </div>
+        <p className="mt-3 text-center text-xs text-muted-foreground">
+          Serve solo la prima volta. Le nuove versioni vengono segnalate direttamente nell&apos;app.
+        </p>
+
         <div className="mt-10 flex flex-col items-center gap-4">
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
-            <span className="inline-flex items-center gap-1.5"><Check className="h-4 w-4 text-green-600" /> Aggiornamenti automatici</span>
-            <span className="inline-flex items-center gap-1.5"><Check className="h-4 w-4 text-green-600" /> Funziona offline</span>
+            <span className="inline-flex items-center gap-1.5"><Check className="h-4 w-4 text-green-600" /> Interfaccia sempre aggiornata</span>
+            <span className="inline-flex items-center gap-1.5"><Check className="h-4 w-4 text-green-600" /> Menu e scorciatoie di sistema</span>
             <span className="inline-flex items-center gap-1.5"><Check className="h-4 w-4 text-green-600" /> Nessun abbonamento</span>
           </div>
           <Button asChild variant="ghost" size="sm">
