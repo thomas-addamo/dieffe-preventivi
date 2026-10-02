@@ -34,6 +34,28 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.13.1",
+    date: "2026-10-02",
+    headline: "Rifiniture e correzioni.",
+    highlights: [
+      {
+        icon: "sparkles",
+        title: "Notifiche ridisegnate",
+        description: "Nuova card per le notifiche in arrivo, con contorni puliti su computer e telefono.",
+      },
+      {
+        icon: "desktop",
+        title: "Tema sempre allineato",
+        description: "Con il tema «Sistema» l'app passa da chiaro a scuro insieme al computer, senza ricaricare.",
+      },
+      {
+        icon: "layout",
+        title: "Impostazioni stabili",
+        description: "Corretto lo scorrimento che portava la pagina troppo in basso.",
+      },
+    ],
+  },
+  {
     version: "3.13.0",
     date: "2026-10-02",
     headline: "La nuova app per Mac e Windows.",

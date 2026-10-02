@@ -3,10 +3,8 @@
 import { useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { X } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
-import { getNotificationMeta } from "@/lib/notification-meta";
+import { NotificationCard } from "@/components/shared/NotificationCard";
 import { isDesktopApp, showDesktopNotification } from "@/lib/desktop-notifications";
 
 type NotificationItem = {
@@ -104,66 +102,27 @@ export function NotificationToaster() {
         showDesktopNotification(n.title, n.body, () => handleClick(n));
       }
 
-      const meta = getNotificationMeta(n.type);
-      const Icon = meta.icon;
-      const isFeature = n.type === "feature";
-
       toast.custom(
         (id) => (
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={() => {
+          <NotificationCard
+            type={n.type}
+            title={n.title}
+            body={n.body}
+            hasLink={!!n.link}
+            onOpen={() => {
               toast.dismiss(id);
               handleClick(n);
             }}
-            className={cn(
-              "group w-full max-w-[380px] flex items-start gap-3 rounded-2xl border p-3.5 text-left",
-              "cursor-pointer bg-background/95 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)]",
-              "border-border/60 transition active:scale-[.98]",
-              isFeature &&
-                "bg-gradient-to-br from-violet-500/[0.12] to-fuchsia-500/[0.06] border-violet-500/40"
-            )}
-          >
-            <span
-              className={cn(
-                "mt-0.5 w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
-                meta.iconClass
-              )}
-            >
-              <Icon className="h-[18px] w-[18px]" />
-            </span>
-            <span className="flex-1 min-w-0">
-              {isFeature && (
-                <span className="inline-flex items-center gap-1 mb-1 rounded-full bg-violet-500/15 text-violet-600 dark:text-violet-300 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5">
-                  ✨ Novità
-                </span>
-              )}
-              <span className="block text-[15px] font-semibold leading-snug break-words">
-                {n.title}
-              </span>
-              {n.body && (
-                <span className="block text-[13px] text-muted-foreground mt-0.5 line-clamp-3 break-words">
-                  {n.body}
-                </span>
-              )}
-            </span>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                toast.dismiss(id);
-              }}
-              className="-m-1 p-1 rounded-md text-muted-foreground/40 hover:text-foreground shrink-0 transition-colors"
-              aria-label="Chiudi"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
+            onClose={() => toast.dismiss(id)}
+          />
         ),
         {
           position: "top-right",
-          duration: isFeature ? 12_000 : 8_000,
+          duration: n.type === "feature" ? 12_000 : 8_000,
+          // Nessuno stile del toast di base: la card ha già bordo, raggio e ombra
+          // (prima appariva un rettangolo attorno alla card arrotondata).
+          unstyled: true,
+          className: "!bg-transparent !border-0 !shadow-none !p-0",
         }
       );
     }

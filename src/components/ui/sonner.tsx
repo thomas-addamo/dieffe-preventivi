@@ -19,6 +19,14 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
+      style={{ "--width": "380px" } as React.CSSProperties}
+      // iPhone (app installata): sotto tacca / Dynamic Island e sopra la tab bar
+      mobileOffset={{
+        top: "calc(env(safe-area-inset-top, 0px) + 10px)",
+        bottom: "calc(env(safe-area-inset-bottom, 0px) + 76px)",
+        left: "12px",
+        right: "12px",
+      }}
       icons={{
         success: <CircleCheck className="h-4 w-4" />,
         info: <Info className="h-4 w-4" />,
@@ -28,8 +36,10 @@ const Toaster = ({ ...props }: ToasterProps) => {
       }}
       toastOptions={{
         classNames: {
+          // Solo i toast "standard" (data-styled=true): le card personalizzate
+          // (es. NotificationCard) gestiscono da sole sfondo, bordo e raggio.
           toast:
-            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
+            "group toast group-[.toaster]:data-[styled=true]:bg-popover group-[.toaster]:data-[styled=true]:text-popover-foreground group-[.toaster]:data-[styled=true]:border-border/70 group-[.toaster]:data-[styled=true]:rounded-xl group-[.toaster]:data-[styled=true]:shadow-lg",
           description: "group-[.toast]:text-muted-foreground",
           actionButton:
             "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",

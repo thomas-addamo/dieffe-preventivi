@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { NotificationCard } from "@/components/shared/NotificationCard";
 import {
   ADMIN_NOTIFICATION_TYPES,
   ADMIN_TYPE_DESCRIPTION,
@@ -45,8 +46,6 @@ export function ComposeNotificationClient({
   const [target, setTarget] = useState("all");
   const [sending, setSending] = useState(false);
 
-  const meta = NOTIFICATION_META[type];
-  const PreviewIcon = meta.icon;
   const isFeature = type === "feature";
 
   async function send() {
@@ -239,38 +238,13 @@ export function ComposeNotificationClient({
         {/* Anteprima */}
         <div className="space-y-2">
           <Label className="text-muted-foreground">Anteprima</Label>
-          <div
-            className={cn(
-              "flex items-start gap-3 rounded-xl border p-3.5 shadow-sm",
-              meta.accentClass,
-              isFeature &&
-                "bg-gradient-to-br from-violet-500/[0.10] to-fuchsia-500/[0.06] border-violet-500/40"
-            )}
-          >
-            <span
-              className={cn(
-                "mt-0.5 w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
-                meta.iconClass
-              )}
-            >
-              <PreviewIcon className="h-4 w-4" />
-            </span>
-            <div className="flex-1 min-w-0">
-              {isFeature && (
-                <span className="inline-flex items-center gap-1 mb-1 rounded-full bg-violet-500/15 text-violet-600 dark:text-violet-300 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5">
-                  ✨ Novità
-                </span>
-              )}
-              <p className="text-sm font-semibold leading-snug break-words">
-                {title.trim() || "Titolo della notifica"}
-              </p>
-              {(body.trim() || !title.trim()) && (
-                <p className="text-xs text-muted-foreground mt-0.5 break-words line-clamp-4">
-                  {body.trim() || "Il testo della notifica apparirà qui."}
-                </p>
-              )}
-            </div>
-          </div>
+          <NotificationCard
+            type={type}
+            title={title.trim() || "Titolo della notifica"}
+            body={body.trim() || (!title.trim() ? "Il testo della notifica apparirà qui." : null)}
+            hasLink={!!link.trim()}
+            onClose={() => {}}
+          />
           <p className="text-[11px] text-muted-foreground">
             Comparirà come toast in alto a destra e resterà nel centro notifiche
             (campanella) di ogni destinatario.

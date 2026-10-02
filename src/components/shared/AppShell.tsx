@@ -92,7 +92,10 @@ export function AppShell({ children, userRole, userName, userEmail, trashCount =
 
           <main
             className={cn(
-              "bg-background lg:flex-1 lg:overflow-y-auto mac:bg-transparent",
+              // relative: gli input nascosti posizionati in assoluto (Radix
+              // Switch/Select dentro i form) restano dentro il contenitore che
+              // scorre, invece di allungare il documento e far "scappare" la pagina.
+              "relative bg-background lg:flex-1 lg:overflow-y-auto mac:bg-transparent",
               !immersive && "pb-tabbar lg:pb-0"
             )}
           >

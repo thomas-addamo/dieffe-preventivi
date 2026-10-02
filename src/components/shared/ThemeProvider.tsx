@@ -23,12 +23,18 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       root.classList.add("dark");
     } else if (theme === "light") {
       root.classList.remove("dark");
-    } else {
-      const mq = window.matchMedia("(prefers-color-scheme: dark)");
-      root.classList.toggle("dark", mq.matches);
     }
     // App desktop: materiali e controlli nativi (sidebar, menu) seguono il tema scelto.
     window.electron?.setTheme?.(theme);
+    if (theme !== "system") return;
+
+    // "Sistema": segue il sistema operativo anche quando cambia mentre l'app è aperta
+    // (prima veniva letto solo all'avvio: cambiava la finestra ma non il contenuto).
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const apply = () => root.classList.toggle("dark", mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
   }, [theme]);
 
   const setTheme = (t: Theme) => {
