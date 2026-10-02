@@ -36,7 +36,11 @@ module.exports = {
     icon: "assets/icon.icns",
     minimumSystemVersion: "12.0",
     darkModeSupport: true,
-    target: [{ target: "dmg", arch: ["arm64", "x64"] }],
+    // dmg = prima installazione · zip = aggiornamento automatico dall'app
+    target: [
+      { target: "dmg", arch: ["arm64", "x64"] },
+      { target: "zip", arch: ["arm64", "x64"] },
+    ],
     identity: hasAppleCert ? undefined : null,
     hardenedRuntime: hasAppleCert,
     notarize: hasAppleCert && canNotarize,

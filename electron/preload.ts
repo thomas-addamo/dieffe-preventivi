@@ -3,10 +3,14 @@ import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 // Ponte minimo e tipizzato tra la web app e il sistema (window.electron).
 // Tipi lato web in src/types/electron.d.ts — tenerli allineati.
 
-interface UpdateInfo {
-  version: string;
-  downloadUrl: string;
-  pageUrl: string;
+interface UpdateStatus {
+  state: 'idle' | 'downloading' | 'ready' | 'error';
+  version?: string;
+  progress?: number;
+  canAutoInstall?: boolean;
+  downloadUrl?: string;
+  pageUrl?: string;
+  error?: string;
 }
 
 function on<T extends unknown[]>(channel: string, callback: (...args: T) => void) {
@@ -32,9 +36,13 @@ contextBridge.exposeInMainWorld('electron', {
   onOnlineStatus: (callback: (isOnline: boolean) => void) => on('online-status-changed', callback),
 
   // Aggiornamenti dell'app desktop
-  onUpdateAvailable: (callback: (info: UpdateInfo) => void) => on('update-available', callback),
-  getKnownUpdate: () => ipcRenderer.invoke('get-known-update') as Promise<UpdateInfo | null>,
+  // (download in background → "Riavvia per aggiornare")
+  onUpdateStatus: (callback: (status: UpdateStatus) => void) => on('update-status', callback),
+  getUpdateStatus: () => ipcRenderer.invoke('get-update-status') as Promise<UpdateStatus>,
+  installUpdate: () => ipcRenderer.send('install-update'),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates') as Promise<void>,
+  // Compatibilità con la web app pubblicata prima di questa versione
+  onUpdateAvailable: (callback: (info: unknown) => void) => on('update-available', callback),
   openReleases: () => ipcRenderer.send('open-releases'),
 
   // Integrazione sistema

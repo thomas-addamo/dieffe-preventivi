@@ -34,6 +34,28 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.14.0",
+    date: "2026-10-02",
+    headline: "L'app si aggiorna da sola.",
+    highlights: [
+      {
+        icon: "zap",
+        title: "Aggiornamento automatico",
+        description: "Le nuove versioni si scaricano in background: un clic su «Riavvia» e l'app si aggiorna da sola.",
+      },
+      {
+        icon: "shield",
+        title: "Download verificato",
+        description: "Ogni aggiornamento è controllato con impronta digitale e firma prima dell'installazione.",
+      },
+      {
+        icon: "desktop",
+        title: "Nessuna reinstallazione",
+        description: "Niente più file da scaricare e trascinare: se chiudi l'app, l'aggiornamento si installa da solo.",
+      },
+    ],
+  },
+  {
     version: "3.13.1",
     date: "2026-10-02",
     headline: "Rifiniture e correzioni.",

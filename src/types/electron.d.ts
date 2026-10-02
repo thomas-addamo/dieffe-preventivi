@@ -11,6 +11,17 @@ export interface DesktopUpdateInfo {
   pageUrl: string;
 }
 
+/** Stato dell'aggiornamento automatico (wrapper ≥ 3.14). */
+export interface DesktopUpdateStatus {
+  state: "idle" | "downloading" | "ready" | "error";
+  version?: string;
+  progress?: number;
+  canAutoInstall?: boolean;
+  downloadUrl?: string;
+  pageUrl?: string;
+  error?: string;
+}
+
 export interface ElectronBridge {
   isElectron: boolean;
   shellVersion?: string | null;
@@ -21,6 +32,9 @@ export interface ElectronBridge {
   onOnlineStatus: (callback: (isOnline: boolean) => void) => () => void;
   onUpdateAvailable: (callback: (info?: DesktopUpdateInfo) => void) => () => void;
   getKnownUpdate?: () => Promise<DesktopUpdateInfo | null>;
+  onUpdateStatus?: (callback: (status: DesktopUpdateStatus) => void) => () => void;
+  getUpdateStatus?: () => Promise<DesktopUpdateStatus>;
+  installUpdate?: () => void;
   checkForUpdates?: () => Promise<void>;
   openReleases?: () => void;
   setTheme?: (theme: "light" | "dark" | "system") => void;

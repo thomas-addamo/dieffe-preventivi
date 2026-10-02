@@ -14,7 +14,13 @@ import {
 import { loadWindowState, trackWindowState } from './window-state';
 import { buildAppMenu, navigate } from './menu';
 import { attachContextMenu } from './context-menu';
-import { checkForUpdatesInteractive, getKnownUpdate, startUpdateChecks } from './updates';
+import {
+  checkForUpdatesInteractive,
+  getUpdateStatus,
+  installOnQuitIfReady,
+  quitAndInstall,
+  startUpdateChecks,
+} from './updates';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Dieffe Preventivi — app desktop (macOS / Windows)
@@ -106,10 +112,10 @@ function createWindow() {
     win.loadURL(offlinePageUrl(validatedURL));
   });
 
-  // Dopo ogni caricamento ripropone l'eventuale aggiornamento già trovato.
+  // Dopo ogni caricamento ripropone lo stato dell'aggiornamento (download, pronto…).
   win.webContents.on('did-finish-load', () => {
-    const update = getKnownUpdate();
-    if (update) win.webContents.send('update-available', update);
+    const update = getUpdateStatus();
+    if (update.state !== 'idle') win.webContents.send('update-status', update);
   });
 
   // Navigazione: dentro l'app solo la web app; tutto il resto nel browser.
@@ -203,6 +209,9 @@ app.whenReady().then(() => {
   });
 });
 
+// Aggiornamento scaricato e l'utente chiude l'app: lo installa ora, senza riaprirla.
+app.on('before-quit', () => installOnQuitIfReady());
+
 app.on('window-all-closed', () => {
   if (!isMac) app.quit();
 });
@@ -229,7 +238,8 @@ ipcMain.on('set-badge-count', (_e, count: unknown) => {
 });
 
 ipcMain.handle('check-for-updates', () => checkForUpdatesInteractive(getWindow()));
-ipcMain.handle('get-known-update', () => getKnownUpdate());
+ipcMain.handle('get-update-status', () => getUpdateStatus());
+ipcMain.on('install-update', () => quitAndInstall());
 ipcMain.on('open-releases', () => shell.openExternal(RELEASES_URL));
 
 // Usato dai menu quando la pagina chiede di aprire una sezione.

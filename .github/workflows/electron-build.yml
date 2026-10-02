@@ -73,6 +73,7 @@ jobs:
         with:
           files: |
             dist-electron/*.dmg
+            dist-electron/*.zip
             dist-electron/*.exe
           draft: false
           prerelease: false
