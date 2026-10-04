@@ -34,6 +34,23 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.15.3",
+    date: "2026-10-04",
+    headline: "Barra laterale al millimetro.",
+    highlights: [
+      {
+        icon: "layout",
+        title: "Tutto allineato",
+        description: "Margini uguali a destra e a sinistra, pulsante in alto sulla stessa colonna della freccia.",
+      },
+      {
+        icon: "desktop",
+        title: "Raggi annidati",
+        description: "Voci, freccia e pulsanti seguono gli angoli della finestra e delle voci che li contengono.",
+      },
+    ],
+  },
+  {
     version: "3.15.2",
     date: "2026-10-04",
     headline: "Barra laterale rifinita.",

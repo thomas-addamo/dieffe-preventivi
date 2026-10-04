@@ -537,52 +537,71 @@ body {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   BARRA LATERALE — misure (vedi Sidebar.tsx)
-   Compressa: larghezza = 2 × margine + lato del pulsante quadrato.
+   BARRA LATERALE — geometria (vedi Sidebar.tsx)
+
+   --sb-item         lato del pulsante quadrato (= altezza di ogni voce)
+   --sb-pad          margine laterale da COMPRESSA (centra i quadrati)
+   --sb-pad-open     margine laterale da APERTA
+   --sb-pad-x        margine effettivo: animato tra i due (registrato con
+                     @property, così si interpola insieme alla larghezza)
+
+   Raggi annidati (raggio interno = raggio esterno − distanza):
+   · Mac: finestra 17 − margine aperto 7 → voci 10 (= raggio del pannello)
+   · voce 10/12 − 4px → freccia, pulsante in alto e controlli interni 6/8
+   · web: barra aperta col mouse = raggio voce + margine (12 + 10 = 22)
    ───────────────────────────────────────────────────────────────────────────── */
+@property --sb-pad-x {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
 :root {
-  --sb-w: 15rem;              /* 240px aperta            */
-  --sb-pad: 0.625rem;         /* 10px  margine laterale   */
-  --sb-item: 2.75rem;         /* 44px  pulsante quadrato  */
-  --sb-item-radius: 0.75rem;  /* 12px  raggio delle voci  */
+  --sb-w: 15rem;              /* 240px aperta                  */
+  --sb-pad: 0.625rem;         /* 10px                          */
+  --sb-pad-open: 0.625rem;
+  --sb-item: 2.75rem;         /* 44px                          */
+  --sb-item-radius: 0.75rem;  /* 12px                          */
 }
 [data-shell="desktop"] {
   --sb-w: 15.5rem;
-  --sb-pad: 0.75rem;          /* 64px  = 12 + 40 + 12     */
-  --sb-item: 2.5rem;
-  --sb-item-radius: 0.625rem; /* 10px */
+  --sb-pad: 0.75rem;          /* 12px → compressa 65px          */
+  --sb-pad-open: 0.75rem;
+  --sb-item: 2.5rem;          /* 40px                          */
+  --sb-item-radius: 0.625rem; /* 10px                          */
 }
 [data-platform="mac"] {
-  /* Su Mac la barra compressa contiene i semafori (18–77pt): larga 95px
-     (27 + 40 + 27 + 1) li ha ESATTAMENTE centrati (18pt per lato), con
-     icone e logo sullo stesso asse. */
+  /* Compressa: 27 + 40 + 27 + 1 = 95px → semafori (18–77pt) esattamente
+     centrati, con icone e logo sul loro asse. Aperta: margine 7px, lo stesso
+     distacco del pannello, così le voci sono concentriche agli angoli della
+     finestra e il loro bordo dista dal pannello quanto il pannello dalla finestra. */
   --sb-w: 16rem;
   --sb-pad: 27px;
+  --sb-pad-open: var(--desk-gap, 7px);
 }
-/* Derivate (stesso elemento <html>: si aggiornano con le variabili sopra) */
+/* Derivate da --sb-item (stesso elemento <html>) */
 :root,
 [data-shell="desktop"],
 [data-platform="mac"] {
-  /* compressa = margine + quadrato + margine + 1px di bordo → pulsanti quadrati esatti */
-  --sb-w-collapsed: calc(2 * var(--sb-pad) + var(--sb-item) + 1px);
-  --sb-ipad: calc((var(--sb-item) - 1rem) / 2);           /* centra l'icona da 16px */
-  --sb-logo-pad: calc(var(--sb-pad) + (var(--sb-item) - 2rem) / 2);
-  --sb-brand-pad: calc((var(--sb-item) - 1.75rem) / 2);
-  --sb-dash-left: calc(var(--sb-item) / 2 - 0.625rem);
-  /* Raggi annidati dentro la barra:
-     barra aperta col mouse = raggio voce + margine laterale (le voci sono
-     concentriche ai suoi angoli); elementi dentro una voce a 4px dal bordo
-     = raggio voce − 4px. */
-  --sb-overlay-radius: calc(var(--sb-item-radius) + var(--sb-pad));
+  --sb-w-collapsed: calc(2 * var(--sb-pad) + var(--sb-item) + 1px); /* +1px bordo → quadrati esatti */
+  --sb-ipad: calc((var(--sb-item) - 1rem) / 2);           /* centra l'icona da 16px            */
+  --sb-sub: calc(var(--sb-item) - 0.5rem);                /* controllo interno: 4px per lato   */
   --sb-inner-radius: calc(var(--sb-item-radius) - 0.25rem);
-  /* pulsante nell'angolo in alto a destra della barra aperta col mouse */
-  --sb-corner-radius: calc(var(--sb-overlay-radius) - var(--sb-pad));
+  --sb-badge-pr: calc(var(--sb-item) / 2 - 9px);          /* badge centrato sulla colonna della freccia */
+  --sb-dash-left: calc(var(--sb-item) / 2 - 0.625rem);
+  --sb-brand-pad: calc((var(--sb-item) - 1.75rem) / 2);   /* logo 28px centrato sulla colonna icone */
+  --sb-overlay-radius: calc(var(--sb-item-radius) + var(--sb-pad-open));
 }
-/* Mac: il margine (24px) è dettato dai semafori; gli angoli della barra
-   aperta riprendono quelli della finestra. */
 [data-platform="mac"] {
-  --sb-overlay-radius: var(--desk-window-radius, 17px);
-  --sb-corner-radius: var(--sb-inner-radius);
+  --sb-overlay-radius: var(--desk-window-radius, 17px);   /* bordo destro = curva della finestra */
+}
+/* Derivate dal margine animato: definite sull'<aside> */
+aside {
+  /* A destra il bordo della barra (1px) è dentro la sua larghezza: lo si
+     sottrae, così i margini sinistro e destro sono identici. */
+  --sb-pr: calc(var(--sb-pad-x) - 1px);
+  --sb-foot-pb: var(--sb-pad-open);                        /* "Impostazioni": stesso margine sui 3 lati */
+  --sb-logo-pad: calc(var(--sb-pad-x) + (var(--sb-item) - 1.75rem) / 2); /* logo 28px sulla colonna icone */
+  --sb-top-pr: calc(var(--sb-pr) + 0.25rem);              /* pulsante in alto = colonna della freccia */
 }
 
 /* Barra compressa aperta dal mouse: superficie distinta che fluttua sul contenuto */
@@ -595,45 +614,15 @@ body {
   backdrop-filter: blur(30px) saturate(1.8);
 }
 [data-platform="mac"] aside.sidebar-overlay {
-  border-color: color-mix(in srgb, var(--foreground) 12%, transparent);
-}
-
-/* ── Barra laterale: misure interne (definite sull'<aside>, così la variante
-   flottante può spostarle senza muovere le icone) ───────────────────────── */
-aside {
-  --sb-shift: 0px;                                         /* distacco dal bordo finestra */
-  --sb-pad-x: calc(var(--sb-pad) - var(--sb-shift));       /* margine laterale effettivo  */
-  --sb-foot-pb: 0.75rem;
-  --sb-top-h: calc(var(--desk-titlebar-h, 3.25rem) - var(--sb-shift));
-  --sb-lights-pad: calc(84px - var(--sb-shift));
-}
-
-/* Barra aperta col mouse sull'app Mac: card flottante gemella del pannello
-   contenuti — stesso distacco dai bordi della finestra e stesso raggio
-   (concentrico agli angoli della finestra). Le icone non si muovono: il
-   distacco viene tolto dal margine interno. */
-[data-platform="mac"] aside.sidebar-overlay {
-  --sb-shift: var(--desk-gap);
-  --sb-foot-pb: var(--sb-pad-x);                           /* margini interni bilanciati */
-  top: var(--desk-gap);
-  left: var(--desk-gap);
-  height: calc(100vh - 2 * var(--desk-gap));
-  width: calc(var(--sb-w) - var(--desk-gap));
-  border: 0;
-  border-radius: var(--desk-radius);
+  border-color: transparent;
   box-shadow:
-    0 0 0 0.5px rgb(0 0 0 / 0.12),
-    0 2px 6px rgb(0 0 0 / 0.06),
-    0 16px 44px -8px rgb(16 24 40 / 0.28);
+    0.5px 0 0 rgb(0 0 0 / 0.12),
+    14px 0 40px -10px rgb(16 24 40 / 0.28);
 }
 [data-platform="mac"].dark aside.sidebar-overlay {
   box-shadow:
-    0 0 0 0.5px rgb(255 255 255 / 0.1),
-    0 16px 44px -8px rgb(0 0 0 / 0.7);
-}
-/* Il pulsante resta allineato ai semafori anche con la card spostata */
-[data-platform="mac"] aside.sidebar-overlay .sb-toggle {
-  translate: 0 calc(var(--desk-gap) / -2);
+    0.5px 0 0 rgb(255 255 255 / 0.1),
+    14px 0 40px -10px rgb(0 0 0 / 0.7);
 }
 
 /* Barra aperta col mouse: niente zone di trascinamento sotto di lei */

@@ -185,7 +185,7 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
   const itemClass = (active: boolean) =>
     cn(
       "group relative flex w-full items-center gap-3 overflow-hidden whitespace-nowrap",
-      "h-[var(--sb-item)] rounded-[var(--sb-item-radius)] pl-[var(--sb-ipad)] pr-2 text-sm font-medium",
+      "h-[var(--sb-item)] rounded-[var(--sb-item-radius)] pl-[var(--sb-ipad)] pr-[var(--sb-badge-pr)] text-sm font-medium",
       "transition-colors duration-150",
       // App desktop: tipografia e selezione da lista di sistema (Finder/Mail)
       "desktop:text-[13px]",
@@ -268,9 +268,11 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
     <aside
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
+      // Margine laterale: compresso ↔ aperto, interpolato insieme alla larghezza
+      style={{ "--sb-pad-x": expanded ? "var(--sb-pad-open)" : "var(--sb-pad)" } as React.CSSProperties}
       className={cn(
         "top-0 flex h-screen shrink-0 flex-col overflow-hidden border-r border-[var(--sidebar-border)] bg-[var(--sidebar-bg)]",
-        `transition-[width,top,left,height,border-radius,box-shadow,background-color] duration-[320ms] ${EASE}`,
+        `transition-[width,--sb-pad-x,border-radius,box-shadow,background-color] duration-[320ms] ${EASE}`,
         expanded ? "w-[var(--sb-w)]" : "w-[var(--sb-w-collapsed)]",
         isDrawer ? "sticky" : "fixed left-0 z-30",
         // Aperta dal mouse: pannello flottante ben distinto dal contenuto
@@ -284,22 +286,24 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
       <div
         className={cn(
           "flex h-14 shrink-0 items-center border-b border-[var(--sidebar-border)]",
-          "pl-[var(--sb-logo-pad)] pr-[var(--sb-pad)]",
-          "mac:h-[var(--sb-top-h)] mac:pl-[var(--sb-lights-pad)]",
+          "pl-[var(--sb-logo-pad)] pr-[var(--sb-top-pr)]",
+          // Mac: 84px liberi per i semafori; altezza = barra del titolo
+          "mac:h-[var(--desk-titlebar-h)] mac:pl-[84px]",
           !overlaying && "desktop-titlebar"
         )}
       >
         <Image
           src="/icona_dieffe.svg"
           alt="Dieffe"
-          width={32}
-          height={32}
+          width={28}
+          height={28}
           priority
-          className="h-8 w-8 shrink-0 mac:hidden"
+          className="h-7 w-7 shrink-0 mac:hidden"
         />
+        {/* Logo 28px sulla colonna delle icone, nome allineato alle etichette */}
         <span
           className={cn(
-            "ml-3 flex-1 truncate whitespace-nowrap text-sm font-semibold tracking-tight mac:hidden",
+            "ml-1.5 flex-1 truncate whitespace-nowrap text-sm font-semibold tracking-tight mac:hidden",
             reveal
           )}
         >
@@ -318,9 +322,10 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
           <button
             onClick={toggleCollapsed}
             className={cn(
-              // Annidato all'angolo in alto a destra della barra aperta col mouse
-              "sb-toggle flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--sb-corner-radius)] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
-              "mac:h-7 mac:w-7 mac:rounded-[var(--sb-inner-radius)] mac:hover:bg-foreground/[0.06]",
+              // Stessa colonna e stessa misura della freccia "Preventivi" (4px dal
+              // bordo delle voci); su Mac centrato in verticale sui semafori.
+              "flex h-[var(--sb-sub)] w-[var(--sb-sub)] shrink-0 items-center justify-center rounded-[var(--sb-inner-radius)] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
+              "mac:-translate-y-px mac:hover:bg-foreground/[0.06]",
               reveal
             )}
             aria-label={collapsed ? "Mantieni aperta la barra laterale" : "Comprimi la barra laterale"}
@@ -338,10 +343,10 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
           style={{ width: "200%", transform: showQuotes ? "translateX(-50%)" : "translateX(0)" }}
         >
           {/* ── Pannello 1: navigazione ── */}
-          <nav className="h-full w-1/2 overflow-y-auto overflow-x-hidden px-[var(--sb-pad-x)] pb-4 pt-3 mac:pt-0">
+          <nav className="h-full w-1/2 overflow-y-auto overflow-x-hidden pl-[var(--sb-pad-x)] pr-[var(--sb-pr)] pb-4 pt-3 mac:pt-0">
             {/* App Mac: marchio sotto i semafori. Sempre presente (il logo resta
                 nella colonna delle icone): niente salti all'apertura. */}
-            <div className="mb-1 hidden h-[var(--sb-item)] items-center gap-2.5 pl-[var(--sb-brand-pad)] mac:flex">
+            <div className="mb-1 hidden h-[var(--sb-item)] items-center gap-1.5 pl-[var(--sb-brand-pad)] mac:flex">
               <Image src="/icona_dieffe.svg" alt="" width={28} height={28} className="h-7 w-7 shrink-0 drop-shadow-sm" />
               <div className={cn("min-w-0 whitespace-nowrap leading-tight", reveal)}>
                 <span className="block truncate text-[13px] font-semibold tracking-tight">Dieffe Preventivi</span>
@@ -361,7 +366,8 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
                       aria-label="Mostra elenco preventivi"
                       title="Elenco preventivi"
                       className={cn(
-                        "absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-[var(--sb-inner-radius)] text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground",
+                        // 4px da destra, sopra e sotto: concentrica alla riga (raggio riga − 4px)
+                        "absolute right-1 top-1/2 flex h-[var(--sb-sub)] w-[var(--sb-sub)] -translate-y-1/2 items-center justify-center rounded-[var(--sb-inner-radius)] text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground",
                         reveal
                       )}
                     >
@@ -462,7 +468,7 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
       </div>
 
       {/* Footer — Impostazioni (TUTTI gli utenti) */}
-      <div className="shrink-0 border-t border-[var(--sidebar-border)] px-[var(--sb-pad-x)] pb-[var(--sb-foot-pb)] pt-3">
+      <div className="shrink-0 border-t border-[var(--sidebar-border)] pl-[var(--sb-pad-x)] pr-[var(--sb-pr)] pb-[var(--sb-foot-pb)] pt-3">
         {renderLink("/impostazioni", "Impostazioni", Settings, pathname.startsWith("/impostazioni"))}
       </div>
     </aside>
