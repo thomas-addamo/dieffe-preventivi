@@ -34,6 +34,28 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.15.2",
+    date: "2026-10-04",
+    headline: "Barra laterale rifinita.",
+    highlights: [
+      {
+        icon: "desktop",
+        title: "Barra flottante su Mac",
+        description: "Aperta col mouse diventa una card gemella del pannello, con angoli concentrici alla finestra.",
+      },
+      {
+        icon: "layout",
+        title: "Semafori centrati",
+        description: "Da chiusa la barra è larga quanto i pulsanti della finestra: icone e logo sullo stesso asse.",
+      },
+      {
+        icon: "zap",
+        title: "Pulsante sempre raggiungibile",
+        description: "Il pulsante per fissare la barra si raggiunge col mouse senza che si richiuda.",
+      },
+    ],
+  },
+  {
     version: "3.15.1",
     date: "2026-10-04",
     headline: "Ogni angolo al suo posto.",

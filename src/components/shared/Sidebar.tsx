@@ -129,6 +129,14 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
   // Compressa ma aperta dal mouse: fluttua sopra il contenuto.
   const overlaying = !isDrawer && collapsed && hovered;
 
+  // Mentre fluttua, nessuna zona "trascina finestra" deve stare sotto di lei:
+  // macOS dà la precedenza a quelle zone anche se coperte, e il cursore
+  // "spariva" sul pulsante in alto a destra richiudendo la barra.
+  useEffect(() => {
+    document.documentElement.toggleAttribute("data-sidebar-peek", overlaying);
+    return () => document.documentElement.removeAttribute("data-sidebar-peek");
+  }, [overlaying]);
+
   // Il pannello preventivi esiste solo a barra aperta.
   const showQuotes = quotesPanel && expanded;
 
@@ -262,7 +270,7 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
       onMouseLeave={onLeave}
       className={cn(
         "top-0 flex h-screen shrink-0 flex-col overflow-hidden border-r border-[var(--sidebar-border)] bg-[var(--sidebar-bg)]",
-        `transition-[width,box-shadow,background-color] duration-[320ms] ${EASE}`,
+        `transition-[width,top,left,height,border-radius,box-shadow,background-color] duration-[320ms] ${EASE}`,
         expanded ? "w-[var(--sb-w)]" : "w-[var(--sb-w-collapsed)]",
         isDrawer ? "sticky" : "fixed left-0 z-30",
         // Aperta dal mouse: pannello flottante ben distinto dal contenuto
@@ -277,7 +285,7 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
         className={cn(
           "flex h-14 shrink-0 items-center border-b border-[var(--sidebar-border)]",
           "pl-[var(--sb-logo-pad)] pr-[var(--sb-pad)]",
-          "mac:h-[var(--desk-titlebar-h)] mac:pl-[84px]",
+          "mac:h-[var(--sb-top-h)] mac:pl-[var(--sb-lights-pad)]",
           !overlaying && "desktop-titlebar"
         )}
       >
@@ -311,7 +319,7 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
             onClick={toggleCollapsed}
             className={cn(
               // Annidato all'angolo in alto a destra della barra aperta col mouse
-              "flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--sb-corner-radius)] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
+              "sb-toggle flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--sb-corner-radius)] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
               "mac:h-7 mac:w-7 mac:rounded-[var(--sb-inner-radius)] mac:hover:bg-foreground/[0.06]",
               reveal
             )}
@@ -330,7 +338,7 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
           style={{ width: "200%", transform: showQuotes ? "translateX(-50%)" : "translateX(0)" }}
         >
           {/* ── Pannello 1: navigazione ── */}
-          <nav className="h-full w-1/2 overflow-y-auto overflow-x-hidden px-[var(--sb-pad)] pb-4 pt-3 mac:pt-0">
+          <nav className="h-full w-1/2 overflow-y-auto overflow-x-hidden px-[var(--sb-pad-x)] pb-4 pt-3 mac:pt-0">
             {/* App Mac: marchio sotto i semafori. Sempre presente (il logo resta
                 nella colonna delle icone): niente salti all'apertura. */}
             <div className="mb-1 hidden h-[var(--sb-item)] items-center gap-2.5 pl-[var(--sb-brand-pad)] mac:flex">
@@ -454,7 +462,7 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
       </div>
 
       {/* Footer — Impostazioni (TUTTI gli utenti) */}
-      <div className="shrink-0 border-t border-[var(--sidebar-border)] px-[var(--sb-pad)] py-3">
+      <div className="shrink-0 border-t border-[var(--sidebar-border)] px-[var(--sb-pad-x)] pb-[var(--sb-foot-pb)] pt-3">
         {renderLink("/impostazioni", "Impostazioni", Settings, pathname.startsWith("/impostazioni"))}
       </div>
     </aside>

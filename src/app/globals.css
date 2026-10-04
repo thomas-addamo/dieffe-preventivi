@@ -553,9 +553,11 @@ body {
   --sb-item-radius: 0.625rem; /* 10px */
 }
 [data-platform="mac"] {
-  /* Su Mac la barra compressa deve contenere i semafori (18–77pt) */
+  /* Su Mac la barra compressa contiene i semafori (18–77pt): larga 95px
+     (27 + 40 + 27 + 1) li ha ESATTAMENTE centrati (18pt per lato), con
+     icone e logo sullo stesso asse. */
   --sb-w: 16rem;
-  --sb-pad: 1.5rem;
+  --sb-pad: 27px;
 }
 /* Derivate (stesso elemento <html>: si aggiornano con le variabili sopra) */
 :root,
@@ -594,4 +596,47 @@ body {
 }
 [data-platform="mac"] aside.sidebar-overlay {
   border-color: color-mix(in srgb, var(--foreground) 12%, transparent);
+}
+
+/* ── Barra laterale: misure interne (definite sull'<aside>, così la variante
+   flottante può spostarle senza muovere le icone) ───────────────────────── */
+aside {
+  --sb-shift: 0px;                                         /* distacco dal bordo finestra */
+  --sb-pad-x: calc(var(--sb-pad) - var(--sb-shift));       /* margine laterale effettivo  */
+  --sb-foot-pb: 0.75rem;
+  --sb-top-h: calc(var(--desk-titlebar-h, 3.25rem) - var(--sb-shift));
+  --sb-lights-pad: calc(84px - var(--sb-shift));
+}
+
+/* Barra aperta col mouse sull'app Mac: card flottante gemella del pannello
+   contenuti — stesso distacco dai bordi della finestra e stesso raggio
+   (concentrico agli angoli della finestra). Le icone non si muovono: il
+   distacco viene tolto dal margine interno. */
+[data-platform="mac"] aside.sidebar-overlay {
+  --sb-shift: var(--desk-gap);
+  --sb-foot-pb: var(--sb-pad-x);                           /* margini interni bilanciati */
+  top: var(--desk-gap);
+  left: var(--desk-gap);
+  height: calc(100vh - 2 * var(--desk-gap));
+  width: calc(var(--sb-w) - var(--desk-gap));
+  border: 0;
+  border-radius: var(--desk-radius);
+  box-shadow:
+    0 0 0 0.5px rgb(0 0 0 / 0.12),
+    0 2px 6px rgb(0 0 0 / 0.06),
+    0 16px 44px -8px rgb(16 24 40 / 0.28);
+}
+[data-platform="mac"].dark aside.sidebar-overlay {
+  box-shadow:
+    0 0 0 0.5px rgb(255 255 255 / 0.1),
+    0 16px 44px -8px rgb(0 0 0 / 0.7);
+}
+/* Il pulsante resta allineato ai semafori anche con la card spostata */
+[data-platform="mac"] aside.sidebar-overlay .sb-toggle {
+  translate: 0 calc(var(--desk-gap) / -2);
+}
+
+/* Barra aperta col mouse: niente zone di trascinamento sotto di lei */
+[data-sidebar-peek] .desktop-titlebar {
+  -webkit-app-region: no-drag;
 }
