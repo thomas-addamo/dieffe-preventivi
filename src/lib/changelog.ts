@@ -34,6 +34,28 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.15.0",
+    date: "2026-10-04",
+    headline: "Più fluida, più precisa.",
+    highlights: [
+      {
+        icon: "layout",
+        title: "Barra laterale fluida",
+        description: "Apertura in sequenza senza salti, pulsanti quadrati e ben distanziati da chiusa.",
+      },
+      {
+        icon: "sparkles",
+        title: "Finestre in stile Apple",
+        description: "Le finestre si aprono con una transizione morbida; su telefono salgono dal basso.",
+      },
+      {
+        icon: "desktop",
+        title: "Angoli perfetti su Mac",
+        description: "Il pannello segue la curva degli angoli della finestra, su ogni versione di macOS.",
+      },
+    ],
+  },
+  {
     version: "3.14.1",
     date: "2026-10-02",
     headline: "Aggiornamenti ancora più affidabili.",

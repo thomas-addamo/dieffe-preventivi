@@ -113,8 +113,8 @@ function SaveToListinoModal({ item, categories, onClose, onSaved }: SaveToListin
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-background border rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+    <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-[3px]">
+      <div className="modal-pop bg-background border rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-5 py-4 border-b">
           <h2 className="font-semibold text-sm">Salva nel listino prezzi</h2>
           <Button variant="ghost" size="icon" onClick={onClose}>

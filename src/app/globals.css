@@ -396,13 +396,22 @@ body {
    ───────────────────────────────────────────────────────────────────────────── */
 
 [data-shell="desktop"] {
-  --desk-gap: 0.5rem;          /* 8px  — distanza pannello ↔ bordo finestra */
-  --desk-radius: 1rem;         /* 16px — pannello contenuti                  */
+  /* Raggio degli angoli della finestra macOS, misurato: ~17pt da macOS 26,
+     10pt nelle versioni precedenti (data-os-legacy). Il pannello è concentrico:
+     raggio pannello = raggio finestra − distacco. */
+  --desk-window-radius: 17px;
+  --desk-gap: 7px;             /* distanza pannello ↔ bordo finestra */
+  --desk-radius: calc(var(--desk-window-radius) - var(--desk-gap)); /* 10px */
   --desk-titlebar-h: 3.25rem;  /* 52px — altezza barra integrata             */
   overscroll-behavior: none;
 }
 
 /* Font di sistema (SF Pro su Mac, Segoe UI Variable su Windows) */
+[data-shell="desktop"][data-os-legacy] {
+  --desk-window-radius: 10px;
+  --desk-gap: 5px;             /* → pannello 5px */
+}
+
 [data-shell="desktop"] body {
   --font-inter: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text",
     "Segoe UI", system-ui, sans-serif;
@@ -471,4 +480,102 @@ body {
 [data-platform="mac"] aside,
 [data-platform="mac"] aside > div {
   border-color: transparent;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   TRANSIZIONI FINESTRE (dialog, modali, fogli) — stile Apple
+   Apertura: sfondo che sfuma + finestra che "si posa" (scala 0.96 → 1 e
+   leggero sollevamento) con la curva di decelerazione di iOS/macOS.
+   Chiusura più rapida e discreta. Le animazioni usano "transform", mentre il
+   centramento dei dialog usa la proprietà "translate": non si disturbano.
+   ───────────────────────────────────────────────────────────────────────────── */
+:root {
+  --ease-apple: cubic-bezier(0.32, 0.72, 0, 1);
+}
+@keyframes apple-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes apple-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes apple-pop-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.965); }
+  60% { opacity: 1; }
+  to { opacity: 1; transform: none; }
+}
+@keyframes apple-pop-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: scale(0.975); }
+}
+@keyframes apple-sheet-in {
+  from { transform: translateY(100%); }
+  to { transform: none; }
+}
+@keyframes apple-sheet-out {
+  from { transform: none; }
+  to { transform: translateY(100%); }
+}
+.modal-backdrop {
+  animation: apple-fade-in 0.24s ease-out both;
+}
+.modal-pop {
+  animation: apple-pop-in 0.36s var(--ease-apple) both;
+}
+.sheet-in {
+  animation: apple-sheet-in 0.42s var(--ease-apple) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .modal-backdrop, .modal-pop, .sheet-in { animation-duration: 1ms; }
+}
+/* Fogli dal basso che da tablet/desktop diventano finestre centrate */
+@media (min-width: 768px) {
+  .sheet-in.md\:modal-pop {
+    animation: apple-pop-in 0.36s var(--ease-apple) both;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   BARRA LATERALE — misure (vedi Sidebar.tsx)
+   Compressa: larghezza = 2 × margine + lato del pulsante quadrato.
+   ───────────────────────────────────────────────────────────────────────────── */
+:root {
+  --sb-w: 15rem;              /* 240px aperta            */
+  --sb-pad: 0.625rem;         /* 10px  margine laterale   */
+  --sb-item: 2.75rem;         /* 44px  pulsante quadrato  */
+}
+[data-shell="desktop"] {
+  --sb-w: 15.5rem;
+  --sb-pad: 0.75rem;          /* 64px  = 12 + 40 + 12     */
+  --sb-item: 2.5rem;
+}
+[data-platform="mac"] {
+  /* Su Mac la barra compressa deve contenere i semafori (18–77pt) */
+  --sb-w: 16rem;
+  --sb-pad: 1.5rem;
+}
+/* Derivate (stesso elemento <html>: si aggiornano con le variabili sopra) */
+:root,
+[data-shell="desktop"],
+[data-platform="mac"] {
+  /* compressa = margine + quadrato + margine + 1px di bordo → pulsanti quadrati esatti */
+  --sb-w-collapsed: calc(2 * var(--sb-pad) + var(--sb-item) + 1px);
+  --sb-ipad: calc((var(--sb-item) - 1rem) / 2);           /* centra l'icona da 16px */
+  --sb-logo-pad: calc(var(--sb-pad) + (var(--sb-item) - 2rem) / 2);
+  --sb-brand-pad: calc((var(--sb-item) - 1.75rem) / 2);
+  --sb-dash-left: calc(var(--sb-item) / 2 - 0.625rem);
+}
+
+/* Barra compressa aperta dal mouse: superficie distinta che fluttua sul contenuto */
+.sidebar-overlay {
+  background: var(--card);
+}
+[data-platform="mac"] .sidebar-overlay {
+  background: color-mix(in srgb, var(--background) 92%, transparent);
+  -webkit-backdrop-filter: blur(30px) saturate(1.8);
+  backdrop-filter: blur(30px) saturate(1.8);
+}
+[data-platform="mac"] aside.sidebar-overlay {
+  border-color: color-mix(in srgb, var(--foreground) 12%, transparent);
 }

@@ -185,8 +185,8 @@ function SignatureSection({
 
       {/* Confirmation modal */}
       {confirmOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-background border rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
+        <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-[3px]">
+          <div className="modal-pop bg-background border rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
             <h2 className="text-base font-semibold">Sei sicuro di voler annullare l&apos;accettazione?</h2>
             <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
               <li>Riporterà il preventivo in stato &quot;Inviato&quot;</li>
@@ -1092,10 +1092,10 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
         {mobileTotalsOpen && (
           <div className="fixed inset-0 z-20 flex flex-col justify-end">
             <div
-              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+              className="modal-backdrop absolute inset-0 bg-black/40 backdrop-blur-sm"
               onClick={() => setMobileTotalsOpen(false)}
             />
-            <div className="animate-slide-up relative bg-background rounded-t-2xl max-h-[85dvh] overflow-y-auto overscroll-contain">
+            <div className="sheet-in md:modal-pop relative bg-background rounded-t-2xl max-h-[85dvh] overflow-y-auto overscroll-contain">
               <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-xl px-5 pb-3 pt-2 border-b">
                 <div aria-hidden className="mx-auto mb-2 h-1 w-9 rounded-full bg-muted-foreground/25" />
                 <div className="flex items-center justify-between">
@@ -1146,8 +1146,8 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
       {!isViewer && <AiChatAssistant />}
 
       {showReassignModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-background rounded-2xl p-6 max-w-sm w-full shadow-xl">
+        <div className="modal-backdrop fixed inset-0 bg-black/40 backdrop-blur-[3px] z-50 flex items-center justify-center p-4">
+          <div className="modal-pop bg-background border rounded-2xl p-6 max-w-sm w-full shadow-xl">
             <h2 className="font-semibold text-lg mb-1">Riassegna preventivo</h2>
             <p className="text-sm text-muted-foreground mb-4">Assegna questo preventivo a un altro utente.</p>
             <div className="mb-4">

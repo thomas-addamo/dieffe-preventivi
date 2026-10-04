@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   LayoutDashboard,
   FileText,
@@ -27,6 +27,20 @@ import {
   Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Barra laterale (desktop web + app desktop).
+//
+// Aperta e compressa hanno la STESSA struttura: cambia solo la larghezza.
+// Le icone restano ferme nella stessa colonna, le etichette compaiono con un
+// leggero ritardo dopo l'allargamento (e spariscono subito alla chiusura),
+// logo e titoli di sezione occupano sempre lo stesso spazio: la transizione
+// è fluida e senza salti. Da compressa i pulsanti sono quadrati.
+//
+// Misure (globals.css): --sb-w / --sb-w-collapsed = larghezze, --sb-pad =
+// margine laterale, --sb-item = lato del pulsante quadrato, --sb-ipad =
+// rientro che centra l'icona nel quadrato.
+// ─────────────────────────────────────────────────────────────────────────────
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -59,12 +73,17 @@ interface QuoteLite {
 }
 
 const STORAGE_KEY = "sidebar-collapsed";
+/** Ritardo prima di richiudere la barra aperta al passaggio del mouse. */
+const HOVER_CLOSE_DELAY = 220;
+
+const EASE = "ease-[cubic-bezier(0.32,0.72,0,1)]";
 
 export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [hovered, setHovered] = useState(false);
+  const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Pannello scorrevole "Preventivi" dentro la stessa barra.
   const [quotesPanel, setQuotesPanel] = useState(false);
@@ -80,22 +99,38 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
   }, [isDrawer]);
 
   function toggleCollapsed() {
+    setQuotesPanel(false);
     setCollapsed((c) => {
       const next = !c;
       localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
       return next;
     });
+    setHovered(false);
   }
 
-  // Espanso se: drawer mobile, oppure non collassato, oppure il mouse è sopra.
+  function onEnter() {
+    if (isDrawer) return;
+    if (leaveTimer.current) clearTimeout(leaveTimer.current);
+    setHovered(true);
+  }
+
+  function onLeave() {
+    if (isDrawer) return;
+    if (leaveTimer.current) clearTimeout(leaveTimer.current);
+    leaveTimer.current = setTimeout(() => setHovered(false), HOVER_CLOSE_DELAY);
+  }
+
+  useEffect(() => () => {
+    if (leaveTimer.current) clearTimeout(leaveTimer.current);
+  }, []);
+
+  // Espansa se: drawer mobile, oppure non compressa, oppure il mouse è sopra.
   const expanded = isDrawer || !collapsed || hovered;
-  // Quando è collassato ma espanso per hover, la barra fluttua sopra il contenuto.
+  // Compressa ma aperta dal mouse: fluttua sopra il contenuto.
   const overlaying = !isDrawer && collapsed && hovered;
 
-  // Se la barra si stringe a icone, chiudi il pannello preventivi.
-  useEffect(() => {
-    if (!expanded) setQuotesPanel(false);
-  }, [expanded]);
+  // Il pannello preventivi esiste solo a barra aperta.
+  const showQuotes = quotesPanel && expanded;
 
   async function loadQuotes() {
     setLoadingQuotes(true);
@@ -132,24 +167,27 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
     );
   }, [quotes, quoteSearch]);
 
-  const linkClass = (active: boolean) =>
+  // ── Stili condivisi ──────────────────────────────────────────────────────
+  /** Elementi che compaiono solo da aperta: in sequenza dopo l'allargamento. */
+  const reveal = cn(
+    "transition-opacity",
+    expanded ? "opacity-100 duration-200 delay-[120ms]" : "pointer-events-none opacity-0 duration-75"
+  );
+
+  const itemClass = (active: boolean) =>
     cn(
-      "group relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 min-h-[44px]",
-      // App desktop: righe compatte da lista di sistema (Finder/Mail)
-      "desktop:min-h-8 desktop:py-1.5 desktop:px-2.5 desktop:gap-2.5 desktop:rounded-md desktop:text-[13px] desktop:transition-none",
-      !expanded && "justify-center px-0 desktop:px-0",
+      "group relative flex w-full items-center gap-3 overflow-hidden whitespace-nowrap",
+      "h-[var(--sb-item)] rounded-lg pl-[var(--sb-ipad)] pr-2 text-sm font-medium",
+      "transition-colors duration-150",
+      // App desktop: tipografia e selezione da lista di sistema (Finder/Mail)
+      "desktop:rounded-[10px] desktop:text-[13px]",
       active
-        ? "bg-primary/10 text-primary shadow-2xs desktop:shadow-none desktop:bg-foreground/[0.08] desktop:text-foreground dark:desktop:bg-white/[0.1] desktop:[&>svg]:text-primary"
+        ? "bg-primary/10 text-primary desktop:bg-foreground/[0.08] desktop:text-foreground dark:desktop:bg-white/[0.1] desktop:[&>svg]:text-primary"
         : "text-muted-foreground hover:bg-accent hover:text-foreground desktop:text-foreground/80 desktop:hover:bg-foreground/[0.05] desktop:[&>svg]:text-primary/80"
     );
 
-  const labelClass = cn(
-    "truncate transition-[opacity] duration-200",
-    expanded ? "opacity-100" : "opacity-0"
-  );
-
   const activeIndicator = (
-    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-full bg-primary desktop:hidden" />
+    <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-primary desktop:hidden" />
   );
 
   const renderLink = (
@@ -164,78 +202,83 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
       href={href}
       onClick={onClose}
       title={!expanded ? label : undefined}
-      className={linkClass(active)}
+      aria-label={label}
+      className={itemClass(active)}
     >
       {active && activeIndicator}
-      <Icon className="w-4 h-4 shrink-0" />
-      {expanded && <span className={cn(labelClass, "flex-1")}>{label}</span>}
-      {expanded && badge !== undefined && badge > 0 && (
-        <span className="bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
-          {badge > 99 ? "99+" : badge}
-        </span>
-      )}
-      {!expanded && badge !== undefined && badge > 0 && (
-        <span className="absolute top-1.5 right-2 w-2 h-2 rounded-full bg-red-500" />
+      <Icon className="h-4 w-4 shrink-0" />
+      <span className={cn("flex-1 truncate", reveal)}>{label}</span>
+      {badge !== undefined && badge > 0 && (
+        <>
+          <span
+            className={cn(
+              "flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-xs font-bold text-white",
+              reveal
+            )}
+          >
+            {badge > 99 ? "99+" : badge}
+          </span>
+          {/* Da compressa: puntino sul quadrato */}
+          <span
+            className={cn(
+              "absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500 transition-opacity",
+              expanded ? "opacity-0 duration-75" : "opacity-100 duration-200 delay-150"
+            )}
+          />
+        </>
       )}
     </Link>
   );
 
-  const preventiviActive = pathname === "/preventivi" || pathname.startsWith("/preventivi/");
-
-  // Riga "Preventivi" con freccia che apre il pannello-elenco (solo da espansa).
-  const preventiviRow = expanded ? (
-    <div
-      className={cn(
-        "group relative flex items-center rounded-lg transition-all duration-150 min-h-[44px]",
-        "desktop:min-h-8 desktop:rounded-md desktop:transition-none",
-        preventiviActive
-          ? "bg-primary/10 text-primary shadow-2xs desktop:shadow-none desktop:bg-foreground/[0.08] desktop:text-foreground dark:desktop:bg-white/[0.1]"
-          : "text-muted-foreground hover:bg-accent hover:text-foreground desktop:text-foreground/80 desktop:hover:bg-foreground/[0.05]"
-      )}
-    >
-      {preventiviActive && activeIndicator}
-      <Link
-        href="/preventivi"
-        onClick={onClose}
-        className="flex flex-1 min-w-0 items-center gap-3 px-3 py-2.5 text-sm font-medium desktop:py-1.5 desktop:px-2.5 desktop:gap-2.5 desktop:text-[13px]"
+  /** Titolo di sezione: stessa altezza aperta/compressa (testo ↔ lineetta). */
+  const sectionLabel = (text: string, icon?: React.ReactNode) => (
+    <div className="relative flex h-8 items-end pb-1.5">
+      <span
+        className={cn(
+          "flex items-center gap-1 whitespace-nowrap pl-[var(--sb-ipad)] text-[11px] font-medium uppercase tracking-wider text-muted-foreground/80",
+          "desktop:normal-case desktop:tracking-normal desktop:font-semibold desktop:text-muted-foreground/70",
+          reveal
+        )}
       >
-        <FileText className="w-4 h-4 shrink-0 desktop:text-primary/80" />
-        <span className="truncate">Preventivi</span>
-      </Link>
-      <button
-        onClick={openQuotesPanel}
-        aria-label="Mostra elenco preventivi"
-        title="Elenco preventivi"
-        className="flex items-center self-stretch rounded-r-lg px-2 text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground desktop:rounded-r-md"
-      >
-        <ChevronRight className="w-4 h-4" />
-      </button>
+        {icon}
+        {text}
+      </span>
+      <span
+        aria-hidden
+        className={cn(
+          "absolute bottom-3 left-[var(--sb-dash-left)] h-px w-5 bg-border transition-opacity",
+          expanded ? "opacity-0 duration-75" : "opacity-100 duration-200 delay-150"
+        )}
+      />
     </div>
-  ) : (
-    renderLink("/preventivi", "Preventivi", FileText, preventiviActive)
   );
 
+  const preventiviActive = pathname === "/preventivi" || pathname.startsWith("/preventivi/");
+
+  // ── Barra ────────────────────────────────────────────────────────────────
   const aside = (
     <aside
-      onMouseEnter={() => !isDrawer && setHovered(true)}
-      onMouseLeave={() => !isDrawer && setHovered(false)}
+      onMouseEnter={onEnter}
+      onMouseLeave={onLeave}
       className={cn(
-        "flex flex-col shrink-0 border-r bg-[var(--sidebar-bg)] border-[var(--sidebar-border)] h-screen top-0",
-        "transition-[width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
-        expanded ? "w-60 mac:w-[248px]" : "w-16 mac:w-[92px]",
+        "top-0 flex h-screen shrink-0 flex-col overflow-hidden border-r border-[var(--sidebar-border)] bg-[var(--sidebar-bg)]",
+        `transition-[width,box-shadow,background-color] duration-[320ms] ${EASE}`,
+        expanded ? "w-[var(--sb-w)]" : "w-[var(--sb-w-collapsed)]",
         isDrawer ? "sticky" : "fixed left-0 z-30",
-        overlaying && "shadow-2xl",
-        // Mac: compressa+hover diventa un pannello flottante con materiale opaco
-        overlaying && "mac:bg-[var(--background)]/95 mac:backdrop-blur-xl mac:rounded-r-2xl mac:border-r mac:border-border/60"
+        // Aperta dal mouse: pannello flottante ben distinto dal contenuto
+        overlaying &&
+          "sidebar-overlay rounded-r-2xl border-border shadow-[0_0_0_0.5px_rgb(0_0_0/0.06),12px_0_40px_-8px_rgb(16_24_40/0.22)] dark:shadow-[0_0_0_0.5px_rgb(255_255_255/0.08),12px_0_40px_-8px_rgb(0_0_0/0.7)]"
       )}
     >
-      {/* Logo + toggle */}
+      {/* Riga superiore. Su Mac ospita i semafori della finestra; è trascinabile
+          solo quando la barra NON è aperta dal mouse (una zona di trascinamento
+          "ruba" il cursore e la barra si richiudeva prima di arrivare al pulsante). */}
       <div
         className={cn(
-          "desktop-titlebar flex items-center gap-3 h-14 border-b border-[var(--sidebar-border)] shrink-0",
-          // Mac: spazio per i semafori (posizionati da electron/main.ts) e niente logo qui
-          "mac:h-[var(--desk-titlebar-h)] mac:pl-[84px] mac:pr-3 mac:justify-end",
-          expanded ? "px-4" : "px-0 justify-center"
+          "flex h-14 shrink-0 items-center border-b border-[var(--sidebar-border)]",
+          "pl-[var(--sb-logo-pad)] pr-[var(--sb-pad)]",
+          "mac:h-[var(--desk-titlebar-h)] mac:pl-[84px]",
+          !overlaying && "desktop-titlebar"
         )}
       >
         <Image
@@ -246,125 +289,131 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
           priority
           className="h-8 w-8 shrink-0 mac:hidden"
         />
-        {expanded && (
-          <div className="flex-1 leading-tight overflow-hidden mac:hidden">
-            <span className="block font-semibold text-sm tracking-tight truncate">
-              Dieffe Preventivi
-            </span>
-          </div>
-        )}
-        {onClose && (
+        <span
+          className={cn(
+            "ml-3 flex-1 truncate whitespace-nowrap text-sm font-semibold tracking-tight mac:hidden",
+            reveal
+          )}
+        >
+          Dieffe Preventivi
+        </span>
+        <span className="hidden flex-1 mac:block" />
+        {onClose ? (
           <button
             onClick={onClose}
-            className="lg:hidden p-1.5 rounded-md hover:bg-accent text-muted-foreground"
+            className="rounded-md p-1.5 text-muted-foreground hover:bg-accent lg:hidden"
             aria-label="Chiudi menu"
           >
-            <X className="w-4 h-4" />
+            <X className="h-4 w-4" />
           </button>
-        )}
-        {!isDrawer && expanded && (
+        ) : (
           <button
             onClick={toggleCollapsed}
-            className="p-1.5 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors mac:hover:bg-foreground/[0.06]"
-            aria-label={collapsed ? "Espandi barra laterale" : "Riduci barra laterale"}
-            title={collapsed ? "Espandi" : "Riduci"}
+            className={cn(
+              "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
+              "mac:h-7 mac:w-7 mac:rounded-md mac:hover:bg-foreground/[0.06]",
+              reveal
+            )}
+            aria-label={collapsed ? "Mantieni aperta la barra laterale" : "Comprimi la barra laterale"}
+            title={collapsed ? "Mantieni aperta" : "Comprimi"}
           >
-            {collapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+            {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
           </button>
         )}
       </div>
 
-      {/* Area centrale scorrevole: pannello principale ↔ elenco preventivi */}
-      <div className="flex-1 relative overflow-hidden">
+      {/* Area centrale scorrevole: navigazione ↔ elenco preventivi */}
+      <div className="relative flex-1 overflow-hidden">
         <div
-          className="flex h-full transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
-          style={{ width: "200%", transform: quotesPanel ? "translateX(-50%)" : "translateX(0)" }}
+          className={`flex h-full transition-transform duration-300 ${EASE}`}
+          style={{ width: "200%", transform: showQuotes ? "translateX(-50%)" : "translateX(0)" }}
         >
           {/* ── Pannello 1: navigazione ── */}
-          <nav className="w-1/2 h-full overflow-y-auto overflow-x-hidden py-4 px-3 space-y-0.5 mac:pt-1 mac:px-2.5">
-            {/* App Mac: marchio sotto i semafori, come il titolo delle app di sistema */}
-            {expanded && (
-              <div className="hidden mac:flex items-center gap-2.5 px-2 pb-4">
-                <Image src="/icona_dieffe.svg" alt="" width={28} height={28} className="h-7 w-7 shrink-0 drop-shadow-sm" />
-                <div className="min-w-0 leading-tight">
-                  <span className="block truncate text-[13px] font-semibold tracking-tight">Dieffe Preventivi</span>
-                  <span className="block truncate text-[11px] text-muted-foreground">Dieffe Ristrutturazioni</span>
-                </div>
+          <nav className="h-full w-1/2 overflow-y-auto overflow-x-hidden px-[var(--sb-pad)] pb-4 pt-3 mac:pt-0">
+            {/* App Mac: marchio sotto i semafori. Sempre presente (il logo resta
+                nella colonna delle icone): niente salti all'apertura. */}
+            <div className="mb-1 hidden h-[var(--sb-item)] items-center gap-2.5 pl-[var(--sb-brand-pad)] mac:flex">
+              <Image src="/icona_dieffe.svg" alt="" width={28} height={28} className="h-7 w-7 shrink-0 drop-shadow-sm" />
+              <div className={cn("min-w-0 whitespace-nowrap leading-tight", reveal)}>
+                <span className="block truncate text-[13px] font-semibold tracking-tight">Dieffe Preventivi</span>
+                <span className="block truncate text-[11px] text-muted-foreground">Dieffe Ristrutturazioni</span>
               </div>
-            )}
-            {expanded ? (
-              <div className="pb-1 px-3">
-                <span className="text-[11px] font-medium text-muted-foreground/80 uppercase tracking-wider desktop:normal-case desktop:tracking-normal desktop:font-semibold desktop:text-muted-foreground/70">
-                  Operatività
-                </span>
-              </div>
-            ) : (
-              <div className="h-2" />
-            )}
+            </div>
 
-            {navItems.map(({ href, label, icon: Icon }) =>
-              href === "/preventivi" ? (
-                <div key={href}>{preventiviRow}</div>
-              ) : (
-                renderLink(href, label, Icon, pathname === href || pathname.startsWith(href + "/"))
-              )
-            )}
+            {sectionLabel("Operatività")}
+            <div className="space-y-1">
+              {navItems.map(({ href, label, icon: Icon }) =>
+                href === "/preventivi" ? (
+                  // Riga "Preventivi" con freccia che apre l'elenco (solo da aperta)
+                  <div key={href} className="relative">
+                    {renderLink(href, label, Icon, preventiviActive)}
+                    <button
+                      onClick={openQuotesPanel}
+                      aria-label="Mostra elenco preventivi"
+                      title="Elenco preventivi"
+                      className={cn(
+                        "absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground",
+                        reveal
+                      )}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  renderLink(href, label, Icon, pathname === href || pathname.startsWith(href + "/"))
+                )
+              )}
 
-            {(userRole === "admin" || userRole === "editor") &&
-              renderLink("/cestino", "Cestino", Trash2, pathname === "/cestino", trashCount)}
+              {(userRole === "admin" || userRole === "editor") &&
+                renderLink("/cestino", "Cestino", Trash2, pathname === "/cestino", trashCount)}
+            </div>
 
             {userRole === "admin" && (
               <>
-                {expanded ? (
-                  <div className="pt-4 pb-1 px-3">
-                    <span className="text-[11px] font-medium text-muted-foreground/80 uppercase tracking-wider flex items-center gap-1 desktop:normal-case desktop:tracking-normal desktop:font-semibold desktop:text-muted-foreground/70">
-                      <Shield className="w-3 h-3" /> Amministrazione
-                    </span>
-                  </div>
-                ) : (
-                  <div className="my-2 mx-2 border-t border-[var(--sidebar-border)]" />
-                )}
-                {adminItems.map(({ href, label, icon: Icon }) =>
-                  renderLink(href, label, Icon, pathname.startsWith(href))
-                )}
+                <div className="pt-3">{sectionLabel("Amministrazione", <Shield className="h-3 w-3" />)}</div>
+                <div className="space-y-1">
+                  {adminItems.map(({ href, label, icon: Icon }) =>
+                    renderLink(href, label, Icon, pathname.startsWith(href))
+                  )}
+                </div>
               </>
             )}
           </nav>
 
           {/* ── Pannello 2: elenco preventivi ── */}
-          <div className="w-1/2 h-full flex flex-col">
-            <div className="flex items-center gap-1.5 px-2 h-11 border-b border-[var(--sidebar-border)] shrink-0 mac:h-9">
+          <div className="flex h-full w-1/2 flex-col">
+            <div className="flex h-11 shrink-0 items-center gap-1.5 border-b border-[var(--sidebar-border)] px-2 mac:h-9">
               <button
                 onClick={() => setQuotesPanel(false)}
-                className="p-1.5 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                 aria-label="Indietro"
               >
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft className="h-4 w-4" />
               </button>
-              <span className="flex-1 text-sm font-semibold truncate">Preventivi</span>
+              <span className="flex-1 truncate text-sm font-semibold">Preventivi</span>
               {!loadingQuotes && (
-                <span className="text-xs text-muted-foreground tabular-nums pr-1">
+                <span className="pr-1 text-xs tabular-nums text-muted-foreground">
                   {filteredQuotes.length}
                 </span>
               )}
             </div>
 
-            <div className="px-3 py-2 shrink-0">
+            <div className="shrink-0 px-3 py-2">
               <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                 <input
                   value={quoteSearch}
                   onChange={(e) => setQuoteSearch(e.target.value)}
                   placeholder="Cerca preventivo..."
-                  className="w-full h-8 pl-8 pr-2 rounded-md border bg-background text-sm outline-none focus:ring-2 focus:ring-ring/40 mac:h-7 mac:border-0 mac:bg-foreground/[0.06] mac:text-[13px]"
+                  className="h-8 w-full rounded-md border bg-background pl-8 pr-2 text-sm outline-none focus:ring-2 focus:ring-ring/40 mac:h-7 mac:border-0 mac:bg-foreground/[0.06] mac:text-[13px]"
                 />
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-2 pb-3 space-y-0.5">
+            <div className="flex-1 space-y-0.5 overflow-y-auto px-2 pb-3">
               {loadingQuotes && quotes.length === 0 ? (
                 <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
-                  <Loader2 className="w-4 h-4 animate-spin" /> Caricamento...
+                  <Loader2 className="h-4 w-4 animate-spin" /> Caricamento...
                 </div>
               ) : filteredQuotes.length === 0 ? (
                 <div className="px-3 py-8 text-center text-sm text-muted-foreground">
@@ -379,27 +428,19 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
                       onClick={() => openQuote(q.id)}
                       title={q.title}
                       className={cn(
-                        "w-full text-left rounded-lg px-2.5 py-2 transition-colors desktop:rounded-md desktop:py-1.5",
+                        "w-full rounded-lg px-2.5 py-2 text-left transition-colors desktop:rounded-md desktop:py-1.5",
                         active ? "bg-primary/10 desktop:bg-foreground/[0.08]" : "hover:bg-accent desktop:hover:bg-foreground/[0.05]"
                       )}
                     >
                       <div className="flex items-center gap-1.5">
                         <FileText
-                          className={cn(
-                            "w-3.5 h-3.5 shrink-0",
-                            active ? "text-primary" : "text-muted-foreground"
-                          )}
+                          className={cn("h-3.5 w-3.5 shrink-0", active ? "text-primary" : "text-muted-foreground")}
                         />
-                        <span
-                          className={cn(
-                            "text-sm font-medium truncate",
-                            active && "text-primary"
-                          )}
-                        >
+                        <span className={cn("truncate text-sm font-medium", active && "text-primary")}>
                           {q.title}
                         </span>
                       </div>
-                      <div className="mt-0.5 pl-5 truncate text-[11px] text-muted-foreground">
+                      <div className="mt-0.5 truncate pl-5 text-[11px] text-muted-foreground">
                         {q.clientName ?? "Nessun cliente"} · {q.code}
                       </div>
                     </button>
@@ -412,18 +453,8 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
       </div>
 
       {/* Footer — Impostazioni (TUTTI gli utenti) */}
-      <div className="px-3 py-3 border-t border-[var(--sidebar-border)] shrink-0 mac:px-2.5">
+      <div className="shrink-0 border-t border-[var(--sidebar-border)] px-[var(--sb-pad)] py-3">
         {renderLink("/impostazioni", "Impostazioni", Settings, pathname.startsWith("/impostazioni"))}
-        {!isDrawer && collapsed && (
-          <button
-            onClick={toggleCollapsed}
-            className="mt-1 w-full flex justify-center p-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-            aria-label="Espandi barra laterale"
-            title="Espandi"
-          >
-            <PanelLeftOpen className="w-4 h-4" />
-          </button>
-        )}
       </div>
     </aside>
   );
@@ -432,10 +463,11 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
 
   return (
     <>
+      {/* Segnaposto: riserva lo spazio della barra fissata (non di quella aperta dal mouse) */}
       <div
         className={cn(
-          "h-screen shrink-0 transition-[width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
-          collapsed ? "w-16 mac:w-[92px]" : "w-60 mac:w-[248px]"
+          `h-screen shrink-0 transition-[width] duration-[320ms] ${EASE}`,
+          collapsed ? "w-[var(--sb-w-collapsed)]" : "w-[var(--sb-w)]"
         )}
         aria-hidden
       />

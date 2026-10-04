@@ -35,7 +35,10 @@ import {
 // ─────────────────────────────────────────────────────────────────────────────
 
 app.setName('Dieffe Preventivi');
-app.userAgentFallback = `${app.userAgentFallback} DieffeDesktop/${app.getVersion()} (${SHELL_PLATFORM})`;
+// Versione maggiore del sistema: su macOS il raggio degli angoli delle finestre
+// cambia tra le versioni e la web app lo usa per i raggi annidati del pannello.
+const OS_MAJOR = (process.getSystemVersion?.() ?? '').split('.')[0] || '0';
+app.userAgentFallback = `${app.userAgentFallback} DieffeDesktop/${app.getVersion()} (${SHELL_PLATFORM}; ${OS_MAJOR})`;
 
 let mainWindow: BrowserWindow | null = null;
 const getWindow = () => (mainWindow && !mainWindow.isDestroyed() ? mainWindow : null);

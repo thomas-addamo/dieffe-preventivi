@@ -352,10 +352,10 @@ export function DashboardClient({
       {showMobileFilters && (
         <div className="fixed inset-0 z-50 lg:hidden flex flex-col justify-end">
           <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            className="modal-backdrop absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={() => setShowMobileFilters(false)}
           />
-          <div className="animate-slide-up relative bg-background rounded-t-2xl p-5 space-y-4 pb-[calc(2rem+env(safe-area-inset-bottom))]">
+          <div className="sheet-in md:modal-pop relative bg-background rounded-t-2xl p-5 space-y-4 pb-[calc(2rem+env(safe-area-inset-bottom))]">
             <div className="flex items-center justify-between mb-2">
               <h3 className="font-semibold">Filtri</h3>
               <button onClick={() => setShowMobileFilters(false)}>

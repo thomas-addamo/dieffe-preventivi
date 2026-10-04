@@ -105,12 +105,12 @@ export function PdfExportSheet({
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end md:items-center md:justify-center">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="modal-backdrop absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Esporta PDF"
-        className="animate-slide-up relative w-full bg-background rounded-t-2xl md:max-w-sm md:rounded-2xl shadow-xl pb-[calc(1.25rem+env(safe-area-inset-bottom))] md:pb-5"
+        className="sheet-in md:modal-pop relative w-full bg-background rounded-t-2xl md:max-w-sm md:rounded-2xl shadow-xl pb-[calc(1.25rem+env(safe-area-inset-bottom))] md:pb-5"
       >
         <div aria-hidden className="mx-auto mt-2 h-1 w-9 rounded-full bg-muted-foreground/25 md:hidden" />
         <div className="flex items-start gap-3 px-5 pt-4">

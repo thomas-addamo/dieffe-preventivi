@@ -21,7 +21,9 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      "fixed inset-0 z-50 bg-black/40 backdrop-blur-[3px]",
+      // Transizioni stile Apple (keyframes in globals.css)
+      "data-[state=open]:[animation:apple-fade-in_0.24s_ease-out_both] data-[state=closed]:[animation:apple-fade-out_0.18s_ease-in_both]",
       className
     )}
     {...props}
@@ -40,11 +42,12 @@ const DialogContent = React.forwardRef<
       className={cn(
         // Mobile: bottom sheet a tutta larghezza, scorrevole, con rispetto della
         // safe-area. Da sm in su torna il classico dialog centrato.
-        "fixed z-50 flex flex-col gap-4 border bg-card shadow-xl duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+        "fixed z-50 flex flex-col gap-4 border bg-card shadow-xl",
         "inset-x-0 bottom-0 mx-auto max-h-[92dvh] w-full overflow-y-auto overscroll-contain rounded-t-2xl p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]",
-        "max-sm:data-[state=closed]:slide-out-to-bottom max-sm:data-[state=open]:slide-in-from-bottom",
+        // Telefono: foglio che sale dal basso. Da sm: finestra che "si posa" al centro.
+        "max-sm:data-[state=open]:[animation:apple-sheet-in_0.42s_var(--ease-apple)_both] max-sm:data-[state=closed]:[animation:apple-sheet-out_0.24s_ease-in_both]",
         "sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:max-h-[calc(100dvh-4rem)] sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:p-6",
-        "sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 sm:data-[state=closed]:slide-out-to-left-1/2 sm:data-[state=closed]:slide-out-to-top-[48%] sm:data-[state=open]:slide-in-from-left-1/2 sm:data-[state=open]:slide-in-from-top-[48%]",
+        "sm:data-[state=open]:[animation:apple-pop-in_0.36s_var(--ease-apple)_both] sm:data-[state=closed]:[animation:apple-pop-out_0.16s_ease-in_both]",
         className
       )}
       {...props}

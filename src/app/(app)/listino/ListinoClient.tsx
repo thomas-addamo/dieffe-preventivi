@@ -421,8 +421,8 @@ export function ListinoClient({ userRole }: ListinoClientProps) {
 
       {/* Create/Edit Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-background border rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-[3px]">
+          <div className="modal-pop bg-background border rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between px-5 py-4 border-b">
               <h2 className="font-semibold">{editingItem ? "Modifica voce" : "Nuova voce listino"}</h2>
               <Button variant="ghost" size="icon" onClick={() => setShowModal(false)}>
@@ -542,8 +542,8 @@ export function ListinoClient({ userRole }: ListinoClientProps) {
 
       {/* Delete Confirm */}
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-background border rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
+        <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-[3px]">
+          <div className="modal-pop bg-background border rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
             <div className="flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
               <div>
@@ -566,8 +566,8 @@ export function ListinoClient({ userRole }: ListinoClientProps) {
 
       {/* Import Modal */}
       {showImport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-background border rounded-2xl shadow-xl w-full max-w-lg">
+        <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-[3px]">
+          <div className="modal-pop bg-background border rounded-2xl shadow-xl w-full max-w-lg">
             <div className="flex items-center justify-between px-5 py-4 border-b">
               <h2 className="font-semibold">Importa listino</h2>
               <Button variant="ghost" size="icon" onClick={() => { setShowImport(false); setImportFile(null); setImportPreview(null); }}>

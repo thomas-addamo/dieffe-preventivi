@@ -21,7 +21,7 @@ function on<T extends unknown[]>(channel: string, callback: (...args: T) => void
   };
 }
 
-const params = navigator.userAgent.match(/DieffeDesktop\/([\d.]+) \((\w+)\)/);
+const params = navigator.userAgent.match(/DieffeDesktop\/([\d.]+) \((\w+)(?:; (\d+))?\)/);
 
 contextBridge.exposeInMainWorld('electron', {
   isElectron: true,
