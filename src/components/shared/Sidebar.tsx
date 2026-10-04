@@ -177,10 +177,10 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
   const itemClass = (active: boolean) =>
     cn(
       "group relative flex w-full items-center gap-3 overflow-hidden whitespace-nowrap",
-      "h-[var(--sb-item)] rounded-lg pl-[var(--sb-ipad)] pr-2 text-sm font-medium",
+      "h-[var(--sb-item)] rounded-[var(--sb-item-radius)] pl-[var(--sb-ipad)] pr-2 text-sm font-medium",
       "transition-colors duration-150",
       // App desktop: tipografia e selezione da lista di sistema (Finder/Mail)
-      "desktop:rounded-[10px] desktop:text-[13px]",
+      "desktop:text-[13px]",
       active
         ? "bg-primary/10 text-primary desktop:bg-foreground/[0.08] desktop:text-foreground dark:desktop:bg-white/[0.1] desktop:[&>svg]:text-primary"
         : "text-muted-foreground hover:bg-accent hover:text-foreground desktop:text-foreground/80 desktop:hover:bg-foreground/[0.05] desktop:[&>svg]:text-primary/80"
@@ -267,7 +267,7 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
         isDrawer ? "sticky" : "fixed left-0 z-30",
         // Aperta dal mouse: pannello flottante ben distinto dal contenuto
         overlaying &&
-          "sidebar-overlay rounded-r-2xl border-border shadow-[0_0_0_0.5px_rgb(0_0_0/0.06),12px_0_40px_-8px_rgb(16_24_40/0.22)] dark:shadow-[0_0_0_0.5px_rgb(255_255_255/0.08),12px_0_40px_-8px_rgb(0_0_0/0.7)]"
+          "sidebar-overlay rounded-r-[var(--sb-overlay-radius)] border-border shadow-[0_0_0_0.5px_rgb(0_0_0/0.06),12px_0_40px_-8px_rgb(16_24_40/0.22)] dark:shadow-[0_0_0_0.5px_rgb(255_255_255/0.08),12px_0_40px_-8px_rgb(0_0_0/0.7)]"
       )}
     >
       {/* Riga superiore. Su Mac ospita i semafori della finestra; è trascinabile
@@ -310,8 +310,9 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
           <button
             onClick={toggleCollapsed}
             className={cn(
-              "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
-              "mac:h-7 mac:w-7 mac:rounded-md mac:hover:bg-foreground/[0.06]",
+              // Annidato all'angolo in alto a destra della barra aperta col mouse
+              "flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--sb-corner-radius)] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
+              "mac:h-7 mac:w-7 mac:rounded-[var(--sb-inner-radius)] mac:hover:bg-foreground/[0.06]",
               reveal
             )}
             aria-label={collapsed ? "Mantieni aperta la barra laterale" : "Comprimi la barra laterale"}
@@ -352,7 +353,7 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
                       aria-label="Mostra elenco preventivi"
                       title="Elenco preventivi"
                       className={cn(
-                        "absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground",
+                        "absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-[var(--sb-inner-radius)] text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground",
                         reveal
                       )}
                     >
@@ -428,7 +429,7 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
                       onClick={() => openQuote(q.id)}
                       title={q.title}
                       className={cn(
-                        "w-full rounded-lg px-2.5 py-2 text-left transition-colors desktop:rounded-md desktop:py-1.5",
+                        "w-full rounded-[var(--sb-item-radius)] px-2.5 py-2 text-left transition-colors desktop:py-1.5",
                         active ? "bg-primary/10 desktop:bg-foreground/[0.08]" : "hover:bg-accent desktop:hover:bg-foreground/[0.05]"
                       )}
                     >

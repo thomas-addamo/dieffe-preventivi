@@ -34,6 +34,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.15.1",
+    date: "2026-10-04",
+    headline: "Ogni angolo al suo posto.",
+    highlights: [
+      {
+        icon: "layout",
+        title: "Raggi annidati ovunque",
+        description: "Anche dentro la barra laterale ogni angolo segue quello che lo contiene.",
+      },
+    ],
+  },
+  {
     version: "3.15.0",
     date: "2026-10-04",
     headline: "Più fluida, più precisa.",

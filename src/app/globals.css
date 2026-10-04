@@ -544,11 +544,13 @@ body {
   --sb-w: 15rem;              /* 240px aperta            */
   --sb-pad: 0.625rem;         /* 10px  margine laterale   */
   --sb-item: 2.75rem;         /* 44px  pulsante quadrato  */
+  --sb-item-radius: 0.75rem;  /* 12px  raggio delle voci  */
 }
 [data-shell="desktop"] {
   --sb-w: 15.5rem;
   --sb-pad: 0.75rem;          /* 64px  = 12 + 40 + 12     */
   --sb-item: 2.5rem;
+  --sb-item-radius: 0.625rem; /* 10px */
 }
 [data-platform="mac"] {
   /* Su Mac la barra compressa deve contenere i semafori (18–77pt) */
@@ -565,6 +567,20 @@ body {
   --sb-logo-pad: calc(var(--sb-pad) + (var(--sb-item) - 2rem) / 2);
   --sb-brand-pad: calc((var(--sb-item) - 1.75rem) / 2);
   --sb-dash-left: calc(var(--sb-item) / 2 - 0.625rem);
+  /* Raggi annidati dentro la barra:
+     barra aperta col mouse = raggio voce + margine laterale (le voci sono
+     concentriche ai suoi angoli); elementi dentro una voce a 4px dal bordo
+     = raggio voce − 4px. */
+  --sb-overlay-radius: calc(var(--sb-item-radius) + var(--sb-pad));
+  --sb-inner-radius: calc(var(--sb-item-radius) - 0.25rem);
+  /* pulsante nell'angolo in alto a destra della barra aperta col mouse */
+  --sb-corner-radius: calc(var(--sb-overlay-radius) - var(--sb-pad));
+}
+/* Mac: il margine (24px) è dettato dai semafori; gli angoli della barra
+   aperta riprendono quelli della finestra. */
+[data-platform="mac"] {
+  --sb-overlay-radius: var(--desk-window-radius, 17px);
+  --sb-corner-radius: var(--sb-inner-radius);
 }
 
 /* Barra compressa aperta dal mouse: superficie distinta che fluttua sul contenuto */

@@ -11,4 +11,4 @@
 // e aggiungere le novità in src/lib/changelog.ts (banner "Novità").
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const APP_VERSION = "3.15.0";
+export const APP_VERSION = "3.15.1";
