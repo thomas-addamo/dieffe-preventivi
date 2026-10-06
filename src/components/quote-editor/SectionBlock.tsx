@@ -161,7 +161,7 @@ export function SectionBlock({
   );
 
   return (
-    <div ref={setNodeRef} style={sectionStyle} className="bg-card border rounded-xl overflow-hidden">
+    <div ref={setNodeRef} style={sectionStyle} className="surface overflow-hidden p-0">
       {/* Section header */}
       <div className={cn("flex items-center gap-2 px-3 md:px-4 py-3 border-b", headerBg)}>
         <GripVertical

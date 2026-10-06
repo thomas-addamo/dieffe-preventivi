@@ -43,10 +43,10 @@ const DialogContent = React.forwardRef<
         // Mobile: bottom sheet a tutta larghezza, scorrevole, con rispetto della
         // safe-area. Da sm in su torna il classico dialog centrato.
         "fixed z-50 flex flex-col gap-4 border bg-card shadow-xl",
-        "inset-x-0 bottom-0 mx-auto max-h-[92dvh] w-full overflow-y-auto overscroll-contain rounded-t-2xl p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]",
+        "inset-x-0 bottom-0 mx-auto max-h-[92dvh] w-full overflow-y-auto overscroll-contain rounded-t-sheet p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]",
         // Telefono: foglio che sale dal basso. Da sm: finestra che "si posa" al centro.
         "max-sm:data-[state=open]:[animation:apple-sheet-in_0.42s_var(--ease-apple)_both] max-sm:data-[state=closed]:[animation:apple-sheet-out_0.24s_ease-in_both]",
-        "sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:max-h-[calc(100dvh-4rem)] sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:p-6",
+        "sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:max-h-[calc(100dvh-4rem)] sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-sheet sm:p-5",
         "sm:data-[state=open]:[animation:apple-pop-in_0.36s_var(--ease-apple)_both] sm:data-[state=closed]:[animation:apple-pop-out_0.16s_ease-in_both]",
         className
       )}
@@ -58,7 +58,8 @@ const DialogContent = React.forwardRef<
         className="mx-auto -mb-2 h-1 w-9 shrink-0 rounded-full bg-muted-foreground/25 sm:hidden"
       />
       {children}
-      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-md p-1 opacity-70 transition-opacity hover:opacity-100 hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+      {/* Cerchio da 32px a 16px dal bordo: concentrico all'angolo da 32px */}
+      <DialogPrimitive.Close className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-muted/70 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:pointer-events-none">
         <X className="h-4 w-4" />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>
@@ -73,7 +74,7 @@ const DialogHeader = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex shrink-0 flex-col space-y-1.5 pr-8 text-left",
+      "flex min-h-8 shrink-0 flex-col justify-center space-y-1.5 pr-10 text-left",
       className
     )}
     {...props}

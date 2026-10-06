@@ -4,6 +4,7 @@ import { useRef, useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { Page, PageHeader } from "@/components/shared/Page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -97,8 +98,8 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} className="scroll-mt-20 bg-card border rounded-xl p-5 space-y-4">
-      <h2 className="font-medium text-sm flex items-center gap-2">
+    <section id={id} className="surface scroll-mt-20 space-y-4">
+      <h2 className="font-semibold text-[15px] flex items-center gap-2 px-1">
         <Icon className="w-4 h-4 text-primary" /> {title}
       </h2>
       {children}
@@ -273,15 +274,15 @@ export function ImpostazioniClient({
   ];
 
   return (
-    <div className="p-4 md:p-6 lg:p-8">
-      <div className="mb-6 lg:mb-8">
-        <h1 className="text-2xl font-bold lg:text-xl lg:font-semibold">Impostazioni</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          {isAdmin
+    <Page>
+      <PageHeader
+        title="Impostazioni"
+        subtitle={
+          isAdmin
             ? "Gestisci le tue preferenze personali e le impostazioni dell'azienda"
-            : "Gestisci le tue preferenze personali"}
-        </p>
-      </div>
+            : "Gestisci le tue preferenze personali"
+        }
+      />
 
       <div className="lg:grid lg:grid-cols-[210px_minmax(0,1fr)] lg:gap-8 lg:items-start">
         {/* Nav laterale (desktop) */}
@@ -302,7 +303,7 @@ export function ImpostazioniClient({
         </nav>
 
         {/* Contenuto */}
-        <div className="space-y-6 min-w-0 max-w-3xl">
+        <div className="space-y-4 min-w-0 max-w-3xl">
           {/* ───────── PERSONALI (tutti gli utenti) ───────── */}
           <Section id="account" title="Account" icon={User}>
             <div className="flex items-center gap-3">
@@ -417,7 +418,7 @@ export function ImpostazioniClient({
 
           {/* ───────── AZIENDALI (solo admin) ───────── */}
           {isAdmin && (
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <Section id="azienda" title="Dati azienda" icon={Building2}>
                 <p className="text-xs text-muted-foreground -mt-2">
                   Questi dati appaiono nell&apos;intestazione di tutti i preventivi.
@@ -699,6 +700,6 @@ export function ImpostazioniClient({
       </div>
 
       <ChangePasswordDialog open={showChangePassword} onOpenChange={setShowChangePassword} />
-    </div>
+    </Page>
   );
 }

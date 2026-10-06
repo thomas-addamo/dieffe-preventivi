@@ -163,7 +163,7 @@ export function NotificationBell() {
                     >
                       <span
                         className={cn(
-                          "mt-0.5 w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
+                          "mt-0.5 w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
                           meta.iconClass
                         )}
                       >

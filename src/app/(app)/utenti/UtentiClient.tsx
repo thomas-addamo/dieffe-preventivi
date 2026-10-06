@@ -7,6 +7,7 @@ import { z } from "zod";
 import { Plus, Edit2, Trash2, Loader2, Shield, User, Eye, EyeOff, Clock, UserCheck, Wand2, Copy, Check, Info } from "lucide-react";
 import { ROLES } from "@/lib/permissions/types";
 import { Button } from "@/components/ui/button";
+import { Page, PageHeader } from "@/components/shared/Page";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordStrengthMeter } from "@/components/shared/PasswordStrengthMeter";
@@ -259,30 +260,28 @@ export function UtentiClient({
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-4 md:mb-6">
-        <div>
-          <h1 className="text-2xl font-bold lg:text-xl lg:font-semibold">
-            Utenti
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Gestione accessi
-          </p>
-        </div>
-        <Button onClick={() => setShowCreate(true)} className="gap-2 hidden lg:flex">
-          <Plus className="w-4 h-4" /> Nuovo utente
-        </Button>
-        <button
-          onClick={() => setShowCreate(true)}
-          aria-label="Nuovo utente"
-          className="lg:hidden flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xs transition-transform active:scale-90"
-        >
-          <Plus className="h-5 w-5" />
-        </button>
-      </div>
+    <Page>
+      <PageHeader
+        title="Utenti"
+        subtitle="Gestione accessi"
+        actions={
+          <>
+            <Button onClick={() => setShowCreate(true)} className="gap-2 hidden lg:flex">
+              <Plus className="w-4 h-4" /> Nuovo utente
+            </Button>
+            <button
+              onClick={() => setShowCreate(true)}
+              aria-label="Nuovo utente"
+              className="lg:hidden flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xs transition-transform active:scale-90"
+            >
+              <Plus className="h-5 w-5" />
+            </button>
+          </>
+        }
+      />
 
       {/* Desktop table */}
-      <div className="hidden lg:block border rounded-xl overflow-hidden bg-card">
+      <div className="surface hidden lg:block overflow-hidden p-0">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40 hover:bg-muted/40">
@@ -370,7 +369,7 @@ export function UtentiClient({
       {/* Mobile card list */}
       <div className="lg:hidden space-y-3">
         {users.map((u) => (
-          <div key={u.id} className="bg-card border rounded-xl p-4 space-y-2">
+          <div key={u.id} className="surface space-y-2">
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -662,6 +661,6 @@ export function UtentiClient({
           </form>
         </DialogContent>
       </Dialog>
-    </div>
+    </Page>
   );
 }

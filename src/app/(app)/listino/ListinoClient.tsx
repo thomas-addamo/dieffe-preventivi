@@ -21,13 +21,21 @@ import {
   Trash2,
   ToggleLeft,
   ToggleRight,
-  X,
   Loader2,
   List,
   AlertTriangle,
   CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Page, PageHeader, EmptyState } from "@/components/shared/Page";
 import { formatCurrency } from "@/lib/utils";
 import type { PriceListItem } from "@/lib/db/schema";
 
@@ -232,46 +240,39 @@ export function ListinoClient({ userRole }: ListinoClientProps) {
   );
 
   return (
-    <div className="p-3 md:p-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6 gap-3">
-        <div>
-          <h1 className="text-2xl font-bold lg:text-xl lg:font-semibold flex items-center gap-2">
-            <List className="w-6 h-6 lg:w-5 lg:h-5 text-primary" /> Listino Prezzi
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {items.length} voci{filterActive === "active" ? " attive" : ""}
-          </p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap justify-end">
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setShowImport(true)}>
-            <Upload className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Importa</span>
+    <Page>
+      <PageHeader
+        title="Listino prezzi"
+        subtitle={`${items.length} voci${filterActive === "active" ? " attive" : ""}`}
+        actions={<>
+          <Button variant="outline" className="gap-2" onClick={() => setShowImport(true)}>
+            <Upload className="w-4 h-4" /> <span className="hidden sm:inline">Importa</span>
           </Button>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExport}>
-            <Download className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Esporta</span>
+          <Button variant="outline" className="gap-2" onClick={handleExport}>
+            <Download className="w-4 h-4" /> <span className="hidden sm:inline">Esporta</span>
           </Button>
-          <Button size="sm" className="gap-1.5" onClick={openCreate}>
-            <Plus className="w-3.5 h-3.5" /> Aggiungi voce
+          <Button className="gap-2" onClick={openCreate}>
+            <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Aggiungi voce</span>
           </Button>
-        </div>
-      </div>
+        </>}
+      />
 
       {/* AI Search */}
       <AiSearchPanel />
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-2 mb-4">
+      <div className="flex flex-wrap gap-3 mb-4">
         <div className="relative flex-1 min-w-40">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Cerca nel listino..."
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            className="pl-8 h-9 text-sm"
+            className="pl-9"
           />
         </div>
         <Select value={filterCategory || "_all"} onValueChange={(v) => setFilterCategory(v === "_all" ? "" : v)}>
-          <SelectTrigger className="h-9 text-sm w-44">
+          <SelectTrigger className="w-44">
             <SelectValue placeholder="Tutte le categorie" />
           </SelectTrigger>
           <SelectContent>
@@ -282,7 +283,7 @@ export function ListinoClient({ userRole }: ListinoClientProps) {
           </SelectContent>
         </Select>
         <Select value={filterActive} onValueChange={(v) => setFilterActive(v as "all" | "active" | "inactive")}>
-          <SelectTrigger className="h-9 text-sm w-36">
+          <SelectTrigger className="w-36">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -299,17 +300,21 @@ export function ListinoClient({ userRole }: ListinoClientProps) {
           <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
         </div>
       ) : items.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground">
-          <List className="w-10 h-10 mx-auto mb-3 opacity-30" />
-          <p className="text-sm">Nessuna voce trovata</p>
-          <Button size="sm" className="mt-3" onClick={openCreate}>
-            <Plus className="w-3.5 h-3.5 mr-1.5" /> Aggiungi la prima voce
-          </Button>
+        <div className="surface p-0">
+          <EmptyState
+            icon={List}
+            title="Nessuna voce trovata"
+            action={
+              <Button size="sm" className="mt-1" onClick={openCreate}>
+                <Plus className="w-3.5 h-3.5 mr-1.5" /> Aggiungi la prima voce
+              </Button>
+            }
+          />
         </div>
       ) : (
         <>
           {/* Desktop */}
-          <div className="hidden md:block border rounded-xl overflow-hidden">
+          <div className="surface hidden md:block overflow-hidden p-0">
             <table className="w-full text-sm">
               <thead className="bg-muted/50">
                 <tr>
@@ -368,9 +373,9 @@ export function ListinoClient({ userRole }: ListinoClientProps) {
           </div>
 
           {/* Mobile cards */}
-          <div className="md:hidden space-y-2">
+          <div className="md:hidden space-y-2.5">
             {items.map((item) => (
-              <div key={item.id} className={`border rounded-xl p-3 ${!item.isActive ? "opacity-50" : ""}`}>
+              <div key={item.id} className={`surface ${!item.isActive ? "opacity-50" : ""}`}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-sm leading-snug">{item.description}</div>
@@ -420,16 +425,12 @@ export function ListinoClient({ userRole }: ListinoClientProps) {
       )}
 
       {/* Create/Edit Modal */}
-      {showModal && (
-        <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-[3px]">
-          <div className="modal-pop bg-background border rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between px-5 py-4 border-b">
-              <h2 className="font-semibold">{editingItem ? "Modifica voce" : "Nuova voce listino"}</h2>
-              <Button variant="ghost" size="icon" onClick={() => setShowModal(false)}>
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-            <div className="p-5 space-y-4">
+      <Dialog open={showModal} onOpenChange={(o) => !o && setShowModal(false)}>
+        <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>{editingItem ? "Modifica voce" : "Nuova voce listino"}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
               <div className="space-y-1.5">
                 <Label>Descrizione *</Label>
                 <textarea
@@ -437,14 +438,14 @@ export function ListinoClient({ userRole }: ListinoClientProps) {
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   placeholder="Fornitura e posa..."
                   rows={3}
-                  className="w-full border rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="w-full rounded-lg border border-input bg-card px-3 py-2 text-base shadow-2xs resize-none focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-ring md:text-sm"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label>U.M. *</Label>
                   <Select value={form.unitOfMeasure} onValueChange={(v) => setForm({ ...form, unitOfMeasure: v })}>
-                    <SelectTrigger className="h-9 text-sm">
+                    <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -462,7 +463,6 @@ export function ListinoClient({ userRole }: ListinoClientProps) {
                     onChange={(e) => setForm({ ...form, unitPrice: e.target.value })}
                     placeholder="0.00"
                     step="0.01"
-                    className="h-9 text-sm"
                   />
                 </div>
               </div>
@@ -480,7 +480,7 @@ export function ListinoClient({ userRole }: ListinoClientProps) {
                       }
                     }}
                   >
-                    <SelectTrigger className="h-9 text-sm flex-1">
+                    <SelectTrigger className="flex-1">
                       <SelectValue placeholder="Seleziona categoria..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -497,7 +497,7 @@ export function ListinoClient({ userRole }: ListinoClientProps) {
                   placeholder="Nuova categoria..."
                   value={newCategoryInput}
                   onChange={(e) => setNewCategoryInput(e.target.value)}
-                  className="h-9 text-sm mt-1"
+                  className="mt-1"
                 />
               </div>
               <div className="space-y-1.5">
@@ -506,7 +506,7 @@ export function ListinoClient({ userRole }: ListinoClientProps) {
                   value={form.code}
                   onChange={(e) => setForm({ ...form, code: e.target.value })}
                   placeholder="CAP-001"
-                  className="h-9 text-sm font-mono"
+                  className="font-mono"
                 />
               </div>
               <div className="space-y-1.5">
@@ -515,7 +515,6 @@ export function ListinoClient({ userRole }: ListinoClientProps) {
                   value={form.notes}
                   onChange={(e) => setForm({ ...form, notes: e.target.value })}
                   placeholder="Note..."
-                  className="h-9 text-sm"
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -529,57 +528,54 @@ export function ListinoClient({ userRole }: ListinoClientProps) {
                 <Label htmlFor="isActive" className="cursor-pointer">Voce attiva</Label>
               </div>
             </div>
-            <div className="flex justify-end gap-2 px-5 py-4 border-t">
+            <DialogFooter>
               <Button variant="outline" onClick={() => setShowModal(false)}>Annulla</Button>
               <Button onClick={handleSave} disabled={saving}>
                 {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : null}
                 {editingItem ? "Salva modifiche" : "Crea voce"}
               </Button>
-            </div>
-          </div>
-        </div>
-      )}
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirm */}
-      {deleteTarget && (
-        <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-[3px]">
-          <div className="modal-pop bg-background border rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
-              <div>
-                <h3 className="font-semibold">Elimina voce</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Stai eliminando definitivamente: <strong>{deleteTarget.description}</strong>. Questa operazione non può essere annullata.
-                </p>
-              </div>
-            </div>
-            <div className="flex justify-end gap-2">
+      <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <DialogContent className="sm:max-w-sm">
+          {deleteTarget && (<>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-destructive shrink-0" /> Elimina voce
+              </DialogTitle>
+              <DialogDescription>
+                Stai eliminando definitivamente: <strong>{deleteTarget.description}</strong>. Questa operazione non può essere annullata.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
               <Button variant="outline" onClick={() => setDeleteTarget(null)}>Annulla</Button>
               <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
                 {deleting ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : null}
                 Elimina
               </Button>
-            </div>
-          </div>
-        </div>
-      )}
+            </DialogFooter>
+          </>)}
+        </DialogContent>
+      </Dialog>
 
       {/* Import Modal */}
-      {showImport && (
-        <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-[3px]">
-          <div className="modal-pop bg-background border rounded-2xl shadow-xl w-full max-w-lg">
-            <div className="flex items-center justify-between px-5 py-4 border-b">
-              <h2 className="font-semibold">Importa listino</h2>
-              <Button variant="ghost" size="icon" onClick={() => { setShowImport(false); setImportFile(null); setImportPreview(null); }}>
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-            <div className="p-5 space-y-4">
+      <Dialog
+        open={showImport}
+        onOpenChange={(o) => { if (!o) { setShowImport(false); setImportFile(null); setImportPreview(null); } }}
+      >
+        <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Importa listino</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
                 Carica un file Excel (.xlsx) o CSV con colonne: <strong>descrizione</strong>, <strong>prezzo</strong>, u.m. (opzionale), codice (opzionale), categoria (opzionale).
               </p>
               <div
-                className="border-2 border-dashed rounded-xl p-6 text-center cursor-pointer hover:bg-muted/20"
+                className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:bg-muted/20"
                 onClick={() => fileInputRef.current?.click()}
               >
                 <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
@@ -627,7 +623,7 @@ export function ListinoClient({ userRole }: ListinoClientProps) {
                 </div>
               )}
             </div>
-            <div className="flex justify-end gap-2 px-5 py-4 border-t">
+            <DialogFooter>
               <Button variant="outline" onClick={() => { setShowImport(false); setImportFile(null); setImportPreview(null); }}>
                 Annulla
               </Button>
@@ -637,10 +633,9 @@ export function ListinoClient({ userRole }: ListinoClientProps) {
                   Importa {importPreview.count} voci
                 </Button>
               )}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Page>
   );
 }

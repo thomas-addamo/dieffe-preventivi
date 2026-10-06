@@ -235,6 +235,43 @@ export const quoteTemplates = pgTable("quote_templates", {
     .defaultNow(),
 });
 
+// ─── Communications (lettere / comunicazioni su carta intestata) ───────────────
+
+export type CommunicationRecipient = {
+  /** cliente | condomini | amministratore | architetto | altro */
+  kind: string;
+  /** Formula di apertura: "Spett.le", "Egr. Arch.", "Gent.mi Condòmini"… */
+  salutation: string;
+  name: string;
+  address?: string;
+  email?: string;
+  clientId?: string | null;
+};
+
+export const communications = pgTable(
+  "communications",
+  {
+    id: text("id").primaryKey(),
+    code: text("code").notNull(),
+    subject: text("subject").notNull().default(""),
+    /** Documento Tiptap (JSON ProseMirror) con la formattazione completa. */
+    body: jsonb("body").notNull(),
+    recipients: jsonb("recipients").$type<CommunicationRecipient[]>().notNull().default([]),
+    place: text("place"),
+    documentDate: text("document_date"),
+    includeStamp: boolean("include_stamp").notNull().default(true),
+    signatory: text("signatory"),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [uniqueIndex("communications_code_idx").on(t.code)]
+);
+
 // ─── Quote Signatures ─────────────────────────────────────────────────────────
 
 export const quoteSignatures = pgTable("quote_signatures", {
@@ -382,6 +419,7 @@ export type QuoteItem = typeof quoteItems.$inferSelect;
 export type NewQuoteItem = typeof quoteItems.$inferInsert;
 export type QuoteItemImage = typeof quoteItemImages.$inferSelect;
 export type QuoteTemplate = typeof quoteTemplates.$inferSelect;
+export type Communication = typeof communications.$inferSelect;
 export type QuoteSignature = typeof quoteSignatures.$inferSelect;
 export type NewQuoteSignature = typeof quoteSignatures.$inferInsert;
 export type UserAccessLog = typeof userAccessLog.$inferSelect;

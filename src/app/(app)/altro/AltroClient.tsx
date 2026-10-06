@@ -3,7 +3,7 @@
 import Link from "next/link";
 import {
   List,
-  LayoutTemplate,
+  Mail,
   Trash2,
   BellRing,
   ScrollText,
@@ -38,7 +38,7 @@ function Row({ item }: { item: Item }) {
       className="flex items-center gap-3 px-4 py-3.5 transition-colors active:bg-accent"
     >
       <span
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${item.iconClass}`}
+        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${item.iconClass}`}
       >
         <Icon className="h-5 w-5" />
       </span>
@@ -60,7 +60,7 @@ function Row({ item }: { item: Item }) {
 
 function Group({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mb-5 divide-y divide-border/60 overflow-hidden rounded-2xl border bg-card shadow-xs">
+    <div className="mb-5 divide-y divide-border/60 overflow-hidden rounded-card border bg-card shadow-xs">
       {children}
     </div>
   );
@@ -86,10 +86,10 @@ export function AltroClient({ userRole, trashCount }: AltroClientProps) {
       iconClass: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
     },
     {
-      href: "/template",
-      label: "Template",
-      description: "Modelli di preventivo riutilizzabili",
-      icon: LayoutTemplate,
+      href: "/comunicazioni",
+      label: "Crea comunicazione",
+      description: "Lettere su carta intestata con timbro",
+      icon: Mail,
       iconClass: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
     },
   ];

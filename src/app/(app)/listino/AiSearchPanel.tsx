@@ -67,8 +67,8 @@ export function AiSearchPanel() {
     results && (results.quoteItems.length > 0 || results.listinoItems.length > 0);
 
   return (
-    <div className="mb-5 border border-violet-200 dark:border-violet-800 rounded-xl bg-violet-50/60 dark:bg-violet-950/20 p-3 md:p-4 overflow-hidden">
-      <div className="flex items-center gap-2 mb-2.5">
+    <div className="mb-5 border border-violet-200 dark:border-violet-800 rounded-card bg-violet-50/60 dark:bg-violet-950/20 p-4 overflow-hidden">
+      <div className="flex items-center gap-2 mb-3 px-1">
         <Sparkles className="w-4 h-4 text-violet-500 shrink-0" />
         <span className="text-sm font-medium text-violet-700 dark:text-violet-400">
           Ricerca AI — cerca nel listino e nella storia dei preventivi
@@ -77,19 +77,18 @@ export function AiSearchPanel() {
 
       <div className="flex gap-2">
         <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Es: cappotto termico, posa piastrelle, tinteggiatura..."
-            className="pl-8 h-9 text-sm bg-card"
+            className="pl-9"
           />
         </div>
         <Button
-          size="sm"
-          className="h-9 bg-violet-600 hover:bg-violet-700"
+          className="h-11 md:h-10 bg-violet-600 hover:bg-violet-700"
           onClick={() => handleSearch()}
           disabled={!query.trim() || loading}
         >

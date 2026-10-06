@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { ScrollText, Download } from "lucide-react";
+import { Download } from "lucide-react";
+import { Page, PageHeader } from "@/components/shared/Page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -104,23 +105,23 @@ export function AuditLogClient({ initialRows }: { initialRows: AuditRow[] }) {
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <div className="flex items-center gap-3">
-          <ScrollText className="w-6 h-6 text-muted-foreground" />
-          <h1 className="text-2xl font-bold">Audit Log</h1>
-        </div>
-        <Button variant="outline" size="sm" onClick={exportCsv}>
-          <Download className="w-4 h-4 mr-1" /> Esporta CSV
-        </Button>
-      </div>
+    <Page>
+      <PageHeader
+        title="Audit log"
+        subtitle={`${filtered.length} eventi`}
+        actions={
+          <Button variant="outline" className="gap-2" onClick={exportCsv}>
+            <Download className="w-4 h-4" /> <span className="hidden sm:inline">Esporta CSV</span>
+          </Button>
+        }
+      />
 
-      <div className="flex flex-wrap gap-3 mb-5">
+      <div className="flex flex-wrap gap-3 mb-4">
         <Input
           placeholder="Cerca..."
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(0); }}
-          className="max-w-xs"
+          className="sm:max-w-xs"
         />
         <Select value={filterAction} onValueChange={(v) => { setFilterAction(v); setPage(0); }}>
           <SelectTrigger className="w-48">
@@ -146,9 +147,7 @@ export function AuditLogClient({ initialRows }: { initialRows: AuditRow[] }) {
         </Select>
       </div>
 
-      <div className="text-sm text-muted-foreground mb-3">{filtered.length} eventi</div>
-
-      <div className="rounded-xl border overflow-hidden">
+      <div className="surface overflow-x-auto p-0">
         <table className="w-full text-sm">
           <thead className="bg-muted/50 text-muted-foreground">
             <tr>
@@ -214,6 +213,6 @@ export function AuditLogClient({ initialRows }: { initialRows: AuditRow[] }) {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </Page>
   );
 }

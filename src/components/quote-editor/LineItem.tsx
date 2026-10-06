@@ -10,7 +10,6 @@ import {
   Sparkles,
   Loader2,
   BookmarkPlus,
-  X,
   CheckCircle2,
   ChevronDown,
   Info,
@@ -19,6 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -113,15 +113,12 @@ function SaveToListinoModal({ item, categories, onClose, onSaved }: SaveToListin
   }
 
   return (
-    <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-[3px]">
-      <div className="modal-pop bg-background border rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-5 py-4 border-b">
-          <h2 className="font-semibold text-sm">Salva nel listino prezzi</h2>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="w-4 h-4" />
-          </Button>
-        </div>
-        <div className="p-5 space-y-4">
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Salva nel listino prezzi</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
           {similar.length > 0 && (
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800 space-y-1">
               <p className="font-medium">Attenzione: voci simili già nel listino:</p>
@@ -133,55 +130,54 @@ function SaveToListinoModal({ item, categories, onClose, onSaved }: SaveToListin
             </div>
           )}
           <div className="space-y-1.5">
-            <Label className="text-xs">Descrizione</Label>
+            <Label>Descrizione</Label>
             <textarea
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               rows={2}
-              className="w-full border rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full rounded-lg border border-input bg-card px-3 py-2 text-base shadow-2xs resize-none focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-ring md:text-sm"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs">U.M.</Label>
+              <Label>U.M.</Label>
               <Select
                 value={form.unitOfMeasure}
                 onValueChange={(v) => setForm({ ...form, unitOfMeasure: v })}
               >
-                <SelectTrigger className="h-8 text-xs">
+                <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {UNIT_OF_MEASURES.map((um) => (
-                    <SelectItem key={um} value={um} className="text-xs">{um}</SelectItem>
+                    <SelectItem key={um} value={um} >{um}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Prezzo unitario</Label>
+              <Label>Prezzo unitario</Label>
               <Input
                 type="number"
                 value={form.unitPrice}
                 onChange={(e) => setForm({ ...form, unitPrice: e.target.value })}
                 step="0.01"
-                className="h-8 text-xs"
               />
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Categoria</Label>
+            <Label>Categoria</Label>
             <Select
               value={form.category || "_none"}
               onValueChange={(v) => setForm({ ...form, category: v === "_none" ? "" : v, newCategory: "" })}
             >
-              <SelectTrigger className="h-8 text-xs">
+              <SelectTrigger>
                 <SelectValue placeholder="Seleziona..." />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="_none">Nessuna</SelectItem>
                 {categories.map((c) => (
-                  <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>
+                  <SelectItem key={c} value={c} >{c}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -189,28 +185,28 @@ function SaveToListinoModal({ item, categories, onClose, onSaved }: SaveToListin
               placeholder="Oppure: nuova categoria..."
               value={form.newCategory}
               onChange={(e) => setForm({ ...form, newCategory: e.target.value, category: "" })}
-              className="h-8 text-xs mt-1"
+              className="mt-1"
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Codice (opzionale)</Label>
+            <Label>Codice (opzionale)</Label>
             <Input
               value={form.code}
               onChange={(e) => setForm({ ...form, code: e.target.value })}
               placeholder="CAP-001"
-              className="h-8 text-xs font-mono"
+              className="font-mono"
             />
           </div>
         </div>
-        <div className="flex justify-end gap-2 px-5 py-4 border-t">
-          <Button variant="outline" size="sm" onClick={onClose}>Annulla</Button>
-          <Button size="sm" onClick={handleSave} disabled={saving || !form.description}>
-            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <BookmarkPlus className="w-3.5 h-3.5 mr-1" />}
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Annulla</Button>
+          <Button onClick={handleSave} disabled={saving || !form.description}>
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookmarkPlus className="w-4 h-4" />}
             Salva nel listino
           </Button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -265,7 +261,7 @@ function ListinoAutocomplete({
 
   return createPortal(
     <div
-      className="fixed z-[60] bg-background border rounded-xl shadow-lg divide-y text-xs max-h-60 overflow-y-auto"
+      className="fixed z-[60] bg-background border rounded-xl shadow-lg divide-y overflow-hidden text-xs max-h-60 overflow-y-auto"
       style={{
         left: pos.left,
         width: pos.width,
@@ -817,7 +813,7 @@ export function LineItem({
         </div>
 
         {/* Riga 3: totale voce + azioni */}
-        <div className="flex items-center justify-between rounded-xl bg-muted/40 px-3 py-1.5">
+        <div className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-1.5">
           <div className="min-w-0">
             <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
               Totale voce

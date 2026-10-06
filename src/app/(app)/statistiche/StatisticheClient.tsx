@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BarChart2 } from "lucide-react";
+import { Page, PageHeader } from "@/components/shared/Page";
 import {
   BarChart,
   Bar,
@@ -168,33 +168,26 @@ export function StatisticheClient({ quotes }: { quotes: QuoteData[] }) {
   }, [filtered]);
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">
-      <div className="mb-4 md:mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <span className="hidden sm:flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-            <BarChart2 className="w-4.5 h-4.5" />
-          </span>
-          <div className="min-w-0">
-            <h1 className="text-2xl font-bold lg:text-xl lg:font-semibold">Statistiche</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              {totalCount} preventiv{totalCount === 1 ? "o" : "i"} nel periodo selezionato
-            </p>
-          </div>
-        </div>
-        <Select value={period} onValueChange={setPeriod}>
-          <SelectTrigger className="w-full sm:w-48 shrink-0">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {PERIOD_OPTIONS.map((o) => (
-              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+    <Page>
+      <PageHeader
+        title="Statistiche"
+        subtitle={`${totalCount} preventiv${totalCount === 1 ? "o" : "i"} nel periodo selezionato`}
+        actions={
+          <Select value={period} onValueChange={setPeriod}>
+            <SelectTrigger className="w-40 sm:w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PERIOD_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        }
+      />
 
       {/* KPI cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4 mb-6 md:mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-5 md:mb-6">
         <KpiCard label="Totale preventivi" value={totalCount.toString()} />
         <KpiCard label="Valore accettati" value={fmtCurrency(totalAcceptedValue)} />
         <KpiCard label="Tasso conversione" value={fmtPct(conversionRate)} />
@@ -208,8 +201,8 @@ export function StatisticheClient({ quotes }: { quotes: QuoteData[] }) {
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
-        <div className="border rounded-xl bg-card p-4 shadow-xs">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5 md:mb-6">
+        <div className="surface">
           <h2 className="font-semibold text-sm mb-3 md:mb-4">Preventivi per mese (ultimi 12 mesi)</h2>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={monthlyData}>
@@ -225,7 +218,7 @@ export function StatisticheClient({ quotes }: { quotes: QuoteData[] }) {
           </ResponsiveContainer>
         </div>
 
-        <div className="border rounded-xl bg-card p-4 shadow-xs">
+        <div className="surface">
           <h2 className="font-semibold text-sm mb-3 md:mb-4">Valore mensile preventivi accettati</h2>
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={monthlyValueData}>
@@ -238,7 +231,7 @@ export function StatisticheClient({ quotes }: { quotes: QuoteData[] }) {
           </ResponsiveContainer>
         </div>
 
-        <div className="border rounded-xl bg-card p-4 shadow-xs">
+        <div className="surface">
           <h2 className="font-semibold text-sm mb-3 md:mb-4">Distribuzione stati</h2>
           <ResponsiveContainer width="100%" height={220}>
             <PieChart>
@@ -254,8 +247,8 @@ export function StatisticheClient({ quotes }: { quotes: QuoteData[] }) {
       </div>
 
       {/* Tables */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-        <div className="border rounded-xl bg-card p-4 shadow-xs">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="surface">
           <h2 className="font-semibold text-sm mb-3">Top 5 clienti (per valore accettato)</h2>
           {topClients.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nessun dato</p>
@@ -274,7 +267,7 @@ export function StatisticheClient({ quotes }: { quotes: QuoteData[] }) {
           )}
         </div>
 
-        <div className="border rounded-xl bg-card p-4 shadow-xs">
+        <div className="surface">
           <h2 className="font-semibold text-sm mb-3">Top 5 utenti (per numero preventivi)</h2>
           {topUsers.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nessun dato</p>
@@ -293,15 +286,15 @@ export function StatisticheClient({ quotes }: { quotes: QuoteData[] }) {
           )}
         </div>
       </div>
-    </div>
+    </Page>
   );
 }
 
 function KpiCard({ label, value, sub, subColor }: { label: string; value: string; sub?: string; subColor?: string }) {
   return (
-    <div className="border rounded-xl bg-card p-3.5 md:p-4 shadow-xs">
-      <p className="text-[11px] md:text-xs text-muted-foreground mb-1 leading-tight">{label}</p>
-      <p className="text-lg md:text-xl font-bold tabular-nums">{value}</p>
+    <div className="surface">
+      <p className="truncate text-xs leading-tight text-muted-foreground">{label}</p>
+      <p className="mt-1 truncate text-lg font-bold tabular-nums md:text-xl">{value}</p>
       {sub && <p className={`text-xs mt-1 ${subColor ?? "text-muted-foreground"}`}>{sub}</p>}
     </div>
   );

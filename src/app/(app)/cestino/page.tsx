@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Trash2, RotateCcw, AlertTriangle } from "lucide-react";
+import { Page, PageHeader, EmptyState } from "@/components/shared/Page";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import {
@@ -74,13 +75,10 @@ export default function CestinoPage() {
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-5xl mx-auto">
-      <div className="flex items-center gap-3 mb-6">
-        <Trash2 className="w-6 h-6 text-muted-foreground" />
-        <h1 className="text-2xl font-bold">Cestino</h1>
-      </div>
+    <Page>
+      <PageHeader title="Cestino" subtitle="Preventivi eliminati, recuperabili per 30 giorni" />
 
-      <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800 mb-6 flex items-center gap-2">
+      <div className="bg-amber-50 border border-amber-200 rounded-card px-4 py-3 text-sm text-amber-800 mb-4 flex items-center gap-2 dark:bg-amber-950/30 dark:border-amber-900 dark:text-amber-300">
         <AlertTriangle className="w-4 h-4 shrink-0" />
         I preventivi nel cestino vengono eliminati automaticamente dopo 30 giorni.
       </div>
@@ -88,12 +86,11 @@ export default function CestinoPage() {
       {loading ? (
         <div className="text-muted-foreground text-sm py-12 text-center">Caricamento...</div>
       ) : quotes.length === 0 ? (
-        <div className="text-center py-20 text-muted-foreground">
-          <Trash2 className="w-12 h-12 mx-auto mb-4 opacity-20" />
-          <p className="text-lg font-medium">Il cestino è vuoto.</p>
+        <div className="surface p-0">
+          <EmptyState icon={Trash2} title="Il cestino è vuoto" />
         </div>
       ) : (
-        <div className="rounded-xl border overflow-hidden">
+        <div className="surface overflow-x-auto p-0">
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-muted-foreground">
               <tr>
@@ -167,6 +164,6 @@ export default function CestinoPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </Page>
   );
 }

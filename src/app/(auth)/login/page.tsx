@@ -37,7 +37,7 @@ export default async function LoginPage() {
           </p>
         </div>
 
-        <div className="bg-card border rounded-2xl p-6 shadow-md mac:bg-card/80 mac:backdrop-blur-2xl mac:border-border/60 mac:shadow-xl">
+        <div className="bg-card border rounded-sheet p-5 shadow-md mac:bg-card/80 mac:backdrop-blur-2xl mac:border-border/60 mac:shadow-xl">
           <LoginForm isFirstRun={userCount === 0} />
         </div>
       </div>
