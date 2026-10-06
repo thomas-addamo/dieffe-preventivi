@@ -1,13 +1,47 @@
 name: Build app desktop
 
 # Parte a ogni tag di versione (es. v3.13.0) e pubblica i pacchetti nella Release.
+# Avvio manuale (Actions → "Run workflow" su main): crea tag e Release con la
+# versione di package.json (es. v3.17.0) e compila i pacchetti.
 on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 jobs:
+  # Crea (o ritrova) la Release della versione, una sola volta per tutte le piattaforme.
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Versione da rilasciare
+        id: version
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=v$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Crea la Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: ${{ steps.version.outputs.tag }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   build:
+    needs: release
     strategy:
       fail-fast: false
       matrix:
@@ -71,6 +105,7 @@ jobs:
       - name: Pubblica nella Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.release.outputs.tag }}
           files: |
             dist-electron/*.dmg
             dist-electron/*.zip
