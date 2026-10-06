@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { Page, PageHeader } from "@/components/shared/Page";
 
 interface MobilePageProps {
   title: string;
@@ -10,30 +10,14 @@ interface MobilePageProps {
 }
 
 /**
- * Contenitore pagina in stile iOS "large title" — solo per la shell mobile.
- * Le pagine desktop continuano a usare i propri header.
+ * Pagina in stile iOS "large title" (Profilo, Altro): stessa impaginazione e
+ * stesso titolo delle altre pagine (Page/PageHeader), in colonna stretta.
  */
-export function MobilePage({
-  title,
-  subtitle,
-  action,
-  children,
-  className,
-}: MobilePageProps) {
+export function MobilePage({ title, subtitle, action, children, className }: MobilePageProps) {
   return (
-    <div className={cn("px-4 pt-3", className)}>
-      <div className="mb-4 flex items-end justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-[28px] font-bold leading-tight tracking-tight">
-            {title}
-          </h1>
-          {subtitle && (
-            <p className="mt-0.5 text-sm text-muted-foreground">{subtitle}</p>
-          )}
-        </div>
-        {action && <div className="shrink-0 pb-1">{action}</div>}
-      </div>
+    <Page width="narrow" className={className}>
+      <PageHeader title={title} subtitle={subtitle} actions={action} />
       {children}
-    </div>
+    </Page>
   );
 }

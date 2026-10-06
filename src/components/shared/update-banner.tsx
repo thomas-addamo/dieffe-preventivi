@@ -50,8 +50,8 @@ export function UpdateBanner() {
       className="animate-slide-up fixed bottom-4 right-4 z-50 w-[340px] rounded-2xl border border-border/70 bg-popover/95 p-1 text-popover-foreground shadow-xl backdrop-blur-xl"
     >
       {/* Radius annidati: card 20px − p-1 (4px) → area interna 16px */}
-      <div className="relative flex items-start gap-3 rounded-xl p-2.5">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-primary text-primary-foreground shadow-sm">
+      <div className="relative flex items-start gap-3 rounded-xl p-2">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm bg-primary text-primary-foreground shadow-sm">
           {ready ? <CheckCircle2 className="h-4 w-4" /> : <ArrowDownToLine className={downloading ? 'h-4 w-4 animate-pulse' : 'h-4 w-4'} />}
         </span>
 

@@ -31,10 +31,10 @@ export function QuoteHeaderForm({
   const { isViewer } = usePermissions();
 
   return (
-    <div className="bg-card border rounded-xl overflow-hidden">
+    <div className="surface overflow-hidden p-0">
       <button
         type="button"
-        className="flex items-center justify-between w-full px-5 py-3.5 hover:bg-muted/40 transition-colors"
+        className="flex items-center justify-between w-full px-4 py-3.5 hover:bg-muted/40 transition-colors"
         onClick={() => setCollapsed(!collapsed)}
       >
         <div className="text-left">
@@ -53,7 +53,7 @@ export function QuoteHeaderForm({
       </button>
 
       {!collapsed && (
-        <div className="px-4 md:px-5 pb-5 grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
+        <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4 border-t">
           <div className="space-y-1.5 col-span-1 md:col-span-2">
             <Label>Titolo preventivo</Label>
             <Input

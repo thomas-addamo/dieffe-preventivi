@@ -24,6 +24,7 @@ import {
   History,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Page, PageHeader, SectionTitle, EmptyState } from "@/components/shared/Page";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -97,17 +98,16 @@ function RecentQuotes({ quotes }: { quotes: QuoteRow[] }) {
   if (items.length === 0) return null;
 
   return (
-    <div className="mb-4 md:mb-6">
-      <div className="flex items-center gap-2 mb-2.5">
-        <History className="w-4 h-4 text-muted-foreground" />
-        <h2 className="text-sm font-semibold">Aperti di recente</h2>
-      </div>
+    <div className="mb-5 md:mb-6">
+      <SectionTitle className="flex items-center gap-1.5">
+        <History className="h-3.5 w-3.5" /> Aperti di recente
+      </SectionTitle>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
         {items.map((q) => (
           <button
             key={q.id}
             onClick={() => router.push(`/preventivi/${q.id}`)}
-            className="group text-left bg-card border rounded-xl p-3.5 transition-all hover:border-primary/40 hover:shadow-sm active:scale-[0.99]"
+            className="surface group text-left transition-all hover:border-primary/40 hover:shadow-sm active:scale-[0.99]"
           >
             <div className="flex items-center justify-between gap-2">
               <span className="font-mono text-xs text-muted-foreground truncate">{q.code}</span>
@@ -145,13 +145,13 @@ function StatCard({
   color: string;
 }) {
   return (
-    <div className="bg-card border rounded-xl p-4 flex items-start gap-3">
+    <div className="surface flex items-start gap-3">
       <div className={`p-2 rounded-lg shrink-0 ${color}`}>
         <Icon className="w-4 h-4" />
       </div>
       <div className="min-w-0">
-        <p className="text-xs text-muted-foreground leading-tight">{label}</p>
-        <p className="text-xl font-semibold tabular-nums">{value}</p>
+        <p className="truncate text-xs leading-tight text-muted-foreground">{label}</p>
+        <p className="mt-1 truncate text-lg font-bold tabular-nums md:text-xl">{value}</p>
       </div>
     </div>
   );
@@ -225,18 +225,11 @@ export function DashboardClient({
   const activeFilterCount = (statusFilter !== "all" ? 1 : 0) + (clientFilter !== "all" ? 1 : 0);
 
   return (
-    <div className="p-4 md:p-6 max-w-7xl mx-auto">
-      {/* Page header */}
-      <div className="flex items-center justify-between mb-4 md:mb-6">
-        <div>
-          <h1 className="text-2xl font-bold lg:text-xl lg:font-semibold">
-            Dashboard
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Gestione preventivi e stato lavori
-          </p>
-        </div>
-        {perms.createQuote && (
+    <Page>
+      <PageHeader
+        title="Dashboard"
+        subtitle="Gestione preventivi e stato lavori"
+        actions={perms.createQuote && (
           <div className="hidden lg:flex gap-2">
             <Button
               variant="outline"
@@ -246,14 +239,14 @@ export function DashboardClient({
               <Upload className="w-4 h-4" /> Importa da file
             </Button>
             <Button onClick={() => setShowNewModal(true)} className="gap-2">
-              <Plus className="w-4 h-4" /> Nuovo Preventivo
+              <Plus className="w-4 h-4" /> Nuovo preventivo
             </Button>
           </div>
         )}
-      </div>
+      />
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4 md:mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5 md:mb-6">
         <StatCard
           icon={FileText}
           label="Preventivi totali"
@@ -291,7 +284,7 @@ export function DashboardClient({
             placeholder="Cerca preventivi..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 h-11 md:h-9 text-base md:text-sm"
+            className="pl-9"
           />
         </div>
 
@@ -355,7 +348,7 @@ export function DashboardClient({
             className="modal-backdrop absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={() => setShowMobileFilters(false)}
           />
-          <div className="sheet-in md:modal-pop relative bg-background rounded-t-2xl p-5 space-y-4 pb-[calc(2rem+env(safe-area-inset-bottom))]">
+          <div className="sheet-in md:modal-pop relative bg-background rounded-t-sheet p-5 space-y-4 pb-[calc(2rem+env(safe-area-inset-bottom))]">
             <div className="flex items-center justify-between mb-2">
               <h3 className="font-semibold">Filtri</h3>
               <button onClick={() => setShowMobileFilters(false)}>
@@ -407,7 +400,7 @@ export function DashboardClient({
       )}
 
       {/* Desktop table */}
-      <div className="hidden lg:block border rounded-xl overflow-hidden bg-card">
+      <div className="surface hidden lg:block overflow-hidden p-0">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40 hover:bg-muted/40">
@@ -518,21 +511,21 @@ export function DashboardClient({
       {/* Mobile card list */}
       <div className="lg:hidden space-y-2.5">
         {filtered.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 text-muted-foreground py-16">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary">
-              <FileText className="w-8 h-8 opacity-40" />
-            </div>
-            <p className="font-medium text-foreground">Nessun preventivo trovato</p>
-            <p className="text-sm text-center">
-              {search || statusFilter !== "all"
-                ? "Prova a modificare i filtri"
-                : "Tocca + per creare il primo preventivo"}
-            </p>
+          <div className="surface p-0">
+            <EmptyState
+              icon={FileText}
+              title="Nessun preventivo trovato"
+              description={
+                search || statusFilter !== "all"
+                  ? "Prova a modificare i filtri"
+                  : "Tocca + per creare il primo preventivo"
+              }
+            />
           </div>
         ) : (
           filtered.map((q) => (
             <Link key={q.id} href={`/preventivi/${q.id}`} className="block">
-              <div className="flex items-center gap-3 rounded-2xl border bg-card p-3.5 shadow-xs transition-all active:scale-[.98] active:bg-accent">
+              <div className="surface flex items-center gap-3 transition-all active:scale-[.98] active:bg-accent">
                 <div className="min-w-0 flex-1 space-y-1.5">
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-[11px] font-semibold text-primary">
@@ -588,6 +581,6 @@ export function DashboardClient({
           />
         </>
       )}
-    </div>
+    </Page>
   );
 }

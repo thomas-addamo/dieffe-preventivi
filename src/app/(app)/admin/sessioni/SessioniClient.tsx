@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Activity, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
+import { Page, PageHeader } from "@/components/shared/Page";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -53,14 +54,13 @@ export function SessioniClient({ rows: initialRows, currentToken }: { rows: Sess
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-6xl mx-auto">
-      <div className="flex items-center gap-3 mb-6">
-        <Activity className="w-6 h-6 text-muted-foreground" />
-        <h1 className="text-2xl font-bold">Sessioni attive</h1>
-        <Badge variant="secondary">{rows.length}</Badge>
-      </div>
+    <Page>
+      <PageHeader
+        title="Sessioni attive"
+        subtitle={`${rows.length} session${rows.length === 1 ? "e" : "i"} aperte`}
+      />
 
-      <div className="rounded-xl border overflow-hidden">
+      <div className="surface overflow-x-auto p-0">
         <table className="w-full text-sm">
           <thead className="bg-muted/50 text-muted-foreground">
             <tr>
@@ -108,6 +108,6 @@ export function SessioniClient({ rows: initialRows, currentToken }: { rows: Sess
           </tbody>
         </table>
       </div>
-    </div>
+    </Page>
   );
 }

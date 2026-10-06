@@ -11,6 +11,7 @@ import type { CompanySettings } from "@/lib/db/schema";
 import { calcQuoteTotals, calcSectionTotal } from "@/lib/calculations";
 import { formatDate } from "@/lib/utils";
 import { PdfRichText } from "./PdfRichText";
+import { Letterhead, LetterheadFooter } from "./Letterhead";
 
 function fmtCurrency(n: number): string {
   return new Intl.NumberFormat("it-IT", {
@@ -53,25 +54,6 @@ const s = StyleSheet.create({
     paddingHorizontal: 36,
   },
   // ── Header ──────────────────────────────────────────────────────────────────
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 20,
-    paddingBottom: 12,
-    borderBottomWidth: 2,
-    borderBottomColor: PRIMARY,
-  },
-  logo: { height: 44, maxWidth: 140, objectFit: "contain" },
-  companyBlock: { flex: 1, paddingLeft: 10 },
-  companyName: {
-    fontSize: 15,
-    fontFamily: "Helvetica-Bold",
-    color: PRIMARY,
-    marginBottom: 2,
-  },
-  companyInfo: { fontSize: 8, color: MUTED, lineHeight: 1.4 },
-  quoteInfo: { alignItems: "flex-end" },
   quoteCode: { fontSize: 11, fontFamily: "Helvetica-Bold", color: PRIMARY },
   quoteDate: { fontSize: 8, color: MUTED, marginTop: 2 },
   validityBadge: {
@@ -377,19 +359,6 @@ const s = StyleSheet.create({
   digitalSigValue: { fontSize: 8, flex: 1 },
   digitalSigImage: { width: 200, height: 60, objectFit: "contain", marginTop: 6, borderWidth: 0.5, borderColor: BORDER, borderRadius: 2 },
   digitalSigNote: { fontSize: 7, color: MUTED, marginTop: 8, fontFamily: "Helvetica-Oblique" },
-  // ── Footer ───────────────────────────────────────────────────────────────────
-  footer: {
-    position: "absolute",
-    bottom: 22,
-    left: 36,
-    right: 36,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    borderTopWidth: 0.5,
-    borderTopColor: BORDER,
-    paddingTop: 5,
-  },
-  footerText: { fontSize: 7, color: MUTED },
 });
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -521,40 +490,22 @@ export function ClassicTemplate({ quote, settings, logoUrl }: ClassicTemplatePro
     .reduce((sum, s) => sum + s.subtotal, 0);
 
   const companyName = settings?.companyName ?? "Dieffe Ristrutturazioni";
-  const address = settings?.address;
-  const vatNum = settings?.vatNumber;
-  const email = settings?.email;
-  const phone = settings?.phone;
-  const website = settings?.website;
 
   return (
     <Document title={`${quote.code} — ${quote.title}`} author={companyName}>
       <Page size="A4" style={s.page}>
-        {/* ── Header ── */}
-        <View style={s.header}>
-          <View style={{ flexDirection: "row", alignItems: "flex-start", flex: 1 }}>
-            {logoUrl ? <Image src={logoUrl} style={s.logo} /> : null}
-            <View style={[s.companyBlock, logoUrl ? {} : { paddingLeft: 0 }]}>
-              <Text style={s.companyName}>{companyName}</Text>
-              {address ? <Text style={s.companyInfo}>{address}</Text> : null}
-              {vatNum ? <Text style={s.companyInfo}>P.IVA {vatNum}</Text> : null}
-              {[email, phone, website].filter(Boolean).map((v, i) => (
-                <Text key={i} style={s.companyInfo}>{v}</Text>
-              ))}
+        {/* ── Header (carta intestata condivisa) ── */}
+        <Letterhead settings={settings} logoUrl={logoUrl}>
+          <Text style={s.quoteCode}>{quote.code}</Text>
+          <Text style={s.quoteDate}>Data: {formatDate(quote.createdAt)}</Text>
+          {quote.validUntil && (
+            <View style={s.validityBadge}>
+              <Text style={s.validityText}>
+                Valido fino al {formatDate(quote.validUntil)}
+              </Text>
             </View>
-          </View>
-          <View style={s.quoteInfo}>
-            <Text style={s.quoteCode}>{quote.code}</Text>
-            <Text style={s.quoteDate}>Data: {formatDate(quote.createdAt)}</Text>
-            {quote.validUntil && (
-              <View style={s.validityBadge}>
-                <Text style={s.validityText}>
-                  Valido fino al {formatDate(quote.validUntil)}
-                </Text>
-              </View>
-            )}
-          </View>
-        </View>
+          )}
+        </Letterhead>
 
         {/* ── Client ── */}
         {quote.client && (
@@ -731,18 +682,7 @@ export function ClassicTemplate({ quote, settings, logoUrl }: ClassicTemplatePro
         )}
 
         {/* ── Footer ── */}
-        <View style={s.footer} fixed>
-          <Text style={s.footerText}>
-            {companyName}
-            {vatNum ? ` — P.IVA ${vatNum}` : ""}
-          </Text>
-          <Text
-            style={s.footerText}
-            render={({ pageNumber, totalPages }) =>
-              `Pagina ${pageNumber} di ${totalPages}`
-            }
-          />
-        </View>
+        <LetterheadFooter settings={settings} />
       </Page>
     </Document>
   );

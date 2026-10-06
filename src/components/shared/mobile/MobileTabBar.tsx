@@ -44,7 +44,7 @@ const TABS: TabItem[] = [
       p.startsWith("/altro") ||
       p.startsWith("/listino") ||
       p.startsWith("/statistiche") ||
-      p.startsWith("/template") ||
+      p.startsWith("/comunicazioni") ||
       p.startsWith("/cestino") ||
       p.startsWith("/impostazioni") ||
       p.startsWith("/utenti") ||

@@ -7,7 +7,7 @@ export const ROLES: Record<UserRole, { label: string; description: string }> = {
   },
   editor: {
     label: 'Editor',
-    description: 'Crea e modifica preventivi, clienti e template',
+    description: 'Crea e modifica preventivi, clienti e comunicazioni',
   },
   viewer: {
     label: 'Visualizzatore',

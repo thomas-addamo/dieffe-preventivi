@@ -110,11 +110,11 @@ export function PdfExportSheet({
         role="dialog"
         aria-modal="true"
         aria-label="Esporta PDF"
-        className="sheet-in md:modal-pop relative w-full bg-background rounded-t-2xl md:max-w-sm md:rounded-2xl shadow-xl pb-[calc(1.25rem+env(safe-area-inset-bottom))] md:pb-5"
+        className="sheet-in md:modal-pop relative w-full bg-background rounded-t-sheet md:max-w-sm md:rounded-sheet shadow-xl pb-[calc(1.25rem+env(safe-area-inset-bottom))] md:pb-5"
       >
         <div aria-hidden className="mx-auto mt-2 h-1 w-9 rounded-full bg-muted-foreground/25 md:hidden" />
-        <div className="flex items-start gap-3 px-5 pt-4">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400">
+        <div className="flex items-start gap-3 px-5 pt-5 pr-14">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400">
             <FileText className="h-5 w-5" />
           </span>
           <div className="min-w-0 flex-1">
@@ -134,21 +134,21 @@ export function PdfExportSheet({
           <button
             onClick={onClose}
             aria-label="Chiudi"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-transform active:scale-90"
+            className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-muted/70 text-muted-foreground transition-transform hover:bg-accent active:scale-90"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" />
           </button>
         </div>
 
         <div className="mt-4 space-y-2 px-5">
           {state.status === "loading" && (
-            <div className="flex h-12 items-center justify-center gap-2 rounded-xl bg-muted/50 text-sm text-muted-foreground">
+            <div className="flex h-12 items-center justify-center gap-2 rounded-lg bg-muted/50 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" /> Generazione in corso
             </div>
           )}
 
           {state.status === "error" && (
-            <Button className="h-12 w-full gap-2 rounded-xl" onClick={() => {
+            <Button className="h-12 w-full gap-2 rounded-lg" onClick={() => {
                 setState({ status: "loading" });
                 setAttempt((n) => n + 1);
               }}>
@@ -159,19 +159,19 @@ export function PdfExportSheet({
           {state.status === "ready" && (
             <>
               {canShareFile && (
-                <Button className="h-12 w-full gap-2 rounded-xl text-base" onClick={share}>
+                <Button className="h-12 w-full gap-2 rounded-lg text-base" onClick={share}>
                   <Share className="h-4 w-4" /> Condividi o salva su File
                 </Button>
               )}
               <Button
                 variant={canShareFile ? "outline" : "default"}
-                className="h-12 w-full gap-2 rounded-xl text-base"
+                className="h-12 w-full gap-2 rounded-lg text-base"
                 onClick={download}
               >
                 <Download className="h-4 w-4" /> Scarica PDF
               </Button>
               {!isStandalone() && (
-                <Button variant="ghost" className="h-11 w-full gap-2 rounded-xl" onClick={openPreview}>
+                <Button variant="ghost" className="h-11 w-full gap-2 rounded-lg" onClick={openPreview}>
                   <ExternalLink className="h-4 w-4" /> Apri anteprima
                 </Button>
               )}

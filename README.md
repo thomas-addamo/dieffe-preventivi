@@ -30,7 +30,8 @@ con un unico strumento, disponibile ovunque: in ufficio, in cantiere, dal telefo
 | **Assistente AI** | Suggerimenti di prezzo spiegati (listino, storico, mercato), miglioramento dei testi e import di preventivi da PDF, Word ed Excel. |
 | **Condivisione e firma** | Link pubblico per il cliente, protetto da PIN opzionale, con accettazione e firma online. |
 | **Export** | PDF impaginato con immagini, Excel con formule, CSV e backup JSON. Da iPhone il PDF si condivide o si salva su File. |
-| **Clienti e template** | Anagrafica clienti con lo storico dei preventivi e template riutilizzabili. |
+| **Clienti** | Anagrafica clienti compatta con lo storico dei preventivi. |
+| **Comunicazioni** | Lettere su carta intestata a clienti, condòmini o architetti, con testo formattato, timbro Dieffe e PDF scaricabile. |
 | **Statistiche** | Andamento di valore, conversione e stati dei preventivi. |
 | **Ruoli e controllo** | Amministratore, editor e sola lettura; registro attività, sessioni attive, blocco dei preventivi, cestino con ripristino. |
 | **Notifiche** | Centro notifiche in app e notifiche push su iPhone, Mac e browser. |
@@ -112,8 +113,10 @@ scripts/desktop/  preparazione e firma dei pacchetti desktop
 ### Design
 
 Un unico sistema di token (colori, ombre, raggi) in `src/app/globals.css`, con la regola
-dei **raggi annidati**: il raggio di un elemento interno è quello del contenitore meno
-il suo padding. L'app desktop usa lo stesso sistema con un proprio design, attivato solo
+degli **angoli concentrici**: il raggio di un contenitore è quello dei suoi controlli più
+la distanza dal bordo (controlli 12px · card `rounded-card` 28px con padding 16px ·
+finestre `rounded-sheet` 32px con padding 20px). Tutte le pagine usano `Page` e
+`PageHeader` (`src/components/shared/Page.tsx`) per margini, larghezze e titoli uniformi. L'app desktop usa lo stesso sistema con un proprio design, attivato solo
 al suo interno: il sito resta invariato.
 
 ## Novità e versioni

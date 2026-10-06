@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Send, Loader2, Users, User as UserIcon } from "lucide-react";
 import { toast } from "sonner";
+import { Page, PageHeader } from "@/components/shared/Page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -96,14 +97,11 @@ export function ComposeNotificationClient({
   }
 
   return (
-    <div className="p-3 md:p-6 max-w-5xl mx-auto pb-20 lg:pb-6">
-      <div className="mb-4 md:mb-6">
-        <h1 className="text-lg md:text-xl font-semibold">Invia notifica</h1>
-        <p className="text-xs md:text-sm text-muted-foreground mt-0.5">
-          Crea una notifica per tutto il team o per un singolo utente. Comparirà
-          in alto a destra e nel centro notifiche.
-        </p>
-      </div>
+    <Page>
+      <PageHeader
+        title="Invia notifica"
+        subtitle="Crea una notifica per tutto il team o per un singolo utente. Comparirà in alto a destra e nel centro notifiche."
+      />
 
       <div className="grid lg:grid-cols-[1fr_360px] gap-6">
         {/* Form */}
@@ -122,7 +120,7 @@ export function ComposeNotificationClient({
                     type="button"
                     onClick={() => setType(t)}
                     className={cn(
-                      "flex items-start gap-3 rounded-xl border p-3 text-left transition-colors",
+                      "flex items-start gap-3 rounded-3xl border bg-card p-3 text-left transition-colors",
                       active
                         ? "border-primary ring-1 ring-primary bg-primary/[0.03]"
                         : "hover:bg-accent/50"
@@ -251,6 +249,6 @@ export function ComposeNotificationClient({
           </p>
         </div>
       </div>
-    </div>
+    </Page>
   );
 }

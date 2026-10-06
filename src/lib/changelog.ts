@@ -34,6 +34,33 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.16.0",
+    date: "2026-10-06",
+    headline: "Comunicazioni su carta intestata, e un'app più coerente.",
+    highlights: [
+      {
+        icon: "pdf",
+        title: "Crea comunicazione",
+        description: "Lettere a clienti, condòmini o architetti con testo formattato, timbro Dieffe e PDF intestato.",
+      },
+      {
+        icon: "layout",
+        title: "Clienti più compatti",
+        description: "Un elenco unico e leggero, uguale su computer e telefono, con la scheda cliente a portata di tocco.",
+      },
+      {
+        icon: "desktop",
+        title: "Angoli concentrici ovunque",
+        description: "Finestre, card e pulsanti seguono la stessa regola di raggi, in stile Apple.",
+      },
+      {
+        icon: "sparkles",
+        title: "Pagine uniformi",
+        description: "Stessi margini, titoli e spaziature in tutte le sezioni dell'app.",
+      },
+    ],
+  },
+  {
     version: "3.15.3",
     date: "2026-10-04",
     headline: "Barra laterale al millimetro.",

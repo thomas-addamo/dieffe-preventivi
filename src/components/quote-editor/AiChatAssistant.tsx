@@ -106,11 +106,12 @@ export function AiChatAssistant() {
       {open && (
         <div className="fixed z-50 flex flex-col overflow-hidden bg-background
           inset-0 rounded-none
-          md:inset-auto md:top-auto md:left-auto md:right-6 md:bottom-20 md:w-[390px] md:h-[min(540px,calc(100vh-160px))] md:rounded-2xl md:border md:shadow-2xl">
-          {/* Header */}
+          md:inset-auto md:top-auto md:left-auto md:right-6 md:bottom-20 md:w-[390px] md:h-[min(540px,calc(100vh-160px))] md:border md:shadow-2xl md:rounded-[30px]">
+          {/* Header — da desktop i cerchi da 36px stanno a 12px dal bordo:
+              raggio pannello = 18 + 12 = 30px (angoli concentrici) */}
           <div className="flex items-center gap-3 px-4 border-b bg-violet-600 text-white shrink-0
-            pt-[calc(env(safe-area-inset-top)+0.875rem)] pb-3.5 md:pt-3 md:pb-3 md:rounded-t-2xl">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 shrink-0 md:h-7 md:w-7">
+            pt-[calc(env(safe-area-inset-top)+0.875rem)] pb-3.5 md:p-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 shrink-0">
               <Bot className="w-5 h-5 md:w-4 md:h-4" />
             </div>
             <div className="flex-1 min-w-0">
@@ -121,7 +122,7 @@ export function AiChatAssistant() {
               type="button"
               onClick={() => setOpen(false)}
               aria-label="Chiudi"
-              className="-mr-1 flex h-9 w-9 items-center justify-center rounded-full text-white/90 transition active:scale-90 hover:bg-white/15"
+              className="-mr-1 flex h-9 w-9 items-center justify-center rounded-full text-white/90 transition active:scale-90 hover:bg-white/15 md:mr-0 md:bg-white/15 md:hover:bg-white/25"
             >
               <X className="w-6 h-6 md:w-5 md:h-5" />
             </button>
@@ -231,16 +232,16 @@ export function AiChatAssistant() {
           </div>
 
           {/* Input */}
-          <div className="border-t p-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] md:pb-2 shrink-0">
+          <div className="border-t p-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] md:p-3 shrink-0">
             <div className="flex gap-2 items-end mx-auto w-full max-w-2xl md:max-w-none">
               <textarea
                 ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Chiedi qualcosa sull'edilizia..."
+                placeholder="Chiedi qualcosa sull'edilizia… (Invio per inviare)"
                 rows={1}
-                className="flex-1 resize-none text-sm md:text-xs border rounded-xl px-3 py-2.5 md:py-2 focus:outline-none focus:ring-2 focus:ring-violet-400 bg-background max-h-32 overflow-auto"
+                className="flex-1 resize-none text-sm md:text-xs border rounded-[18px] px-3.5 py-2.5 md:py-2.5 focus:outline-none focus:ring-2 focus:ring-violet-400 bg-background max-h-32 overflow-auto"
                 style={{ height: "auto" }}
                 onInput={(e) => {
                   const t = e.target as HTMLTextAreaElement;
@@ -250,16 +251,13 @@ export function AiChatAssistant() {
               />
               <Button
                 size="icon"
-                className="h-10 w-10 md:h-8 md:w-8 shrink-0 bg-violet-600 hover:bg-violet-700 active:scale-95 rounded-xl"
+                className="h-10 w-10 md:h-9 md:w-9 shrink-0 bg-violet-600 hover:bg-violet-700 active:scale-95 rounded-full"
                 onClick={() => sendMessage()}
                 disabled={!input.trim() || loading}
               >
                 <Send className="w-4 h-4 md:w-3.5 md:h-3.5" />
               </Button>
             </div>
-            <p className="hidden md:block text-[9px] text-muted-foreground mt-1 text-center">
-              Enter per inviare · Shift+Enter per andare a capo
-            </p>
           </div>
         </div>
       )}

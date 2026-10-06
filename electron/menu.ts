@@ -31,7 +31,7 @@ const GO_TO: { label: string; path: string; key: string }[] = [
   { label: 'Preventivi', path: '/preventivi', key: '2' },
   { label: 'Clienti', path: '/clienti', key: '3' },
   { label: 'Listino', path: '/listino', key: '4' },
-  { label: 'Template', path: '/template', key: '5' },
+  { label: 'Crea comunicazione', path: '/comunicazioni', key: '5' },
   { label: 'Statistiche', path: '/statistiche', key: '6' },
   { label: 'Cestino', path: '/cestino', key: '7' },
 ];

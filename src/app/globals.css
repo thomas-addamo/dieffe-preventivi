@@ -10,17 +10,22 @@
 
 /* ─────────────────────────────────────────────────────────────────────────────
    DESIGN TOKENS — Dieffe Preventivi
-   Sistema di radius "nested-friendly": ogni livello della scala differisce dal
-   successivo di uno step di spacing (4px). Regola d'oro del nesting:
 
-     radius-figlio = radius-genitore − padding-genitore
+   ANGOLI CONCENTRICI (stile Apple). Regola unica, ovunque:
 
-   Coppie canoniche:
-     contenitore rounded-2xl (20px) + p-1 (4px)  → figlio rounded-xl (16px)
-     contenitore rounded-xl  (16px) + p-1 (4px)  → figlio rounded-lg (12px)
-     contenitore rounded-xl  (16px) + p-1.5 (6px)→ figlio rounded-md (10px)
-     contenitore rounded-lg  (12px) + p-1 (4px)  → figlio rounded-sm (8px)
-     contenitore rounded-md  (10px) + p-1 (4px)  → figlio rounded-xs (6px)
+     raggio-contenitore = raggio-figlio + distanza del figlio dal bordo
+
+   Il raggio parte dai CONTROLLI (bottoni, campi) e cresce verso l'esterno:
+
+     controllo            rounded-lg     12px
+     card / superficie    rounded-card   28px  con padding p-4 (16px)  → 28 − 16 = 12
+     finestra / foglio    rounded-sheet  32px  con padding p-5 (20px)  → 32 − 20 = 12
+     blocco interno       rounded-lg     12px  (riquadri dentro card e finestre)
+     menu / tendine       rounded-xl     16px  con padding p-1.5 (6px) → voci rounded-md 10px
+     riquadro 12px + p-1  → figlio rounded-sm 8px
+
+   Componenti pronti: .surface (card), DialogContent (finestra), Page/PageHeader
+   (src/components/shared/Page.tsx) per spaziature e titoli uniformi.
    ───────────────────────────────────────────────────────────────────────────── */
 
 :root {
@@ -124,6 +129,8 @@
   --radius-xl: 1rem;      /* 16px — card, popover, pannelli      */
   --radius-2xl: 1.25rem;  /* 20px — dialog, contenitori grandi   */
   --radius-3xl: 1.5rem;   /* 24px — hero, sezioni speciali       */
+  --radius-card: 1.75rem; /* 28px — card con p-4: 28 − 16 = 12 (controlli)  */
+  --radius-sheet: 2rem;   /* 32px — finestre con p-5: 32 − 20 = 12          */
 
   /* ── Ombre morbide stratificate ─────────────────────────────────────────── */
   --shadow-2xs: 0 1px 2px rgb(16 24 40 / 0.04);
@@ -151,6 +158,20 @@ body {
   font-feature-settings: "cv11", "ss01";
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+/* Superficie standard (card): raggio e padding legati, così i controlli da
+   12px negli angoli sono concentrici. Il padding si può azzerare (p-0) per
+   liste a tutta larghezza: le righe sono ritagliate da overflow-hidden. */
+@layer components {
+  .surface {
+    border-radius: var(--radius-card);
+    border-width: 1px;
+    background: var(--card);
+    color: var(--card-foreground);
+    box-shadow: var(--shadow-xs);
+    padding: 1rem;
+  }
 }
 
 /* Utility per casi custom di nesting: imposta --nest-radius e --nest-pad sul

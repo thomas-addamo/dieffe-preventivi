@@ -16,8 +16,9 @@ export const can = {
   viewClients: (_role: UserRole) => true,
   manageClients: (role: UserRole) => role === 'admin' || role === 'editor',
 
-  viewTemplates: (_role: UserRole) => true,
-  manageTemplates: (role: UserRole) => role === 'admin' || role === 'editor',
+  // Comunicazioni su carta intestata (lettere ai clienti, condòmini, D.L.)
+  viewCommunications: (_role: UserRole) => true,
+  manageCommunications: (role: UserRole) => role === 'admin' || role === 'editor',
 
   manageQuoteImages: (role: UserRole) => role === 'admin' || role === 'editor',
 

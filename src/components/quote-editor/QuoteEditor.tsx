@@ -20,6 +20,14 @@ import { AiChatAssistant } from "./AiChatAssistant";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -98,7 +106,7 @@ function SignatureSection({
 
   return (
     <>
-      <div className="border rounded-xl overflow-hidden">
+      <div className="surface overflow-hidden p-0">
         <button
           className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium bg-muted/30 hover:bg-muted/50 transition-colors"
           onClick={() => setOpen((v) => !v)}
@@ -184,31 +192,30 @@ function SignatureSection({
       </div>
 
       {/* Confirmation modal */}
-      {confirmOpen && (
-        <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-[3px]">
-          <div className="modal-pop bg-background border rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
-            <h2 className="text-base font-semibold">Sei sicuro di voler annullare l&apos;accettazione?</h2>
+      <Dialog open={confirmOpen} onOpenChange={(o) => !o && !revoking && setConfirmOpen(false)}>
+        <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Sei sicuro di voler annullare l&apos;accettazione?</DialogTitle>
+            </DialogHeader>
             <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
               <li>Riporterà il preventivo in stato &quot;Inviato&quot;</li>
               <li>Eliminerà i dati della firma</li>
               <li>Rigenererà un nuovo link pubblico (se era attivo)</li>
             </ul>
-            <div className="flex gap-2 justify-end pt-2">
-              <Button variant="outline" size="sm" onClick={() => setConfirmOpen(false)} disabled={revoking}>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setConfirmOpen(false)} disabled={revoking}>
                 Annulla
               </Button>
               <Button
                 variant="destructive"
-                size="sm"
                 onClick={handleRevoke}
                 disabled={revoking}
               >
                 {revoking ? "In corso..." : "Conferma"}
               </Button>
-            </div>
-          </div>
-        </div>
-      )}
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
@@ -1024,7 +1031,7 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
       <div className="flex flex-1 gap-0 min-h-0">
         {/* Editor column */}
         <div className="flex-1 overflow-y-auto pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-6">
-          <div className="max-w-6xl mx-auto p-3 md:p-6 space-y-4 md:space-y-6">
+          <div className="max-w-6xl mx-auto px-4 pt-4 md:px-6 md:pt-6 lg:px-8 space-y-4">
             <QuoteHeaderForm
               quote={quote}
               clients={clients}
@@ -1095,7 +1102,7 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
               className="modal-backdrop absolute inset-0 bg-black/40 backdrop-blur-sm"
               onClick={() => setMobileTotalsOpen(false)}
             />
-            <div className="sheet-in md:modal-pop relative bg-background rounded-t-2xl max-h-[85dvh] overflow-y-auto overscroll-contain">
+            <div className="sheet-in md:modal-pop relative bg-background rounded-t-sheet max-h-[85dvh] overflow-y-auto overscroll-contain">
               <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-xl px-5 pb-3 pt-2 border-b">
                 <div aria-hidden className="mx-auto mb-2 h-1 w-9 rounded-full bg-muted-foreground/25" />
                 <div className="flex items-center justify-between">
@@ -1145,19 +1152,23 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
       {/* AI Chat Assistant */}
       {!isViewer && <AiChatAssistant />}
 
-      {showReassignModal && (
-        <div className="modal-backdrop fixed inset-0 bg-black/40 backdrop-blur-[3px] z-50 flex items-center justify-center p-4">
-          <div className="modal-pop bg-background border rounded-2xl p-6 max-w-sm w-full shadow-xl">
-            <h2 className="font-semibold text-lg mb-1">Riassegna preventivo</h2>
-            <p className="text-sm text-muted-foreground mb-4">Assegna questo preventivo a un altro utente.</p>
-            <div className="mb-4">
+      <Dialog
+        open={showReassignModal}
+        onOpenChange={(o) => { if (!o) { setShowReassignModal(false); setReassignUserId(""); } }}
+      >
+        <DialogContent className="sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Riassegna preventivo</DialogTitle>
+              <DialogDescription>Assegna questo preventivo a un altro utente.</DialogDescription>
+            </DialogHeader>
+            <div>
               <p className="text-xs text-muted-foreground mb-1">Utente attuale</p>
               <p className="text-sm font-medium">{quote.author.name}</p>
             </div>
-            <div className="mb-5">
+            <div>
               <label className="text-xs text-muted-foreground block mb-1">Nuovo utente</label>
               <select
-                className="w-full border rounded-lg px-3 py-2 text-sm bg-background"
+                className="flex h-11 md:h-10 w-full rounded-lg border border-input bg-card px-3 text-base md:text-sm shadow-2xs"
                 value={reassignUserId}
                 onChange={(e) => setReassignUserId(e.target.value)}
               >
@@ -1167,24 +1178,19 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
                 ))}
               </select>
             </div>
-            <div className="flex gap-2 justify-end">
-              <button
+            <DialogFooter>
+              <Button
+                variant="outline"
                 onClick={() => { setShowReassignModal(false); setReassignUserId(""); }}
-                className="px-4 py-2 text-sm border rounded-lg hover:bg-muted"
               >
                 Annulla
-              </button>
-              <button
-                onClick={doReassign}
-                disabled={!reassignUserId || reassigning}
-                className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg disabled:opacity-50"
-              >
+              </Button>
+              <Button onClick={doReassign} disabled={!reassignUserId || reassigning}>
                 {reassigning ? "..." : "Riassegna"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+              </Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {pdfSheetOpen && (
         <PdfExportSheet

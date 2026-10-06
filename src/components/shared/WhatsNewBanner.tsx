@@ -79,9 +79,9 @@ export function WhatsNewBanner() {
   return (
     <section
       aria-label={`Novità della versione ${entry.version}`}
-      className="animate-slide-up px-3 pt-3 lg:px-6 lg:pt-4"
+      className="animate-slide-up px-4 pt-4 md:px-6 md:pt-6 lg:px-8"
     >
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0f172a] via-[#1e3a8a] to-[#4c1d95] text-white shadow-lg ring-1 ring-white/10">
+      <div className="relative overflow-hidden rounded-sheet bg-gradient-to-br from-[#0f172a] via-[#1e3a8a] to-[#4c1d95] text-white shadow-lg ring-1 ring-white/10">
         {/* Decorazioni: aloni luminosi + griglia sottile */}
         <div aria-hidden className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full bg-sky-400/30 blur-3xl" />
         <div aria-hidden className="pointer-events-none absolute -bottom-28 left-1/3 h-64 w-64 rounded-full bg-fuchsia-500/25 blur-3xl" />
@@ -100,12 +100,12 @@ export function WhatsNewBanner() {
           type="button"
           onClick={close}
           aria-label="Chiudi novità"
-          className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white/80 backdrop-blur transition hover:bg-white/20 hover:text-white active:scale-90"
+          className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/80 backdrop-blur transition hover:bg-white/20 hover:text-white active:scale-90"
         >
           <X className="h-4 w-4" />
         </button>
 
-        <div className="relative flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:gap-8 lg:p-7">
+        <div className="relative flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:gap-8">
           {/* Titolo */}
           <div className="shrink-0 pr-10 lg:w-72 lg:pr-0">
             <div className="flex flex-wrap items-center gap-2">
@@ -131,9 +131,9 @@ export function WhatsNewBanner() {
               return (
                 <li
                   key={title}
-                  className="group w-[72%] shrink-0 snap-start rounded-xl bg-white/[0.07] p-3.5 sm:w-auto ring-1 ring-white/10 backdrop-blur-sm transition hover:bg-white/[0.12]"
+                  className="group w-[72%] shrink-0 snap-start rounded-lg bg-white/[0.07] p-3 sm:w-auto ring-1 ring-white/10 backdrop-blur-sm transition hover:bg-white/[0.12]"
                 >
-                  <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-sky-400 to-indigo-500 shadow-md shadow-indigo-900/40 transition group-hover:scale-105">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-indigo-500 shadow-md shadow-indigo-900/40 transition group-hover:scale-105">
                     <Icon className="h-4 w-4" />
                   </span>
                   <p className="mt-2.5 text-sm font-semibold">{title}</p>

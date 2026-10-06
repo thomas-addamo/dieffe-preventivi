@@ -8,7 +8,7 @@ import {
   LayoutDashboard,
   FileText,
   Users,
-  LayoutTemplate,
+  Mail,
   Settings,
   UserCog,
   X,
@@ -46,7 +46,7 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/preventivi", label: "Preventivi", icon: FileText },
   { href: "/clienti", label: "Clienti", icon: Users },
-  { href: "/template", label: "Template", icon: LayoutTemplate },
+  { href: "/comunicazioni", label: "Crea comunicazione", icon: Mail },
   { href: "/listino", label: "Listino", icon: List },
   { href: "/statistiche", label: "Statistiche", icon: BarChart2 },
 ];

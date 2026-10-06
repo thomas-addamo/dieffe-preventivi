@@ -58,7 +58,7 @@ export function ProfiloClient({ user }: ProfiloClientProps) {
   return (
     <MobilePage title="Profilo" className="mx-auto max-w-md">
       {/* Card identità */}
-      <div className="mb-5 flex items-center gap-4 rounded-2xl border bg-card p-4 shadow-xs">
+      <div className="mb-5 flex items-center gap-4 rounded-card border bg-card p-4 shadow-xs">
         <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-blue-700 text-xl font-bold text-white">
           {initials(user.name) || "U"}
         </div>
@@ -76,7 +76,7 @@ export function ProfiloClient({ user }: ProfiloClientProps) {
       <p className="mb-2 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
         Aspetto
       </p>
-      <div className="mb-5 rounded-2xl border bg-card p-1.5 shadow-xs">
+      <div className="mb-5 rounded-card border bg-card p-1.5 shadow-xs">
         <div className="grid grid-cols-3 gap-1">
           {themeOptions.map(({ value, label, icon: Icon }) => {
             const active = theme === value;
@@ -85,7 +85,7 @@ export function ProfiloClient({ user }: ProfiloClientProps) {
                 key={value}
                 onClick={() => setTheme(value)}
                 className={cn(
-                  "flex flex-col items-center gap-1.5 rounded-xl py-3 text-xs font-medium transition-all active:scale-95",
+                  "flex flex-col items-center gap-1.5 rounded-[22px] py-3 text-xs font-medium transition-all active:scale-95",
                   active
                     ? "bg-primary/10 text-primary shadow-2xs"
                     : "text-muted-foreground hover:bg-accent"
@@ -103,7 +103,7 @@ export function ProfiloClient({ user }: ProfiloClientProps) {
       <p className="mb-2 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
         Notifiche
       </p>
-      <div className="mb-5 overflow-hidden rounded-2xl border bg-card shadow-xs">
+      <div className="mb-5 overflow-hidden rounded-card border bg-card shadow-xs">
         <PushToggle />
       </div>
 
@@ -111,7 +111,7 @@ export function ProfiloClient({ user }: ProfiloClientProps) {
       <p className="mb-2 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
         Account
       </p>
-      <div className="mb-5 overflow-hidden rounded-2xl border bg-card shadow-xs">
+      <div className="mb-5 overflow-hidden rounded-card border bg-card shadow-xs">
         <button
           onClick={() => setShowChangePassword(true)}
           className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors active:bg-accent"
@@ -125,7 +125,7 @@ export function ProfiloClient({ user }: ProfiloClientProps) {
       </div>
 
       {/* Logout */}
-      <div className="mb-6 overflow-hidden rounded-2xl border bg-card shadow-xs">
+      <div className="mb-6 overflow-hidden rounded-card border bg-card shadow-xs">
         <button
           onClick={handleLogout}
           className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-destructive transition-colors active:bg-destructive/10"
