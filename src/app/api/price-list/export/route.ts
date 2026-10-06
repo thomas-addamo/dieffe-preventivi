@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireRole } from '@/lib/permissions/guard';
+import { sortCatalog } from '@/lib/price-list/maintenance';
 import { db } from '@/lib/db/client';
 import { priceListItems } from '@/lib/db/schema';
 import { asc } from 'drizzle-orm';
@@ -22,7 +23,8 @@ export async function GET() {
     { header: 'Descrizione', key: 'description', width: 60 },
     { header: 'U.M.', key: 'unitOfMeasure', width: 12 },
     { header: 'Prezzo Unitario', key: 'unitPrice', width: 18 },
-    { header: 'Categoria', key: 'category', width: 25 },
+    { header: 'Categoria', key: 'category', width: 28 },
+    { header: 'Sottocategoria', key: 'subcategory', width: 22 },
     { header: 'Note', key: 'notes', width: 30 },
     { header: 'Attiva', key: 'isActive', width: 10 },
   ];
@@ -34,13 +36,14 @@ export async function GET() {
     fgColor: { argb: 'FFE2E8F0' },
   };
 
-  for (const item of items) {
+  for (const item of sortCatalog(items)) {
     sheet.addRow({
       code: item.code ?? '',
       description: item.description,
       unitOfMeasure: item.unitOfMeasure,
       unitPrice: parseFloat(item.unitPrice),
       category: item.category ?? '',
+      subcategory: item.subcategory ?? '',
       notes: item.notes ?? '',
       isActive: item.isActive ? 'Sì' : 'No',
     });

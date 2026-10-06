@@ -348,13 +348,13 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
 
       setSaveState("saved");
 
-      // Auto-learn complete items into the price list (max once per 60s, fire-and-forget)
+      // Listino: registra l'uso delle voci e apprende quelle nuove (max una volta ogni 60s)
       const now = Date.now();
       if (now - lastLearnRef.current > 60000) {
         lastLearnRef.current = now;
         const allItems = q.sections.flatMap((s) => s.items);
         const learnableItems = allItems
-          .filter((i) => i.description.trim().length >= 15 && i.unitPrice > 0)
+          .filter((i) => i.description.trim().length >= 3)
           .map((i) => ({
             description: toPlainText(i.description),
             unitOfMeasure: i.unitOfMeasure,

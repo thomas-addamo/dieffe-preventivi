@@ -92,6 +92,13 @@
       "when": 1791300067807,
       "tag": "0012_military_marten_broadcloak",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791301016541,
+      "tag": "0013_price_list_catalog",
+      "breakpoints": true
     }
   ]
 }

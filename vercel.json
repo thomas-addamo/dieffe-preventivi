@@ -1,6 +1,8 @@
 {
   "framework": "nextjs",
-  "regions": ["fra1"],
+  "regions": [
+    "fra1"
+  ],
   "functions": {
     "src/app/api/export/[format]/[id]/route.ts": {
       "maxDuration": 60
@@ -28,12 +30,22 @@
     },
     "src/app/api/ai/search/route.ts": {
       "maxDuration": 45
+    },
+    "src/app/api/price-list/maintenance/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/cron/price-list/route.ts": {
+      "maxDuration": 60
     }
   },
   "crons": [
     {
       "path": "/api/cron/cleanup-trash",
       "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/price-list",
+      "schedule": "30 3 * * *"
     }
   ]
 }

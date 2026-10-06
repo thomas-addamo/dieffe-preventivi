@@ -13,12 +13,16 @@ export function generateId(bytes = 16): string {
 }
 
 export function formatCurrency(amount: number): string {
+  // useGrouping "always": separatore delle migliaia anche a 4 cifre
+  // ("3.200,00 €"), identico su server, browser e app (in it-IT il default
+  // cambia tra motori e causava importi scritti in due modi diversi).
   return new Intl.NumberFormat("it-IT", {
     style: "currency",
     currency: "EUR",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(amount);
+    useGrouping: "always",
+  } as Intl.NumberFormatOptions).format(amount);
 }
 
 export function formatNumber(n: number, decimals = 2): string {

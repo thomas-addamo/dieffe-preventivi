@@ -36,6 +36,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useEditorPref } from "@/lib/editor-prefs";
 import { toPlainText } from "@/lib/rich-text";
+import { CATALOG, canonicalCategory } from "@/lib/price-list/taxonomy";
 import { RichDescriptionEditor } from "./RichDescriptionEditor";
 import { toast } from "sonner";
 
@@ -70,10 +71,9 @@ function SaveToListinoModal({ item, categories, onClose, onSaved }: SaveToListin
     description: toPlainText(item.description),
     unitOfMeasure: item.unitOfMeasure,
     unitPrice: String(item.unitPrice),
-    category: "",
-    code: "",
+    category: canonicalCategory(null, toPlainText(item.description)),
+    subcategory: "",
     notes: "",
-    newCategory: "",
   });
   const [saving, setSaving] = useState(false);
   const [similar, setSimilar] = useState<PriceListItem[]>([]);
@@ -98,8 +98,8 @@ function SaveToListinoModal({ item, categories, onClose, onSaved }: SaveToListin
         description: form.description,
         unitOfMeasure: form.unitOfMeasure,
         unitPrice: form.unitPrice,
-        category: form.newCategory || form.category || null,
-        code: form.code || null,
+        category: form.category,
+        subcategory: form.subcategory.trim() || null,
         notes: form.notes || null,
       }),
     });
@@ -168,34 +168,27 @@ function SaveToListinoModal({ item, categories, onClose, onSaved }: SaveToListin
           <div className="space-y-1.5">
             <Label>Categoria</Label>
             <Select
-              value={form.category || "_none"}
-              onValueChange={(v) => setForm({ ...form, category: v === "_none" ? "" : v, newCategory: "" })}
+              value={form.category}
+              onValueChange={(v) => setForm({ ...form, category: v })}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Seleziona..." />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="_none">Nessuna</SelectItem>
-                {categories.map((c) => (
+                {(categories.length ? categories : CATALOG.map((c) => c.name)).map((c) => (
                   <SelectItem key={c} value={c} >{c}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Input
-              placeholder="Oppure: nuova categoria..."
-              value={form.newCategory}
-              onChange={(e) => setForm({ ...form, newCategory: e.target.value, category: "" })}
-              className="mt-1"
-            />
           </div>
           <div className="space-y-1.5">
-            <Label>Codice (opzionale)</Label>
+            <Label>Sottocategoria (opzionale)</Label>
             <Input
-              value={form.code}
-              onChange={(e) => setForm({ ...form, code: e.target.value })}
-              placeholder="CAP-001"
-              className="font-mono"
+              value={form.subcategory}
+              onChange={(e) => setForm({ ...form, subcategory: e.target.value })}
+              placeholder="Es: Gres porcellanato"
             />
+            <p className="text-xs text-muted-foreground">Il codice viene assegnato in automatico dal catalogo.</p>
           </div>
         </div>
         <DialogFooter>

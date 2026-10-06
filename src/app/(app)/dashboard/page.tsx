@@ -4,6 +4,7 @@ import { db } from "@/lib/db/client";
 import { quotes, clients, users } from "@/lib/db/schema";
 import { eq, desc, count, and, gte, lte, isNull } from "drizzle-orm";
 import { DashboardClient } from "./DashboardClient";
+import { getQuoteNetTotals } from "@/lib/db/quote-totals";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 
 export default async function DashboardPage() {
@@ -47,6 +48,8 @@ export default async function DashboardPage() {
     (q) => q.status === "sent"
   ).length;
 
+  const totals = await getQuoteNetTotals();
+
   const allClients = await db
     .select({ id: clients.id, name: clients.name })
     .from(clients)
@@ -54,7 +57,7 @@ export default async function DashboardPage() {
 
   return (
     <DashboardClient
-      initialQuotes={allQuotes}
+      initialQuotes={allQuotes.map((q) => ({ ...q, total: totals.get(q.id) ?? 0 }))}
       clients={allClients}
       stats={{
         total: totalCount.value,

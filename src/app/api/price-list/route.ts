@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { db } from '@/lib/db/client';
 import { priceListItems } from '@/lib/db/schema';
 import { requireRole } from '@/lib/permissions/guard';
+import { canonicalCategory } from '@/lib/price-list/taxonomy';
+import { renumberCodes, sortCatalog } from '@/lib/price-list/maintenance';
 import { ilike, eq, and, or, desc } from 'drizzle-orm';
 
 const createSchema = z.object({
@@ -11,6 +13,8 @@ const createSchema = z.object({
   unitOfMeasure: z.string().min(1),
   unitPrice: z.string().or(z.number()).transform(String),
   category: z.string().optional().nullable(),
+  subcategory: z.string().max(40).optional().nullable(),
+  pinned: z.boolean().optional(),
   notes: z.string().optional().nullable(),
   isActive: z.boolean().optional().default(true),
 });
@@ -41,9 +45,9 @@ export async function GET(req: NextRequest) {
     .select()
     .from(priceListItems)
     .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(priceListItems.category, priceListItems.description);
+    .orderBy(priceListItems.code, priceListItems.description);
 
-  return NextResponse.json(rows);
+  return NextResponse.json(sortCatalog(rows));
 }
 
 export async function POST(req: NextRequest) {
@@ -58,9 +62,14 @@ export async function POST(req: NextRequest) {
     .insert(priceListItems)
     .values({
       ...parsed.data,
+      code: null,
+      category: canonicalCategory(parsed.data.category, parsed.data.description),
+      subcategory: parsed.data.subcategory?.trim() || null,
+      source: 'manual',
       createdBy: session!.user.id,
     })
     .returning();
+  await renumberCodes();
 
   return NextResponse.json(item, { status: 201 });
 }

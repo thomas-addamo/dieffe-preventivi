@@ -26,7 +26,7 @@ con un unico strumento, disponibile ovunque: in ufficio, in cantiere, dal telefo
 |---|---|
 | **Editor di preventivi** | Sezioni e voci trascinabili, quantità, sconti, prezzi a corpo, sezioni opzionali, più preventivi aperti in schede. |
 | **Descrizioni formattate** | Grassetto, corsivo, sottolineato ed elenchi direttamente nelle voci, riportati fedelmente nel PDF. |
-| **Listino prezzi** | Listino aziendale con codici e categorie, che si arricchisce imparando dai preventivi già fatti. |
+| **Listino prezzi** | Catalogo a categorie e sottocategorie con codici gerarchici, che impara dai preventivi e si riordina da solo ogni notte: l'AI unisce i doppioni e le voci non usate da mesi vengono eliminate (salvo quelle fissate). |
 | **Assistente AI** | Suggerimenti di prezzo spiegati (listino, storico, mercato), miglioramento dei testi e import di preventivi da PDF, Word ed Excel. |
 | **Condivisione e firma** | Link pubblico per il cliente, protetto da PIN opzionale, con accettazione e firma online. |
 | **Export** | PDF impaginato con immagini, Excel con formule, CSV e backup JSON. Da iPhone il PDF si condivide o si salva su File. |
@@ -96,7 +96,7 @@ pnpm dev                     # http://localhost:3847
 | `pnpm dev` | Server di sviluppo |
 | `pnpm build` | Build di produzione |
 | `pnpm lint` | Controlli ESLint |
-| `pnpm db:generate` / `pnpm db:migrate` | Genera / applica le migrazioni del database |
+| `pnpm db:generate` / `pnpm db:migrate` | Genera / applica le migrazioni del database (in produzione si applicano da sole a ogni deploy, vedi `scripts/migrate-deploy.ts`) |
 | `pnpm electron:dev` | App desktop collegata al server di sviluppo |
 | `pnpm electron:build:mac` / `pnpm electron:build:win` | Pacchetti desktop locali in `dist-electron/` |
 

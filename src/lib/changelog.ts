@@ -34,6 +34,28 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.17.0",
+    date: "2026-10-06",
+    headline: "Un listino che si mette in ordine da solo.",
+    highlights: [
+      {
+        icon: "sparkles",
+        title: "Riordino automatico",
+        description: "Ogni notte l'AI unisce i doppioni ed elimina le voci che non usi più da mesi. Le voci fissate restano.",
+      },
+      {
+        icon: "layout",
+        title: "Catalogo a categorie",
+        description: "Categoria › sottocategoria › voce, con codici gerarchici (PAV.02.05) e quante volte ogni voce è stata usata.",
+      },
+      {
+        icon: "zap",
+        title: "Nuovo archivio preventivi",
+        description: "In dashboard un elenco a tasti larghi con cliente, data, stato e importo, uguale su computer e telefono.",
+      },
+    ],
+  },
+  {
     version: "3.16.0",
     date: "2026-10-06",
     headline: "Comunicazioni su carta intestata, e un'app più coerente.",

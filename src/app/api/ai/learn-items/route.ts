@@ -3,10 +3,23 @@ import { requireRole } from '@/lib/permissions/guard';
 import { aiDisabledResponse } from '@/lib/ai/guard';
 import { generateAIJson, isAiConfigured } from '@/lib/ai/client';
 import { db } from '@/lib/db/client';
-import { priceListItems } from '@/lib/db/schema';
-import { ilike, eq, and } from 'drizzle-orm';
-import { conciseLabel, extractMeasure, codePrefix, nextCode } from '@/lib/ai/parse';
+import { priceListItems, type PriceListItem } from '@/lib/db/schema';
+import { conciseLabel } from '@/lib/ai/parse';
+import { MAYBE_SAME, SAME_ITEM, SimilarityIndex } from '@/lib/price-list/similarity';
+import { CATALOG, canonicalCategory, isCatalogCategory } from '@/lib/price-list/taxonomy';
+import { renumberCodes } from '@/lib/price-list/maintenance';
+import { inArray, sql } from 'drizzle-orm';
 import { z } from 'zod';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Apprendimento dal preventivo appena salvato. Per ogni voce:
+//  · è già nel listino (stessa lavorazione)  → aggiorna "ultimo utilizzo";
+//  · è simile ma non è certo                → decide l'AI: stessa voce
+//                                              (sostituisce/aggiorna) o nuova;
+//  · è nuova                                 → entra nel listino con etichetta
+//                                              breve, categoria e sottocategoria.
+// Così il listino non accumula più quasi-doppioni a ogni salvataggio.
+// ─────────────────────────────────────────────────────────────────────────────
 
 const itemSchema = z.object({
   description: z.string().max(2000),
@@ -15,97 +28,115 @@ const itemSchema = z.object({
 });
 
 const schema = z.object({
-  items: z.array(itemSchema).max(100),
+  items: z.array(itemSchema).max(150),
 });
 
-interface AiCondensed {
-  items: { shortLabel: string; category: string }[];
+type In = z.infer<typeof itemSchema>;
+
+interface AiLearn {
+  matches?: { i: number; same: boolean }[];
+  items?: { i: number; shortLabel: string; category: string; subcategory?: string }[];
 }
 
 export async function POST(req: NextRequest) {
   const { error, session } = await requireRole('admin', 'editor');
   if (error) return error;
 
-  const aiOff = await aiDisabledResponse();
-  if (aiOff) return aiOff;
-
   const body = await req.json().catch(() => ({}));
   const parsed = schema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ added: 0 });
+  if (!parsed.success) return NextResponse.json({ added: 0, used: 0 });
 
-  const candidates = parsed.data.items.filter(
-    (i) => i.description.trim().length >= 15 && i.unitPrice > 0
-  );
-  if (candidates.length === 0) return NextResponse.json({ added: 0 });
+  const listino = await db.select().from(priceListItems);
+  const index = new SimilarityIndex<PriceListItem>();
+  for (const it of listino) index.add(it, it.description, it.unitOfMeasure);
 
-  // 1) Condensazione intelligente: una sola chiamata AI per tutto il batch.
-  //    Fallback euristico locale se l'AI non è disponibile/fallisce.
-  let condensed: { shortLabel: string; category: string }[] = candidates.map((c) => ({
-    shortLabel: conciseLabel(c.description),
-    category: '',
-  }));
+  const used = new Map<string, PriceListItem>();
+  const ambiguous: { input: In; candidate: PriceListItem }[] = [];
+  const fresh: In[] = [];
+  const seen = new Set<string>();
 
-  if (isAiConfigured()) {
+  for (const input of parsed.data.items) {
+    const text = input.description.trim();
+    if (text.length < 3) continue;
+    const key = `${text.toLowerCase()}|${input.unitOfMeasure}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    const best = index.find(text, input.unitOfMeasure, MAYBE_SAME)[0];
+    if (best && best.score >= SAME_ITEM) used.set(best.item.id, best.item);
+    else if (best) ambiguous.push({ input, candidate: best.item });
+    else if (text.length >= 15 && input.unitPrice > 0) fresh.push(input);
+  }
+
+  // ── AI: una sola chiamata per dubbi + nuove voci ──
+  const aiOn = isAiConfigured() && !(await aiDisabledResponse());
+  let ai: AiLearn = {};
+  if (aiOn && (ambiguous.length || fresh.length)) {
+    const cats = CATALOG.map((c) => c.name).join(', ');
+    const system = `Sei il responsabile del listino di un'impresa edile.
+A) "DUBBI": per ogni coppia decidi se la voce del preventivo è la STESSA lavorazione della voce di listino ("same": true) o diversa (materiale, formato, spessore, fornitura vs posa diversi → false).
+B) "NUOVE": per ogni voce genera un'etichetta da listino BREVE (max 6 parole, con la misura se presente, es. "Posa gres 30x60"), una categoria tra: ${cats}; e una sottocategoria di 1-3 parole.
+Rispondi SOLO con JSON: {"matches":[{"i":1,"same":true}],"items":[{"i":1,"shortLabel":"...","category":"...","subcategory":"..."}]}`;
+    const prompt =
+      `DUBBI:\n${ambiguous
+        .map((a, i) => `${i + 1}. preventivo: "${a.input.description.slice(0, 300)}" (${a.input.unitOfMeasure}) ↔ listino: "${a.candidate.description}" (${a.candidate.unitOfMeasure})`)
+        .join('\n') || '(nessuno)'}\n\nNUOVE:\n${fresh
+        .map((f, i) => `${i + 1}. "${f.description.slice(0, 300)}" (${f.unitOfMeasure}, €${f.unitPrice})`)
+        .join('\n') || '(nessuna)'}`;
     try {
-      const list = candidates
-        .map((c, i) => `${i + 1}. "${c.description}" (${c.unitOfMeasure}, €${c.unitPrice})`)
-        .join('\n');
-      const system = `Sei un computista edile. Per ogni voce di preventivo genera una versione da LISTINO: etichetta BREVE e parlante (max 6 parole, includi la misura se presente, es. "Posa gres 3x3") e una CATEGORIA edile standard (es. Pavimenti, Rivestimenti, Murature, Demolizioni, Intonaci, Tinteggiature, Impianto elettrico, Idraulica, Cappotto, Serramenti, Cartongesso, Opere edili). NON copiare descrizioni lunghe da capitolato.
-Rispondi SOLO con JSON: {"items":[{"shortLabel":"...","category":"..."}]} nello stesso ordine, stessa lunghezza dell'elenco.`;
-      const ai = await generateAIJson<AiCondensed>(system, list, 12000);
-      if (ai?.items?.length === candidates.length) {
-        condensed = ai.items.map((it, i) => ({
-          shortLabel: (it.shortLabel?.trim() || conciseLabel(candidates[i].description)).slice(0, 80),
-          category: it.category?.trim() || '',
-        }));
-      }
+      ai = await generateAIJson<AiLearn>(system, prompt, 15000, 120 * (ambiguous.length + fresh.length) + 300);
     } catch {
-      // mantiene il fallback euristico
+      ai = {};
     }
   }
 
-  // 2) Carica i codici già esistenti per generare la numerazione gerarchica.
-  const existing = await db
-    .select({ code: priceListItems.code, description: priceListItems.description })
-    .from(priceListItems);
-  const allCodes = existing.map((e) => e.code);
+  // Dubbi: senza risposta AI si considera "stessa voce" solo se molto vicina.
+  ambiguous.forEach((a, i) => {
+    const verdict = ai.matches?.find((m) => m.i === i + 1);
+    const same = verdict ? verdict.same : false;
+    if (same) used.set(a.candidate.id, a.candidate);
+    else if (a.input.description.trim().length >= 15 && a.input.unitPrice > 0) fresh.push(a.input);
+  });
 
-  let added = 0;
-  for (let i = 0; i < candidates.length; i++) {
-    const item = candidates[i];
-    const { shortLabel, category } = condensed[i];
-
-    // Dedup: salta se esiste già una voce con etichetta concisa equivalente.
-    const dup = await db
-      .select({ id: priceListItems.id })
-      .from(priceListItems)
-      .where(and(eq(priceListItems.isActive, true), ilike(priceListItems.description, shortLabel)))
-      .limit(1);
-    if (dup.length > 0) continue;
-
-    // Codice gerarchico: prefisso per categoria + progressivo.
-    const prefix = codePrefix(category, item.description);
-    const code = nextCode(prefix, allCodes);
-    allCodes.push(code);
-
-    const measure = extractMeasure(item.description);
-    const notes =
-      `Appreso automaticamente da preventivo.` +
-      (measure.label ? ` Misura: ${measure.label}.` : '') +
-      ` Testo originale: ${item.description.trim()}`;
-
-    await db.insert(priceListItems).values({
-      code,
-      description: shortLabel,
-      unitOfMeasure: item.unitOfMeasure,
-      unitPrice: String(item.unitPrice),
-      category: category || 'Auto',
-      notes: notes.slice(0, 1000),
+  // Nuove voci (ricontrollando i doppioni sull'etichetta breve).
+  const toInsert: (typeof priceListItems.$inferInsert)[] = [];
+  fresh.forEach((f) => {
+    const k = fresh.indexOf(f) + 1;
+    const meta = ai.items?.find((x) => x.i === k);
+    const label = (meta?.shortLabel?.trim() || conciseLabel(f.description)).slice(0, 120);
+    const dup = index.find(label, f.unitOfMeasure, SAME_ITEM)[0];
+    if (dup) {
+      used.set(dup.item.id, dup.item);
+      return;
+    }
+    if (toInsert.some((t) => t.description.toLowerCase() === label.toLowerCase())) return;
+    const category = isCatalogCategory(meta?.category)
+      ? meta!.category
+      : canonicalCategory(meta?.category, f.description);
+    toInsert.push({
+      description: label,
+      unitOfMeasure: f.unitOfMeasure,
+      unitPrice: String(f.unitPrice),
+      category,
+      subcategory: meta?.subcategory?.trim().slice(0, 40) || null,
+      source: 'learned',
+      lastUsedAt: new Date(),
+      usageCount: 1,
       isActive: true,
       createdBy: session.user.id,
     });
-    added++;
+  });
+
+  if (used.size) {
+    await db
+      .update(priceListItems)
+      .set({ lastUsedAt: sql`now()` })
+      .where(inArray(priceListItems.id, [...used.keys()]));
+  }
+  if (toInsert.length) {
+    await db.insert(priceListItems).values(toInsert);
+    await renumberCodes();
   }
 
-  return NextResponse.json({ added });
+  return NextResponse.json({ added: toInsert.length, used: used.size });
 }

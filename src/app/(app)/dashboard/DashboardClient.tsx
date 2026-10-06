@@ -11,12 +11,8 @@ import {
   CheckCircle,
   Clock,
   TrendingUp,
-  ChevronUp,
-  ChevronDown,
-  ChevronsUpDown,
   ChevronRight,
   Trash2,
-  Eye,
   Filter,
   X,
   Link as LinkIcon,
@@ -34,14 +30,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   formatDate,
   formatCurrency,
@@ -66,10 +54,29 @@ type QuoteRow = {
   authorName: string;
   publicToken?: string | null;
   publicTokenExpiresAt?: Date | string | null;
+  /** Imponibile (al netto dello sconto, IVA esclusa). */
+  total: number;
 };
 
-type SortKey = keyof QuoteRow;
-type SortDir = "asc" | "desc";
+type SortKey = "recent" | "updated" | "oldest" | "value" | "code" | "client";
+
+const SORT_LABELS: Record<SortKey, string> = {
+  recent: "Più recenti",
+  updated: "Modificati di recente",
+  oldest: "Meno recenti",
+  value: "Importo più alto",
+  code: "Codice",
+  client: "Cliente (A→Z)",
+};
+
+const SORTERS: Record<SortKey, (a: QuoteRow, b: QuoteRow) => number> = {
+  recent: (a, b) => b.createdAt.localeCompare(a.createdAt),
+  updated: (a, b) => b.updatedAt.localeCompare(a.updatedAt),
+  oldest: (a, b) => a.createdAt.localeCompare(b.createdAt),
+  value: (a, b) => b.total - a.total,
+  code: (a, b) => b.code.localeCompare(a.code, "it", { numeric: true }),
+  client: (a, b) => (a.clientName ?? "\uffff").localeCompare(b.clientName ?? "\uffff", "it"),
+};
 
 interface DashboardClientProps {
   initialQuotes: QuoteRow[];
@@ -168,8 +175,7 @@ export function DashboardClient({
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [clientFilter, setClientFilter] = useState("all");
-  const [sortKey, setSortKey] = useState<SortKey>("createdAt");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [sort, setSort] = useState<SortKey>("recent");
   const [showNewModal, setShowNewModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
@@ -187,19 +193,9 @@ export function DashboardClient({
     }
     if (statusFilter !== "all") rows = rows.filter((r) => r.status === statusFilter);
     if (clientFilter !== "all") rows = rows.filter((r) => r.clientName === clientFilter);
-    rows.sort((a, b) => {
-      const av = a[sortKey] ?? "";
-      const bv = b[sortKey] ?? "";
-      const cmp = String(av).localeCompare(String(bv));
-      return sortDir === "asc" ? cmp : -cmp;
-    });
+    rows.sort(SORTERS[sort]);
     return rows;
-  }, [quotes, search, statusFilter, clientFilter, sortKey, sortDir]);
-
-  function toggleSort(key: SortKey) {
-    if (key === sortKey) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else { setSortKey(key); setSortDir("asc"); }
-  }
+  }, [quotes, search, statusFilter, clientFilter, sort]);
 
   async function deleteQuote(id: string) {
     if (!confirm("Spostare questo preventivo nel cestino?")) return;
@@ -210,15 +206,6 @@ export function DashboardClient({
     } else {
       toast.error("Errore durante l'eliminazione");
     }
-  }
-
-  function SortIcon({ col }: { col: SortKey }) {
-    if (col !== sortKey) return <ChevronsUpDown className="w-3.5 h-3.5 opacity-40" />;
-    return sortDir === "asc" ? (
-      <ChevronUp className="w-3.5 h-3.5" />
-    ) : (
-      <ChevronDown className="w-3.5 h-3.5" />
-    );
   }
 
   const uniqueClients = [...new Set(quotes.map((q) => q.clientName).filter(Boolean))] as string[];
@@ -276,7 +263,13 @@ export function DashboardClient({
       {/* Aperti di recente */}
       <RecentQuotes quotes={quotes} />
 
-      {/* Search + filters bar */}
+      {/* Archivio preventivi */}
+      <SectionTitle className="flex items-center justify-between">
+        <span>Archivio preventivi</span>
+        <span className="normal-case tracking-normal tabular-nums">
+          {filtered.length} di {quotes.length}
+        </span>
+      </SectionTitle>
       <div className="flex gap-2 mb-3 md:mb-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -324,6 +317,16 @@ export function DashboardClient({
               <SelectItem value="all">Tutti gli stati</SelectItem>
               {Object.entries(QUOTE_STATUS_LABELS).map(([k, v]) => (
                 <SelectItem key={k} value={k}>{v}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
+            <SelectTrigger className="w-44">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(SORT_LABELS) as SortKey[]).map((k) => (
+                <SelectItem key={k} value={k}>{SORT_LABELS[k]}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -383,6 +386,19 @@ export function DashboardClient({
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-1.5">
+              <p className="text-sm font-medium">Ordina per</p>
+              <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
+                <SelectTrigger className="h-11">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(SORT_LABELS) as SortKey[]).map((k) => (
+                    <SelectItem key={k} value={k}>{SORT_LABELS[k]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             {activeFilterCount > 0 && (
               <Button
                 variant="outline"
@@ -399,171 +415,36 @@ export function DashboardClient({
         </div>
       )}
 
-      {/* Desktop table */}
-      <div className="surface hidden lg:block overflow-hidden p-0">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/40 hover:bg-muted/40">
-              {[
-                { key: "code", label: "Codice" },
-                { key: "title", label: "Titolo" },
-                { key: "clientName", label: "Cliente" },
-                { key: "status", label: "Stato" },
-                { key: "createdAt", label: "Data" },
-                { key: "authorName", label: "Autore" },
-              ].map(({ key, label }) => (
-                <TableHead
-                  key={key}
-                  className="cursor-pointer select-none"
-                  onClick={() => toggleSort(key as SortKey)}
-                >
-                  <span className="flex items-center gap-1">
-                    {label}
-                    <SortIcon col={key as SortKey} />
-                  </span>
-                </TableHead>
-              ))}
-              {perms.deleteQuote && <TableHead className="w-20">Azioni</TableHead>}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-16">
-                  <div className="flex flex-col items-center gap-3 text-muted-foreground">
-                    <FileText className="w-10 h-10 opacity-30" />
-                    <p className="font-medium">Nessun preventivo trovato</p>
-                    <p className="text-sm">
-                      {search || statusFilter !== "all"
-                        ? "Prova a modificare i filtri di ricerca"
-                        : "Crea il tuo primo preventivo"}
-                    </p>
-                    {!search && statusFilter === "all" && (
-                      <Button size="sm" onClick={() => setShowNewModal(true)} className="mt-1">
-                        <Plus className="w-3.5 h-3.5 mr-1" /> Nuovo preventivo
-                      </Button>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : (
-              filtered.map((q, i) => (
-                <TableRow key={q.id} className={i % 2 === 1 ? "bg-muted/20" : ""}>
-                  <TableCell>
-                    <Link
-                      href={`/preventivi/${q.id}`}
-                      className="font-mono text-xs font-medium text-primary hover:underline"
-                    >
-                      {q.code}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="max-w-48 truncate">{q.title}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {q.clientName ?? "—"}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1.5">
-                      <Badge
-                        variant="secondary"
-                        className={`text-xs ${QUOTE_STATUS_COLORS[q.status] ?? ""}`}
-                      >
-                        {QUOTE_STATUS_LABELS[q.status] ?? q.status}
-                      </Badge>
-                      {q.publicToken && q.publicTokenExpiresAt && new Date() < new Date(q.publicTokenExpiresAt) && (
-                        <span title="Link pubblico attivo" className="text-blue-500 inline-flex">
-                          <LinkIcon className="w-3.5 h-3.5" aria-label="Link pubblico attivo" />
-                        </span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground tabular-nums">
-                    {formatDate(q.createdAt)}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {q.authorName}
-                  </TableCell>
-                  {perms.deleteQuote && (
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Link href={`/preventivi/${q.id}`}>
-                          <Button variant="ghost" size="icon" className="h-7 w-7">
-                            <Eye className="w-3.5 h-3.5" />
-                          </Button>
-                        </Link>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-destructive hover:text-destructive"
-                          onClick={() => deleteQuote(q.id)}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {/* Mobile card list */}
-      <div className="lg:hidden space-y-2.5">
-        {filtered.length === 0 ? (
-          <div className="surface p-0">
-            <EmptyState
-              icon={FileText}
-              title="Nessun preventivo trovato"
-              description={
-                search || statusFilter !== "all"
-                  ? "Prova a modificare i filtri"
-                  : "Tocca + per creare il primo preventivo"
-              }
+      {/* Archivio: un elenco di "tasti" larghi, lo stesso su computer e telefono */}
+      {filtered.length === 0 ? (
+        <div className="surface p-0">
+          <EmptyState
+            icon={FileText}
+            title="Nessun preventivo trovato"
+            description={
+              search || statusFilter !== "all" || clientFilter !== "all"
+                ? "Prova a modificare la ricerca o i filtri"
+                : "Crea il tuo primo preventivo"
+            }
+            action={
+              !search && statusFilter === "all" && perms.createQuote && (
+                <Button size="sm" onClick={() => setShowNewModal(true)} className="mt-1 gap-1.5">
+                  <Plus className="h-3.5 w-3.5" /> Nuovo preventivo
+                </Button>
+              )
+            }
+          />
+        </div>
+      ) : (
+        <div className="space-y-2.5">
+          {filtered.map((q) => (
+            <QuoteCard
+              key={q.id}
+              quote={q}
+              onDelete={perms.deleteQuote ? () => deleteQuote(q.id) : undefined}
             />
-          </div>
-        ) : (
-          filtered.map((q) => (
-            <Link key={q.id} href={`/preventivi/${q.id}`} className="block">
-              <div className="surface flex items-center gap-3 transition-all active:scale-[.98] active:bg-accent">
-                <div className="min-w-0 flex-1 space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-[11px] font-semibold text-primary">
-                      {q.code}
-                    </span>
-                    {q.publicToken && q.publicTokenExpiresAt && new Date() < new Date(q.publicTokenExpiresAt) && (
-                      <span title="Link pubblico attivo" className="inline-flex text-blue-500">
-                        <LinkIcon className="w-3 h-3" aria-label="Link pubblico attivo" />
-                      </span>
-                    )}
-                  </div>
-                  <p className="font-semibold text-[15px] leading-snug line-clamp-2">{q.title}</p>
-                  <div className="flex items-center gap-2 pt-0.5">
-                    <Badge
-                      variant="secondary"
-                      className={`text-[11px] ${QUOTE_STATUS_COLORS[q.status] ?? ""}`}
-                    >
-                      {QUOTE_STATUS_LABELS[q.status] ?? q.status}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground truncate">
-                      {q.clientName ?? q.authorName}
-                    </span>
-                    <span className="ml-auto shrink-0 text-xs text-muted-foreground tabular-nums">
-                      {formatDate(q.createdAt)}
-                    </span>
-                  </div>
-                </div>
-                <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/50" />
-              </div>
-            </Link>
-          ))
-        )}
-      </div>
-
-      {filtered.length > 0 && (
-        <p className="text-xs text-muted-foreground mt-2 text-right">
-          {filtered.length} preventiv{filtered.length === 1 ? "o" : "i"}
-        </p>
+          ))}
+        </div>
       )}
 
       {perms.createQuote && (
@@ -582,5 +463,86 @@ export function DashboardClient({
         </>
       )}
     </Page>
+  );
+}
+
+// ─── Riga dell'archivio ─────────────────────────────────────────────────────
+
+/** Tessera colorata a sinistra: 40px a 16px dal bordo → raggio 12, concentrico alla card. */
+function QuoteCard({ quote: q, onDelete }: { quote: QuoteRow; onDelete?: () => void }) {
+  const linkActive =
+    !!q.publicToken && !!q.publicTokenExpiresAt && new Date() < new Date(q.publicTokenExpiresAt);
+  const status = (
+    <Badge variant="secondary" className={cn("shrink-0 text-[11px]", QUOTE_STATUS_COLORS[q.status])}>
+      {QUOTE_STATUS_LABELS[q.status] ?? q.status}
+    </Badge>
+  );
+
+  return (
+    <div className="surface group relative flex items-center gap-3 transition-all hover:border-primary/30 hover:shadow-sm active:scale-[.99] active:bg-accent lg:gap-5">
+      {/* L'intera riga è il link; le azioni stanno sopra (z-10) */}
+      <Link
+        href={`/preventivi/${q.id}`}
+        aria-label={`Apri ${q.code} — ${q.title}`}
+        className="absolute inset-0 rounded-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+      />
+
+      <span
+        className={cn(
+          "hidden h-10 w-10 shrink-0 items-center justify-center rounded-lg sm:flex",
+          QUOTE_STATUS_COLORS[q.status] ?? "bg-muted text-muted-foreground"
+        )}
+      >
+        <FileText className="h-[18px] w-[18px]" />
+      </span>
+
+      {/* Codice + titolo (+ dettagli su telefono) */}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5">
+          <span className="font-mono text-[11px] font-semibold text-primary">{q.code}</span>
+          {linkActive && (
+            <LinkIcon className="h-3 w-3 text-blue-500" aria-label="Link pubblico attivo" />
+          )}
+          <span className="hidden truncate text-[11px] text-muted-foreground lg:inline">· {q.authorName}</span>
+        </div>
+        <p className="mt-0.5 line-clamp-2 text-[15px] font-semibold leading-snug lg:line-clamp-1">{q.title}</p>
+        <div className="mt-1.5 flex items-center gap-2 lg:hidden">
+          {status}
+          <span className="truncate text-xs text-muted-foreground">{q.clientName ?? q.authorName}</span>
+          <span className="ml-auto shrink-0 text-xs tabular-nums text-muted-foreground sm:hidden">
+            {formatDate(q.createdAt)}
+          </span>
+        </div>
+      </div>
+
+      {/* Colonne allineate da desktop */}
+      <div className="hidden w-48 min-w-0 shrink-0 lg:block">
+        <p className="text-[11px] text-muted-foreground">Cliente</p>
+        <p className="truncate text-sm">{q.clientName ?? "—"}</p>
+      </div>
+      <div className="hidden w-[92px] shrink-0 lg:block">
+        <p className="text-[11px] text-muted-foreground">Data</p>
+        <p className="text-sm tabular-nums">{formatDate(q.createdAt)}</p>
+      </div>
+      <div className="hidden w-24 shrink-0 lg:block">{status}</div>
+      <div className="hidden w-28 shrink-0 text-right sm:block">
+        <p className="text-[11px] text-muted-foreground">Imponibile</p>
+        <p className="text-sm font-semibold tabular-nums">{formatCurrency(q.total)}</p>
+        <p className="text-[11px] tabular-nums text-muted-foreground lg:hidden">{formatDate(q.createdAt)}</p>
+      </div>
+
+      {onDelete && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative z-10 hidden h-8 w-8 shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100 lg:flex"
+          aria-label={`Sposta ${q.code} nel cestino`}
+          onClick={onDelete}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      )}
+      <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/50" />
+    </div>
   );
 }

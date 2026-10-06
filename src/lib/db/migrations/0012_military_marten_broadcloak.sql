@@ -1,4 +1,4 @@
-CREATE TABLE "communications" (
+CREATE TABLE IF NOT EXISTS "communications" (
 	"id" text PRIMARY KEY NOT NULL,
 	"code" text NOT NULL,
 	"subject" text DEFAULT '' NOT NULL,
@@ -13,5 +13,8 @@ CREATE TABLE "communications" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-ALTER TABLE "communications" ADD CONSTRAINT "communications_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-CREATE UNIQUE INDEX "communications_code_idx" ON "communications" USING btree ("code");
+DO $$ BEGIN
+ ALTER TABLE "communications" ADD CONSTRAINT "communications_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "communications_code_idx" ON "communications" USING btree ("code");

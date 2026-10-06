@@ -1,7 +1,8 @@
 import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db/client";
-import { clients, quotes, quoteSections, quoteItems } from "@/lib/db/schema";
+import { clients, quotes } from "@/lib/db/schema";
+import { getQuoteNetTotals } from "@/lib/db/quote-totals";
 import { desc, isNull } from "drizzle-orm";
 import { ClientiClient, type ClientQuote } from "./ClientiClient";
 
@@ -20,53 +21,16 @@ export default async function ClientiPage() {
       status: quotes.status,
       clientId: quotes.clientId,
       createdAt: quotes.createdAt,
-      discountType: quotes.discountType,
-      discountValue: quotes.discountValue,
     })
     .from(quotes)
     .where(isNull(quotes.deletedAt))
     .orderBy(desc(quotes.createdAt));
 
-  const sectionRows = await db
-    .select({
-      id: quoteSections.id,
-      quoteId: quoteSections.quoteId,
-      isOptional: quoteSections.isOptional,
-      isOptionalIncluded: quoteSections.isOptionalIncluded,
-      lumpSum: quoteSections.lumpSum,
-      lumpSumPrice: quoteSections.lumpSumPrice,
-    })
-    .from(quoteSections);
-
-  const itemRows = await db
-    .select({ sectionId: quoteItems.sectionId, total: quoteItems.total })
-    .from(quoteItems);
-
-  const itemsBySection = new Map<string, number>();
-  for (const row of itemRows) {
-    itemsBySection.set(
-      row.sectionId,
-      (itemsBySection.get(row.sectionId) ?? 0) + (row.total ?? 0)
-    );
-  }
-
-  const grossByQuote = new Map<string, number>();
-  for (const s of sectionRows) {
-    if (s.isOptional && !s.isOptionalIncluded) continue;
-    const subtotal = s.lumpSum ? s.lumpSumPrice ?? 0 : itemsBySection.get(s.id) ?? 0;
-    grossByQuote.set(s.quoteId, (grossByQuote.get(s.quoteId) ?? 0) + subtotal);
-  }
+  const totals = await getQuoteNetTotals();
 
   const quotesByClient = new Map<string, ClientQuote[]>();
   for (const q of quoteRows) {
     if (!q.clientId) continue;
-    const gross = grossByQuote.get(q.id) ?? 0;
-    let discount = 0;
-    if (q.discountType === "percent" && q.discountValue) {
-      discount = gross * (q.discountValue / 100);
-    } else if (q.discountType === "fixed" && q.discountValue) {
-      discount = q.discountValue;
-    }
     const list = quotesByClient.get(q.clientId) ?? [];
     list.push({
       id: q.id,
@@ -74,7 +38,7 @@ export default async function ClientiPage() {
       title: q.title,
       status: q.status,
       createdAt: q.createdAt,
-      total: Math.max(0, gross - discount),
+      total: totals.get(q.id) ?? 0,
     });
     quotesByClient.set(q.clientId, list);
   }

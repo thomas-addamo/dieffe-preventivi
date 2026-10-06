@@ -87,6 +87,11 @@ export const companySettings = pgTable("company_settings", {
   defaultQuoteNotes: text("default_quote_notes"),
   // Interruttore generale dell'AI per tutto il team.
   aiEnabled: boolean("ai_enabled").notNull().default(true),
+  // Riordino automatico del listino: le voci non usate da più di N mesi
+  // vengono eliminate (salvo quelle fissate).
+  priceListRetentionMonths: integer("price_list_retention_months").notNull().default(12),
+  priceListMaintainedAt: timestamp("price_list_maintained_at", { withTimezone: true, mode: "string" }),
+  priceListMaintenanceReport: jsonb("price_list_maintenance_report"),
   updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
     .notNull()
     .defaultNow(),
@@ -327,14 +332,27 @@ export const priceListItems = pgTable(
     description: text("description").notNull(),
     unitOfMeasure: text("unit_of_measure").notNull(),
     unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).notNull(),
+    /** Macro-categoria del catalogo (vedi lib/price-list/taxonomy). */
     category: text("category"),
+    /** Secondo livello della gerarchia (es. Pavimenti › Gres porcellanato). */
+    subcategory: text("subcategory"),
     notes: text("notes"),
     isActive: boolean("is_active").default(true).notNull(),
+    /** Voce fissata: il riordino automatico non la elimina né la unisce. */
+    pinned: boolean("pinned").default(false).notNull(),
+    /** manual | learned | import — da dove arriva la voce. */
+    source: text("source").default("manual").notNull(),
+    /** Ultima volta che la voce è comparsa in un preventivo. */
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    usageCount: integer("usage_count").default(0).notNull(),
     createdBy: text("created_by").references(() => users.id),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
   },
-  (t) => [index("price_list_description_idx").on(t.description)]
+  (t) => [
+    index("price_list_description_idx").on(t.description),
+    index("price_list_category_idx").on(t.category, t.subcategory),
+  ]
 );
 
 // ─── Notifications ────────────────────────────────────────────────────────────

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/permissions/guard';
+import { canonicalCategory } from '@/lib/price-list/taxonomy';
+import { renumberCodes } from '@/lib/price-list/maintenance';
 import { db } from '@/lib/db/client';
 import { priceListItems } from '@/lib/db/schema';
 
@@ -107,12 +109,14 @@ export async function POST(req: NextRequest) {
       description: r.description,
       unitOfMeasure: r.unitOfMeasure,
       unitPrice: r.unitPrice,
-      code: r.code ?? null,
-      category: r.category ?? null,
+      category: canonicalCategory(r.category, r.description),
+      source: 'import',
       isActive: true,
       createdBy: session!.user.id,
     }))
   );
+  // I codici del file vengono sostituiti dalla numerazione gerarchica del catalogo.
+  await renumberCodes();
 
   return NextResponse.json({ imported: rows.length });
 }
