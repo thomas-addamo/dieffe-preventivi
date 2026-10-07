@@ -1,5 +1,6 @@
 "use client";
 
+import { useMenuParam } from "@/hooks/use-menu-param";
 import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import {
@@ -139,6 +140,8 @@ export function ComunicazioniClient({
   function confirmDiscard() {
     return !dirty || confirm("Ci sono modifiche non salvate. Continuare senza salvarle?");
   }
+
+  useMenuParam("nuova", () => startNew());
 
   function startNew() {
     if (!confirmDiscard()) return;

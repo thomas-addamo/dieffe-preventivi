@@ -1,5 +1,6 @@
 "use client";
 
+import { useMenuParam } from "@/hooks/use-menu-param";
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
@@ -706,6 +707,10 @@ export function QuoteEditor({ initialQuote, clients, users = [], related }: Quot
 
   const [pdfSheetOpen, setPdfSheetOpen] = useState(false);
   const [creatingExtra, setCreatingExtra] = useState(false);
+
+  // Comandi dalla barra dei menu dell'app desktop (File).
+  useMenuParam("pdf", (v) => void exportQuote(v === "scarica" ? "pdf-download" : "pdf"));
+  useMenuParam("extra", () => perms.createQuote && quote.kind !== "extra" && void createExtra());
 
   /** Nuovo lavoro extra collegato a questo preventivo (stesse intestazioni). */
   async function createExtra() {

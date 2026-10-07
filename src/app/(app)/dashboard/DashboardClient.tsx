@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useMenuParam } from "@/hooks/use-menu-param";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -189,6 +190,15 @@ export function DashboardClient({
   const [showNewModal, setShowNewModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  // Comandi dalla barra dei menu dell'app desktop.
+  useMenuParam("nuovo", () => perms.createQuote && setShowNewModal(true));
+  useMenuParam("importa", () => perms.createQuote && setShowImportModal(true));
+  useMenuParam("cerca", () => {
+    searchRef.current?.focus();
+    searchRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
 
   // I lavori extra non sono righe a sé: stanno nella tendina del loro preventivo.
   const filtered = useMemo<QuoteGroup[]>(() => {
@@ -301,6 +311,7 @@ export function DashboardClient({
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
+            ref={searchRef}
             placeholder="Cerca preventivi..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}

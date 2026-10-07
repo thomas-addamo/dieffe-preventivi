@@ -46,8 +46,12 @@ L'app desktop offre l'esperienza di un'applicazione nativa:
 - **macOS** — icona Liquid Glass (logo Dieffe in tre strati di vetro, formato Icon Composer
   in `assets/icon.icon`, rigenerabile con `pnpm electron:icon:mac`), barra del titolo integrata, sidebar traslucida con i materiali di sistema,
   font SF, modalità chiara/scura sincronizzata, badge delle notifiche nel Dock.
-- **Menu e scorciatoie** — `⌘N` nuovo preventivo, `⌘1…7` per le sezioni, `⌘[` / `⌘]`
-  avanti e indietro, `⌘,` impostazioni; menu contestuale di sistema con correzione ortografica.
+- **Menu e scorciatoie** — File: `⌘N` nuovo preventivo, `⇧⌘N` lavoro extra, `⌥⌘N` comunicazione,
+  nuovo cliente/voce di listino, `⌘O` importa da file, `⌘E` / `⇧⌘E` anteprima/scarica PDF.
+  Vista: `⌃⌘S` barra laterale, aspetto chiaro/scuro. Vai: `⌘K` cerca un preventivo, `⌘1…9` sezioni,
+  Amministrazione, `⌘[` / `⌘]` avanti e indietro. Strumenti: riordina listino. Aiuto: `⇧⌘/`
+  assistente, scrivi all'amministratore, novità. Menu del Dock con le azioni rapide. I comandi
+  arrivano alla web app come parametri dell'indirizzo (`src/hooks/use-menu-param.ts`).
 - **Sempre aggiornata** — l'interfaccia si aggiorna da sola; quando esce una nuova
   versione dell'app, viene segnalata con il link diretto al pacchetto giusto.
 

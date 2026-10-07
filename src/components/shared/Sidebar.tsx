@@ -32,6 +32,7 @@ import {
 import { cn } from "@/lib/utils";
 import { NEW_BADGE_CLASS, isNewPage } from "@/lib/new-pages";
 import { HelpDialog } from "./HelpDialog";
+import { MENU_EVENTS } from "@/hooks/use-menu-param";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Barra laterale (desktop web + app desktop).
@@ -99,6 +100,7 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
   const [loadingQuotes, setLoadingQuotes] = useState(false);
   const [quoteSearch, setQuoteSearch] = useState("");
   const [helpOpen, setHelpOpen] = useState(false);
+  const [helpTab, setHelpTab] = useState<"ai" | "admin">("ai");
 
   // Stato persistito (solo desktop). onClose presente = drawer mobile → mai collassato.
   const isDrawer = !!onClose;
@@ -132,6 +134,22 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
   useEffect(() => () => {
     if (leaveTimer.current) clearTimeout(leaveTimer.current);
   }, []);
+
+  // Comandi dalla barra dei menu dell'app desktop (Vista, Aiuto).
+  useEffect(() => {
+    if (isDrawer) return;
+    const onHelp = (e: Event) => {
+      setHelpTab((e as CustomEvent<"ai" | "admin">).detail === "admin" ? "admin" : "ai");
+      setHelpOpen(true);
+    };
+    const onToggle = () => toggleCollapsed();
+    window.addEventListener(MENU_EVENTS.help, onHelp);
+    window.addEventListener(MENU_EVENTS.toggleSidebar, onToggle);
+    return () => {
+      window.removeEventListener(MENU_EVENTS.help, onHelp);
+      window.removeEventListener(MENU_EVENTS.toggleSidebar, onToggle);
+    };
+  });
 
   // Espansa se: drawer mobile, oppure non compressa, oppure il mouse è sopra.
   const expanded = isDrawer || !collapsed || hovered;
@@ -547,7 +565,10 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
         <div className="space-y-1">
           <button
             type="button"
-            onClick={() => setHelpOpen(true)}
+            onClick={() => {
+              setHelpTab("ai");
+              setHelpOpen(true);
+            }}
             title={!expanded ? "Aiuto" : undefined}
             aria-label="Aiuto"
             className={itemClass(false)}
@@ -557,7 +578,7 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
           </button>
           {renderLink("/impostazioni", "Impostazioni", Settings, pathname.startsWith("/impostazioni"))}
         </div>
-        <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
+        <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} tab={helpTab} onTabChange={setHelpTab} />
       </div>
     </aside>
   );

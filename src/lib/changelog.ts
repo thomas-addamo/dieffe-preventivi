@@ -34,6 +34,28 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.18.1",
+    date: "2026-10-07",
+    headline: "Tutto a portata di menu, su Mac e Windows.",
+    highlights: [
+      {
+        icon: "keyboard",
+        title: "Nuove scorciatoie",
+        description: "⇧⌘N lavoro extra, ⌥⌘N comunicazione, ⌘O importa, ⌘E PDF, ⌘K cerca un preventivo, ⌘1…9 per ogni sezione.",
+      },
+      {
+        icon: "desktop",
+        title: "Menu più ricchi",
+        description: "Nuovo cliente o voce di listino dal menu File, aspetto chiaro/scuro e barra laterale da Vista, Amministrazione da Vai.",
+      },
+      {
+        icon: "sparkles",
+        title: "Strumenti e Aiuto",
+        description: "Riordina il listino, chiedi all'assistente o scrivi all'amministratore direttamente dalla barra dei menu.",
+      },
+    ],
+  },
+  {
     version: "3.18.0",
     date: "2026-10-07",
     headline: "Lavori extra, una dashboard tutta tua e l'Aiuto sempre a portata.",

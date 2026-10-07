@@ -37,7 +37,18 @@ const TOPICS = [
   { value: "altro", label: "Altro" },
 ] as const;
 
-export function HelpDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+export function HelpDialog({
+  open,
+  onOpenChange,
+  tab,
+  onTabChange,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  /** Scheda aperta (controllata dal menu "Aiuto" dell'app desktop). */
+  tab?: "ai" | "admin";
+  onTabChange?: (t: "ai" | "admin") => void;
+}) {
   const pathname = usePathname();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
@@ -102,7 +113,10 @@ export function HelpDialog({ open, onOpenChange }: { open: boolean; onOpenChange
           <DialogDescription>Chiedi all&apos;assistente come fare, oppure scrivi all&apos;amministratore.</DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="ai" className="min-h-0">
+        <Tabs
+          {...(tab ? { value: tab, onValueChange: (v: string) => onTabChange?.(v as "ai" | "admin") } : { defaultValue: "ai" })}
+          className="min-h-0"
+        >
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="ai">Chiedi all&apos;assistente</TabsTrigger>
             <TabsTrigger value="admin">Scrivi all&apos;admin</TabsTrigger>

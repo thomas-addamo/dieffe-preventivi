@@ -1,5 +1,6 @@
 "use client";
 
+import { useMenuParam } from "@/hooks/use-menu-param";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -52,6 +53,7 @@ export function LavoriExtraClient({ quotes }: { quotes: ExtraQuote[] }) {
   const [picker, setPicker] = useState(false);
   const [search, setSearch] = useState("");
   const [creating, setCreating] = useState<string | null>(null);
+  useMenuParam("nuovo", () => can.createQuote && setPicker(true));
 
   const mains = useMemo(() => quotes.filter((q) => q.kind !== "extra"), [quotes]);
   const groups = useMemo(() => {

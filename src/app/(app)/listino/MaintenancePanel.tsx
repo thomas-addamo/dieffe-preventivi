@@ -1,5 +1,6 @@
 "use client";
 
+import { useMenuParam } from "@/hooks/use-menu-param";
 import { useCallback, useEffect, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { it } from "date-fns/locale";
@@ -63,6 +64,8 @@ export function MaintenancePanel({ isAdmin, onDone }: { isAdmin: boolean; onDone
       alive = false;
     };
   }, []);
+
+  useMenuParam("riordina", () => void run());
 
   async function run() {
     setRunning(true);

@@ -1,5 +1,6 @@
 "use client";
 
+import { useMenuParam } from "@/hooks/use-menu-param";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { it as itLocale } from "date-fns/locale";
@@ -119,6 +120,8 @@ export function ListinoClient({ userRole }: { userRole: string }) {
   const [importPreview, setImportPreview] = useState<{ count: number; preview: PriceListItem[] } | null>(null);
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useMenuParam("nuovo", () => openCreate());
 
   const fetchItems = useCallback(async () => {
     const res = await fetch("/api/price-list");

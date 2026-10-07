@@ -1,5 +1,6 @@
 "use client";
 
+import { useMenuParam } from "@/hooks/use-menu-param";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -180,6 +181,7 @@ export function ClientiClient({
   const [showForm, setShowForm] = useState(false);
   const [detail, setDetail] = useState<ClientWithQuotes | null>(null);
   const { can: perms } = usePermissions();
+  useMenuParam("nuovo", () => perms.manageClients && openNew());
 
   const {
     register,
