@@ -30,6 +30,8 @@ export default async function DashboardPage() {
       authorName: users.name,
       publicToken: quotes.publicToken,
       publicTokenExpiresAt: quotes.publicTokenExpiresAt,
+      kind: quotes.kind,
+      parentQuoteId: quotes.parentQuoteId,
     })
     .from(quotes)
     .leftJoin(clients, eq(quotes.clientId, clients.id))
@@ -59,6 +61,7 @@ export default async function DashboardPage() {
     <DashboardClient
       initialQuotes={allQuotes.map((q) => ({ ...q, total: totals.get(q.id) ?? 0 }))}
       clients={allClients}
+      currentUser={{ id: session.user.id, name: session.user.name }}
       stats={{
         total: totalCount.value,
         acceptedThisMonth,

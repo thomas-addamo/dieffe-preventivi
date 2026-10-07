@@ -1,9 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import { HelpDialog } from "@/components/shared/HelpDialog";
 import {
   List,
   Mail,
+  FilePlus2,
+  CircleHelp,
   Trash2,
   BellRing,
   ScrollText,
@@ -73,8 +77,16 @@ function Group({ children }: { children: React.ReactNode }) {
 export function AltroClient({ userRole, trashCount }: AltroClientProps) {
   const isAdmin = userRole === "admin";
   const isEditor = userRole === "editor";
+  const [helpOpen, setHelpOpen] = useState(false);
 
   const operativita: Item[] = [
+    {
+      href: "/lavori-extra",
+      label: "Lavori extra",
+      description: "Lavorazioni aggiuntive di un preventivo",
+      icon: FilePlus2,
+      iconClass: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+    },
     {
       href: "/listino",
       label: "Listino",
@@ -149,6 +161,25 @@ export function AltroClient({ userRole, trashCount }: AltroClientProps) {
 
   return (
     <MobilePage title="Altro" className="mx-auto max-w-md">
+      <Group>
+        <button
+          type="button"
+          onClick={() => setHelpOpen(true)}
+          className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors active:bg-accent"
+        >
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400">
+            <CircleHelp className="h-5 w-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-medium leading-tight">Aiuto</span>
+            <span className="block truncate text-xs text-muted-foreground">
+              Chiedi all&apos;assistente o scrivi all&apos;amministratore
+            </span>
+          </span>
+          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+        </button>
+      </Group>
+      <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
       <p className="mb-2 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
         Operatività
       </p>

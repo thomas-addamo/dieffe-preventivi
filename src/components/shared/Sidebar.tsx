@@ -23,11 +23,15 @@ import {
   PanelLeftOpen,
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
+  FilePlus2,
   Search,
   Loader2,
+  CircleHelp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NEW_BADGE_CLASS, isNewPage } from "@/lib/new-pages";
+import { HelpDialog } from "./HelpDialog";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Barra laterale (desktop web + app desktop).
@@ -46,6 +50,7 @@ import { NEW_BADGE_CLASS, isNewPage } from "@/lib/new-pages";
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/preventivi", label: "Preventivi", icon: FileText },
+  { href: "/lavori-extra", label: "Lavori extra", icon: FilePlus2 },
   { href: "/clienti", label: "Clienti", icon: Users },
   { href: "/comunicazioni", label: "Crea comunicazione", icon: Mail },
   { href: "/listino", label: "Listino", icon: List },
@@ -71,6 +76,8 @@ interface QuoteLite {
   title: string;
   status: string;
   clientName: string | null;
+  kind?: "standard" | "extra";
+  parentQuoteId?: string | null;
 }
 
 const STORAGE_KEY = "sidebar-collapsed";
@@ -91,6 +98,7 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
   const [quotes, setQuotes] = useState<QuoteLite[]>([]);
   const [loadingQuotes, setLoadingQuotes] = useState(false);
   const [quoteSearch, setQuoteSearch] = useState("");
+  const [helpOpen, setHelpOpen] = useState(false);
 
   // Stato persistito (solo desktop). onClose presente = drawer mobile → mai collassato.
   const isDrawer = !!onClose;
@@ -165,16 +173,35 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
 
   const activeQuoteId = pathname.startsWith("/preventivi/") ? pathname.split("/")[2] : null;
 
+  // Lavori extra raggruppati sotto il loro preventivo (tendina).
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
   const filteredQuotes = useMemo(() => {
+    const ids = new Set(quotes.map((q) => q.id));
+    const isChild = (it: QuoteLite) => it.kind === "extra" && !!it.parentQuoteId && ids.has(it.parentQuoteId);
+    const extras = new Map<string, QuoteLite[]>();
+    for (const it of quotes) {
+      if (isChild(it)) extras.set(it.parentQuoteId!, [...(extras.get(it.parentQuoteId!) ?? []), it]);
+    }
     const q = quoteSearch.trim().toLowerCase();
-    if (!q) return quotes;
-    return quotes.filter(
-      (it) =>
-        it.title.toLowerCase().includes(q) ||
-        it.code.toLowerCase().includes(q) ||
-        (it.clientName?.toLowerCase().includes(q) ?? false)
-    );
+    const hit = (it: QuoteLite) =>
+      !q ||
+      it.title.toLowerCase().includes(q) ||
+      it.code.toLowerCase().includes(q) ||
+      (it.clientName?.toLowerCase().includes(q) ?? false);
+    return quotes
+      .filter((it) => !isChild(it))
+      .map((it) => ({ ...it, extras: extras.get(it.id) ?? [] }))
+      .filter((g) => hit(g) || g.extras.some(hit));
   }, [quotes, quoteSearch]);
+
+  function toggleGroup(id: string) {
+    setOpenGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   // ── Stili condivisi ──────────────────────────────────────────────────────
   /** Elementi che compaiono solo da aperta: in sequenza dopo l'allargamento. */
@@ -452,29 +479,61 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
                 </div>
               ) : (
                 filteredQuotes.map((q) => {
-                  const active = q.id === activeQuoteId;
+                  const groupOpen =
+                    openGroups.has(q.id) || q.extras.some((x) => x.id === activeQuoteId);
+                  const row = (it: QuoteLite, child = false, withToggle = false) => {
+                    const active = it.id === activeQuoteId;
+                    return (
+                      <button
+                        key={it.id}
+                        onClick={() => openQuote(it.id)}
+                        title={it.title}
+                        className={cn(
+                          "w-full min-w-0 rounded-[var(--sb-item-radius)] px-2.5 py-2 text-left transition-colors desktop:py-1.5",
+                          withToggle && "pr-12",
+                          active ? "bg-primary/10 desktop:bg-foreground/[0.08]" : "hover:bg-accent desktop:hover:bg-foreground/[0.05]"
+                        )}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          {child ? (
+                            <FilePlus2 className="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+                          ) : (
+                            <FileText
+                              className={cn("h-3.5 w-3.5 shrink-0", active ? "text-primary" : "text-muted-foreground")}
+                            />
+                          )}
+                          <span className={cn("truncate text-sm font-medium", active && "text-primary")}>
+                            {child ? `Extra ${it.code.split("-").pop()}` : it.title}
+                          </span>
+                        </div>
+                        <div className="mt-0.5 truncate pl-5 text-[11px] text-muted-foreground">
+                          {child ? it.code : `${it.clientName ?? "Nessun cliente"} · ${it.code}`}
+                        </div>
+                      </button>
+                    );
+                  };
                   return (
-                    <button
-                      key={q.id}
-                      onClick={() => openQuote(q.id)}
-                      title={q.title}
-                      className={cn(
-                        "w-full rounded-[var(--sb-item-radius)] px-2.5 py-2 text-left transition-colors desktop:py-1.5",
-                        active ? "bg-primary/10 desktop:bg-foreground/[0.08]" : "hover:bg-accent desktop:hover:bg-foreground/[0.05]"
+                    <div key={q.id}>
+                      <div className="relative">
+                        {row(q, false, q.extras.length > 0)}
+                        {q.extras.length > 0 && (
+                          <button
+                            onClick={() => toggleGroup(q.id)}
+                            aria-expanded={groupOpen}
+                            aria-label={`${groupOpen ? "Nascondi" : "Mostra"} lavori extra`}
+                            className="absolute right-1 top-1.5 flex h-6 items-center gap-0.5 rounded-full bg-amber-100 px-1.5 text-[10px] font-semibold text-amber-800 transition-colors hover:bg-amber-200 dark:bg-amber-950 dark:text-amber-300"
+                          >
+                            +{q.extras.length}
+                            <ChevronDown className={cn("h-3 w-3 transition-transform", groupOpen && "rotate-180")} />
+                          </button>
+                        )}
+                      </div>
+                      {groupOpen && q.extras.length > 0 && (
+                        <div className="ml-3.5 space-y-0.5 border-l border-amber-300/70 pl-1.5 dark:border-amber-500/40">
+                          {q.extras.map((x) => row(x, true))}
+                        </div>
                       )}
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <FileText
-                          className={cn("h-3.5 w-3.5 shrink-0", active ? "text-primary" : "text-muted-foreground")}
-                        />
-                        <span className={cn("truncate text-sm font-medium", active && "text-primary")}>
-                          {q.title}
-                        </span>
-                      </div>
-                      <div className="mt-0.5 truncate pl-5 text-[11px] text-muted-foreground">
-                        {q.clientName ?? "Nessun cliente"} · {q.code}
-                      </div>
-                    </button>
+                    </div>
                   );
                 })
               )}
@@ -485,7 +544,20 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
 
       {/* Footer — Impostazioni (TUTTI gli utenti) */}
       <div className="shrink-0 border-t border-[var(--sidebar-border)] pl-[var(--sb-pad-x)] pr-[var(--sb-pr)] pb-[var(--sb-foot-pb)] pt-3">
-        {renderLink("/impostazioni", "Impostazioni", Settings, pathname.startsWith("/impostazioni"))}
+        <div className="space-y-1">
+          <button
+            type="button"
+            onClick={() => setHelpOpen(true)}
+            title={!expanded ? "Aiuto" : undefined}
+            aria-label="Aiuto"
+            className={itemClass(false)}
+          >
+            <CircleHelp className="h-4 w-4 shrink-0" />
+            <span className={cn("flex-1 truncate text-left", reveal)}>Aiuto</span>
+          </button>
+          {renderLink("/impostazioni", "Impostazioni", Settings, pathname.startsWith("/impostazioni"))}
+        </div>
+        <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
       </div>
     </aside>
   );

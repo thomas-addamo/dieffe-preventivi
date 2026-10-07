@@ -15,6 +15,7 @@ function titleFor(path: string): string {
   if (path.startsWith("/listino")) return "Listino";
   if (path.startsWith("/statistiche")) return "Statistiche";
   if (path.startsWith("/comunicazioni")) return "Comunicazioni";
+  if (path.startsWith("/lavori-extra")) return "Lavori extra";
   if (path.startsWith("/cestino")) return "Cestino";
   if (path.startsWith("/impostazioni")) return "Impostazioni";
   if (path.startsWith("/utenti")) return "Utenti";

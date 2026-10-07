@@ -47,6 +47,8 @@ export async function GET(req: NextRequest) {
       updatedAt: quotes.updatedAt,
       clientName: clients.name,
       authorName: users.name,
+      kind: quotes.kind,
+      parentQuoteId: quotes.parentQuoteId,
     })
     .from(quotes)
     .leftJoin(clients, eq(quotes.clientId, clients.id))

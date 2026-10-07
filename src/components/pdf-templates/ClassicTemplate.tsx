@@ -64,6 +64,24 @@ const s = StyleSheet.create({
     borderRadius: 3,
   },
   validityText: { fontSize: 7, color: "#854d0e" },
+  // ── Lavoro extra ────────────────────────────────────────────────────────────
+  extraBadge: {
+    marginBottom: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    backgroundColor: "#d97706",
+    borderRadius: 3,
+  },
+  extraBadgeText: { fontSize: 7.5, color: "white", fontFamily: "Helvetica-Bold", letterSpacing: 0.8 },
+  extraNotice: {
+    marginBottom: 12,
+    padding: 8,
+    backgroundColor: "#fffbeb",
+    borderLeftWidth: 3,
+    borderLeftColor: "#d97706",
+    borderRadius: 2,
+  },
+  extraNoticeText: { fontSize: 8.5, color: "#92400e", lineHeight: 1.4 },
   // ── Client ──────────────────────────────────────────────────────────────────
   clientBlock: {
     marginBottom: 14,
@@ -490,14 +508,25 @@ export function ClassicTemplate({ quote, settings, logoUrl }: ClassicTemplatePro
     .reduce((sum, s) => sum + s.subtotal, 0);
 
   const companyName = settings?.companyName ?? "Dieffe Ristrutturazioni";
+  // Lavoro extra: codice del preventivo principale = codice senza "-E<n>".
+  const isExtra = quote.kind === "extra";
+  const parentCode = isExtra ? quote.code.replace(/-E\d+$/, "") : null;
 
   return (
     <Document title={`${quote.code} — ${quote.title}`} author={companyName}>
       <Page size="A4" style={s.page}>
         {/* ── Header (carta intestata condivisa) ── */}
         <Letterhead settings={settings} logoUrl={logoUrl}>
+          {isExtra && (
+            <View style={s.extraBadge}>
+              <Text style={s.extraBadgeText}>EXTRA PREVENTIVO</Text>
+            </View>
+          )}
           <Text style={s.quoteCode}>{quote.code}</Text>
           <Text style={s.quoteDate}>Data: {formatDate(quote.createdAt)}</Text>
+          {isExtra && parentCode ? (
+            <Text style={s.quoteDate}>Rif. preventivo {parentCode}</Text>
+          ) : null}
           {quote.validUntil && (
             <View style={s.validityBadge}>
               <Text style={s.validityText}>
@@ -525,6 +554,14 @@ export function ClassicTemplate({ quote, settings, logoUrl }: ClassicTemplatePro
         )}
 
         {/* ── Title ── */}
+        {isExtra && (
+          <View style={s.extraNotice}>
+            <Text style={s.extraNoticeText}>
+              Lavorazioni extra rispetto al preventivo {parentCode ?? "principale"}: importi separati e
+              aggiuntivi, non compresi nel preventivo originale.
+            </Text>
+          </View>
+        )}
         <Text style={s.quoteTitle}>{quote.title}</Text>
         {quote.projectAddress ? (
           <Text style={s.projectAddress}>Cantiere: {quote.projectAddress}</Text>
@@ -582,8 +619,8 @@ export function ClassicTemplate({ quote, settings, logoUrl }: ClassicTemplatePro
             <Text style={s.totalLabel}>IVA {quote.vatRate}%</Text>
             <Text style={s.totalValue}>{fmtCurrency(totals.vatAmount)}</Text>
           </View>
-          <View style={s.grandTotalRow}>
-            <Text style={s.grandTotalLabel}>TOTALE</Text>
+          <View style={[s.grandTotalRow, isExtra ? { backgroundColor: "#d97706" } : {}]}>
+            <Text style={s.grandTotalLabel}>{isExtra ? "TOTALE LAVORI EXTRA" : "TOTALE"}</Text>
             <Text style={s.grandTotalValue}>{fmtCurrency(totals.total)}</Text>
           </View>
         </View>

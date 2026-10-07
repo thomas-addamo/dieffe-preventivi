@@ -12,6 +12,8 @@ import {
   Clock,
   TrendingUp,
   ChevronRight,
+  ChevronDown,
+  FilePlus2,
   Trash2,
   Filter,
   X,
@@ -20,7 +22,8 @@ import {
   History,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Page, PageHeader, SectionTitle, EmptyState } from "@/components/shared/Page";
+import { Page, SectionTitle, EmptyState } from "@/components/shared/Page";
+import { WelcomeBriefing } from "./WelcomeBriefing";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -56,7 +59,12 @@ type QuoteRow = {
   publicTokenExpiresAt?: Date | string | null;
   /** Imponibile (al netto dello sconto, IVA esclusa). */
   total: number;
+  kind: "standard" | "extra";
+  parentQuoteId: string | null;
 };
+
+/** Riga dell'archivio: il preventivo principale con i suoi lavori extra. */
+type QuoteGroup = QuoteRow & { extras: QuoteRow[] };
 
 type SortKey = "recent" | "updated" | "oldest" | "value" | "code" | "client";
 
@@ -82,6 +90,7 @@ interface DashboardClientProps {
   initialQuotes: QuoteRow[];
   clients: { id: string; name: string }[];
   stats: { total: number; acceptedThisMonth: number; pending: number };
+  currentUser: { id: string; name: string };
 }
 
 // Sezione "Aperti di recente": mette in evidenza gli ultimi preventivi aperti
@@ -168,6 +177,7 @@ export function DashboardClient({
   initialQuotes,
   clients,
   stats,
+  currentUser,
 }: DashboardClientProps) {
   const router = useRouter();
   const { can: perms } = usePermissions();
@@ -180,19 +190,36 @@ export function DashboardClient({
   const [showImportModal, setShowImportModal] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-  const filtered = useMemo(() => {
-    let rows = [...quotes];
-    if (search) {
-      const q = search.toLowerCase();
-      rows = rows.filter(
-        (r) =>
+  // I lavori extra non sono righe a sé: stanno nella tendina del loro preventivo.
+  const filtered = useMemo<QuoteGroup[]>(() => {
+    const extrasByParent = new Map<string, QuoteRow[]>();
+    const ids = new Set(quotes.map((q) => q.id));
+    for (const q of quotes) {
+      if (q.kind === "extra" && q.parentQuoteId && ids.has(q.parentQuoteId)) {
+        extrasByParent.set(q.parentQuoteId, [...(extrasByParent.get(q.parentQuoteId) ?? []), q]);
+      }
+    }
+    const matches = (r: QuoteRow) => {
+      if (search) {
+        const q = search.toLowerCase();
+        const hit =
           r.title.toLowerCase().includes(q) ||
           r.code.toLowerCase().includes(q) ||
-          (r.clientName?.toLowerCase().includes(q) ?? false)
-      );
-    }
-    if (statusFilter !== "all") rows = rows.filter((r) => r.status === statusFilter);
-    if (clientFilter !== "all") rows = rows.filter((r) => r.clientName === clientFilter);
+          (r.clientName?.toLowerCase().includes(q) ?? false);
+        if (!hit) return false;
+      }
+      if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      if (clientFilter !== "all" && r.clientName !== clientFilter) return false;
+      return true;
+    };
+    const rows: QuoteGroup[] = quotes
+      .filter((q) => !(q.kind === "extra" && q.parentQuoteId && ids.has(q.parentQuoteId)))
+      .map((q) => ({
+        ...q,
+        extras: (extrasByParent.get(q.id) ?? []).sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+      }))
+      // Un gruppo resta visibile se il preventivo o uno dei suoi extra corrisponde ai filtri.
+      .filter((g) => matches(g) || g.extras.some(matches));
     rows.sort(SORTERS[sort]);
     return rows;
   }, [quotes, search, statusFilter, clientFilter, sort]);
@@ -213,9 +240,9 @@ export function DashboardClient({
 
   return (
     <Page>
-      <PageHeader
-        title="Dashboard"
-        subtitle="Gestione preventivi e stato lavori"
+      <WelcomeBriefing
+        userId={currentUser.id}
+        userName={currentUser.name}
         actions={perms.createQuote && (
           <div className="hidden lg:flex gap-2">
             <Button
@@ -267,7 +294,7 @@ export function DashboardClient({
       <SectionTitle className="flex items-center justify-between">
         <span>Archivio preventivi</span>
         <span className="normal-case tracking-normal tabular-nums">
-          {filtered.length} di {quotes.length}
+          {filtered.length} preventiv{filtered.length === 1 ? "o" : "i"}
         </span>
       </SectionTitle>
       <div className="flex gap-2 mb-3 md:mb-4">
@@ -438,10 +465,10 @@ export function DashboardClient({
       ) : (
         <div className="space-y-2.5">
           {filtered.map((q) => (
-            <QuoteCard
+            <QuoteGroupCard
               key={q.id}
-              quote={q}
-              onDelete={perms.deleteQuote ? () => deleteQuote(q.id) : undefined}
+              group={q}
+              onDelete={perms.deleteQuote ? (id) => deleteQuote(id) : undefined}
             />
           ))}
         </div>
@@ -469,7 +496,40 @@ export function DashboardClient({
 // ─── Riga dell'archivio ─────────────────────────────────────────────────────
 
 /** Tessera colorata a sinistra: 40px a 16px dal bordo → raggio 12, concentrico alla card. */
-function QuoteCard({ quote: q, onDelete }: { quote: QuoteRow; onDelete?: () => void }) {
+/** Preventivo con i suoi lavori extra in una tendina che si apre sotto. */
+function QuoteGroupCard({ group, onDelete }: { group: QuoteGroup; onDelete?: (id: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const extras = group.extras;
+  return (
+    <div>
+      <QuoteCard
+        quote={group}
+        onDelete={onDelete ? () => onDelete(group.id) : undefined}
+        extrasToggle={
+          extras.length > 0 ? { count: extras.length, open, onToggle: () => setOpen((o) => !o) } : undefined
+        }
+      />
+      {open && extras.length > 0 && (
+        <div className="animate-slide-up mt-2 space-y-2 border-l-2 border-amber-300/70 pl-3 ml-5 sm:ml-[34px] dark:border-amber-500/40">
+          {extras.map((x) => (
+            <QuoteCard key={x.id} quote={x} onDelete={onDelete ? () => onDelete(x.id) : undefined} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function QuoteCard({
+  quote: q,
+  onDelete,
+  extrasToggle,
+}: {
+  quote: QuoteRow;
+  onDelete?: () => void;
+  extrasToggle?: { count: number; open: boolean; onToggle: () => void };
+}) {
+  const isExtra = q.kind === "extra";
   const linkActive =
     !!q.publicToken && !!q.publicTokenExpiresAt && new Date() < new Date(q.publicTokenExpiresAt);
   const status = (
@@ -490,16 +550,23 @@ function QuoteCard({ quote: q, onDelete }: { quote: QuoteRow; onDelete?: () => v
       <span
         className={cn(
           "hidden h-10 w-10 shrink-0 items-center justify-center rounded-lg sm:flex",
-          QUOTE_STATUS_COLORS[q.status] ?? "bg-muted text-muted-foreground"
+          isExtra
+            ? "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400"
+            : (QUOTE_STATUS_COLORS[q.status] ?? "bg-muted text-muted-foreground")
         )}
       >
-        <FileText className="h-[18px] w-[18px]" />
+        {isExtra ? <FilePlus2 className="h-[18px] w-[18px]" /> : <FileText className="h-[18px] w-[18px]" />}
       </span>
 
       {/* Codice + titolo (+ dettagli su telefono) */}
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
           <span className="font-mono text-[11px] font-semibold text-primary">{q.code}</span>
+          {isExtra && (
+            <span className="rounded-full bg-amber-100 px-1.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+              Extra
+            </span>
+          )}
           {linkActive && (
             <LinkIcon className="h-3 w-3 text-blue-500" aria-label="Link pubblico attivo" />
           )}
@@ -542,7 +609,20 @@ function QuoteCard({ quote: q, onDelete }: { quote: QuoteRow; onDelete?: () => v
           <Trash2 className="h-4 w-4" />
         </Button>
       )}
-      <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/50" />
+      {extrasToggle ? (
+        <button
+          type="button"
+          onClick={extrasToggle.onToggle}
+          aria-expanded={extrasToggle.open}
+          aria-label={`${extrasToggle.open ? "Nascondi" : "Mostra"} lavori extra`}
+          className="relative z-10 flex h-8 shrink-0 items-center gap-1 rounded-full bg-amber-100 pl-2.5 pr-2 text-xs font-semibold text-amber-800 transition-colors hover:bg-amber-200 dark:bg-amber-950 dark:text-amber-300"
+        >
+          +{extrasToggle.count} extra
+          <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", extrasToggle.open && "rotate-180")} />
+        </button>
+      ) : (
+        <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/50" />
+      )}
     </div>
   );
 }

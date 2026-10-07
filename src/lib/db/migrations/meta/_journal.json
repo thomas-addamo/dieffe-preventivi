@@ -99,6 +99,13 @@
       "when": 1791301016541,
       "tag": "0013_price_list_catalog",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1791392802027,
+      "tag": "0014_quote_extras",
+      "breakpoints": true
     }
   ]
 }

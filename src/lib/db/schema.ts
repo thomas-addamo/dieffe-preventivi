@@ -11,6 +11,7 @@ import {
   uniqueIndex,
   timestamp,
   uuid,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -154,11 +155,18 @@ export const quotes = pgTable(
     isLocked: boolean("is_locked").notNull().default(false),
     lockedBy: text("locked_by").references(() => users.id, { onDelete: "set null" }),
     lockedAt: timestamp("locked_at", { withTimezone: true }),
+    /** standard | extra — un "lavoro extra" è un preventivo separato di sole
+     *  lavorazioni aggiuntive, legato al preventivo principale. */
+    kind: text("kind", { enum: ["standard", "extra"] }).notNull().default("standard"),
+    parentQuoteId: text("parent_quote_id").references((): AnyPgColumn => quotes.id, {
+      onDelete: "set null",
+    }),
   },
   (t) => [
     uniqueIndex("quotes_code_idx").on(t.code),
     index("quotes_user_id_idx").on(t.userId),
     index("quotes_client_id_idx").on(t.clientId),
+    index("quotes_parent_id_idx").on(t.parentQuoteId),
   ]
 );
 
@@ -379,6 +387,8 @@ export const notifications = pgTable(
         "announcement",
         "maintenance",
         "alert",
+        // Richiesta d'aiuto inviata da un utente agli amministratori
+        "support",
       ],
     })
       .notNull()

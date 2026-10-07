@@ -30,6 +30,9 @@ con un unico strumento, disponibile ovunque: in ufficio, in cantiere, dal telefo
 | **Assistente AI** | Suggerimenti di prezzo spiegati (listino, storico, mercato), miglioramento dei testi e import di preventivi da PDF, Word ed Excel. |
 | **Condivisione e firma** | Link pubblico per il cliente, protetto da PIN opzionale, con accettazione e firma online. |
 | **Export** | PDF impaginato con immagini, Excel con formule, CSV e backup JSON. Da iPhone il PDF si condivide o si salva su File. |
+| **Lavori extra** | Lavorazioni aggiuntive in un preventivo separato legato all'originale (PREV-…-E1), con prezzo isolato e PDF marcato "Extra"; in dashboard e nella barra laterale si aprono a tendina sotto il preventivo. |
+| **Dashboard personale** | Saluto in base all'ora, lavori in sospeso e consigli dell'AI per ogni utente (il testo dell'AI resta in cache nel browser, niente scritture nel database). |
+| **Aiuto** | Assistente sull'uso dell'app e richieste all'amministratore, recapitate come notifica. |
 | **Clienti** | Anagrafica clienti compatta con lo storico dei preventivi. |
 | **Comunicazioni** | Lettere su carta intestata a clienti, condòmini o architetti, con testo formattato, timbro Dieffe e PDF scaricabile. |
 | **Statistiche** | Andamento di valore, conversione e stati dei preventivi. |

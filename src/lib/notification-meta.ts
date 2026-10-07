@@ -16,6 +16,7 @@ import {
   Megaphone,
   Wrench,
   AlertTriangle,
+  LifeBuoy,
 } from "lucide-react";
 import type { Notification } from "@/lib/db/schema";
 
@@ -106,6 +107,12 @@ export const NOTIFICATION_META: Record<NotificationType, NotificationMeta> = {
     label: "Avviso importante",
     iconClass: "bg-red-500/12 text-red-600 dark:text-red-400",
     accentClass: "border-red-500/30 bg-red-500/[0.05]",
+  },
+  support: {
+    icon: LifeBuoy,
+    label: "Richiesta d'aiuto",
+    iconClass: "bg-sky-500/12 text-sky-600 dark:text-sky-400",
+    accentClass: "border-sky-500/30 bg-sky-500/[0.05]",
   },
 };
 

@@ -34,6 +34,33 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.18.0",
+    date: "2026-10-07",
+    headline: "Lavori extra, una dashboard tutta tua e l'Aiuto sempre a portata.",
+    highlights: [
+      {
+        icon: "layout",
+        title: "Lavori extra",
+        description: "Lavorazioni aggiuntive in un preventivo separato, legato all'originale, con prezzo isolato e PDF marcato EXTRA.",
+      },
+      {
+        icon: "sparkles",
+        title: "Dashboard personale",
+        description: "Saluto, cosa hai lasciato in sospeso e consigli dell'AI in base all'ora e al tuo lavoro.",
+      },
+      {
+        icon: "zap",
+        title: "Aiuto",
+        description: "Chiedi all'assistente come si fa, oppure scrivi all'amministratore: riceve la tua richiesta come notifica.",
+      },
+      {
+        icon: "desktop",
+        title: "Icona Mac più grande",
+        description: "Il logo Liquid Glass ora riempie meglio l'icona nel Dock.",
+      },
+    ],
+  },
+  {
     version: "3.17.1",
     date: "2026-10-07",
     headline: "Icona Liquid Glass su Mac.",

@@ -20,9 +20,9 @@ const SRC = resolve("public/icona_dieffe.svg");
 const OUT = resolve("assets/icon.icon");
 
 // Tela Icon Composer: 1024×1024 pt. Il logo (≈4080 unità su 4725, già
-// centrato nel suo viewBox) occupa il 62% del lato: margine come le icone Apple.
+// centrato nel suo viewBox) occupa il 76% del lato: ben leggibile nel Dock.
 const CANVAS = 1024;
-const LOGO_SHARE = 0.62;
+const LOGO_SHARE = 0.76;
 const LOGO_EXTENT = 4080;
 const VIEWBOX = 4725;
 const size = (CANVAS * LOGO_SHARE * VIEWBOX) / LOGO_EXTENT;

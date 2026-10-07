@@ -14,6 +14,9 @@ import {
   Lock,
   Unlock,
   UserCog,
+  FilePlus2,
+  Plus,
+  Loader2,
 } from "lucide-react";
 import { SharePopover } from "./SharePopover";
 import { AiChatAssistant } from "./AiChatAssistant";
@@ -226,11 +229,16 @@ interface QuoteEditorProps {
   initialQuote: QuoteWithRelations;
   clients: { id: string; name: string }[];
   users?: { id: string; name: string }[];
+  /** Preventivo principale (se questo è un lavoro extra) e lavori extra collegati. */
+  related?: {
+    parent: { id: string; code: string; title: string } | null;
+    extras: { id: string; code: string; title: string; status: string }[];
+  };
 }
 
 const SECTION_CODES = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
-export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorProps) {
+export function QuoteEditor({ initialQuote, clients, users = [], related }: QuoteEditorProps) {
   const router = useRouter();
   const { isViewer, isAdmin, can: perms } = usePermissions();
   const [quote, setQuote] = useState<QuoteWithRelations>(initialQuote);
@@ -697,6 +705,21 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
   }
 
   const [pdfSheetOpen, setPdfSheetOpen] = useState(false);
+  const [creatingExtra, setCreatingExtra] = useState(false);
+
+  /** Nuovo lavoro extra collegato a questo preventivo (stesse intestazioni). */
+  async function createExtra() {
+    setCreatingExtra(true);
+    const res = await fetch(`/api/quotes/${quote.id}/extras`, { method: "POST" });
+    if (res.ok) {
+      const { id } = await res.json();
+      toast.success("Lavoro extra creato: aggiungi le lavorazioni");
+      router.push(`/preventivi/${id}`);
+    } else {
+      toast.error("Impossibile creare il lavoro extra");
+      setCreatingExtra(false);
+    }
+  }
 
   async function exportQuote(format: string) {
     const url = `/api/export/${format}/${quote.id}`;
@@ -783,6 +806,59 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
         </div>
       )}
 
+      {/* Lavori extra: da dove viene questo extra, o quali extra ha questo preventivo */}
+      {quote.kind === "extra" ? (
+        <div className="flex items-center gap-2 border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200 md:px-6">
+          <FilePlus2 className="h-4 w-4 shrink-0" />
+          <span className="min-w-0 flex-1 truncate">
+            <strong>Lavoro extra</strong>
+            {related?.parent ? (
+              <>
+                {" "}del preventivo{" "}
+                <button
+                  type="button"
+                  onClick={() => router.push(`/preventivi/${related.parent!.id}`)}
+                  className="font-medium underline-offset-2 hover:underline"
+                >
+                  {related.parent.code} — {related.parent.title}
+                </button>
+              </>
+            ) : null}
+            <span className="hidden text-amber-800/80 dark:text-amber-300/80 sm:inline">
+              {" "}· importo separato dal preventivo principale
+            </span>
+          </span>
+        </div>
+      ) : (
+        !!related?.extras.length && (
+          <div className="flex items-center gap-2 overflow-x-auto border-b bg-muted/30 px-4 py-2 text-sm md:px-6">
+            <FilePlus2 className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+            <span className="shrink-0 font-medium">Lavori extra</span>
+            {related.extras.map((x) => (
+              <button
+                key={x.id}
+                type="button"
+                onClick={() => router.push(`/preventivi/${x.id}`)}
+                className="shrink-0 rounded-full bg-amber-100 px-2.5 py-0.5 font-mono text-xs font-semibold text-amber-800 transition-colors hover:bg-amber-200 dark:bg-amber-950 dark:text-amber-300"
+                title={x.title}
+              >
+                {x.code.split("-").pop()}
+              </button>
+            ))}
+            {perms.createQuote && (
+              <button
+                type="button"
+                onClick={createExtra}
+                disabled={creatingExtra}
+                className="flex shrink-0 items-center gap-1 text-xs font-medium text-amber-700 hover:underline disabled:opacity-50 dark:text-amber-400"
+              >
+                <Plus className="h-3.5 w-3.5" /> Nuovo
+              </button>
+            )}
+          </div>
+        )
+      )}
+
       {/* Lock banner for non-admin */}
       {quote.isLocked && !isAdmin && (
         <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-2 flex items-center gap-2 text-sm text-yellow-800">
@@ -809,7 +885,14 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
         {/* Codice + titolo: su mobile è l'unico punto in cui si capisce
             quale preventivo si sta modificando. */}
         <div className="flex-1 min-w-0">
-          <h1 className="font-semibold text-sm truncate leading-tight">{quote.code}</h1>
+          <h1 className="flex items-center gap-1.5 font-semibold text-sm leading-tight">
+            <span className="truncate">{quote.code}</span>
+            {quote.kind === "extra" && (
+              <span className="shrink-0 rounded-full bg-amber-100 px-1.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                Extra
+              </span>
+            )}
+          </h1>
           <p className="md:hidden truncate text-[11px] leading-tight text-muted-foreground">
             {quote.title}
           </p>
@@ -919,6 +1002,20 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
             </DropdownMenuContent>
           </DropdownMenu>
 
+          {perms.createQuote && quote.kind !== "extra" && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 h-8"
+              onClick={createExtra}
+              disabled={creatingExtra}
+              title="Crea un preventivo di sole lavorazioni extra collegato a questo"
+            >
+              {creatingExtra ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FilePlus2 className="w-3.5 h-3.5" />}
+              <span className="hidden lg:inline">Lavoro extra</span>
+            </Button>
+          )}
+
           {perms.deleteQuote && (
             <Button
               variant="ghost"
@@ -986,6 +1083,11 @@ export function QuoteEditor({ initialQuote, clients, users = [] }: QuoteEditorPr
             <DropdownMenuItem onClick={() => exportQuote("pdf")}>
               <Download className="w-4 h-4 mr-2" /> PDF (salva o condividi)
             </DropdownMenuItem>
+            {perms.createQuote && quote.kind !== "extra" && (
+              <DropdownMenuItem onClick={createExtra} disabled={creatingExtra}>
+                <FilePlus2 className="w-4 h-4 mr-2" /> Nuovo lavoro extra
+              </DropdownMenuItem>
+            )}
             {perms.exportQuoteAdvanced && (
               <>
                 <DropdownMenuItem onClick={() => exportQuote("excel")}>
