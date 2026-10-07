@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <g transform="translate(144.376 144.376) scale(0.155608)" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+    <g transform="matrix(2.737063,-1.600294,2.539522,4.343473,-7285.873086,-5308.097099)">
+        <path d="M1444,1944L1444.711,2234.097L1224.51,2235.002L975,2237L975,1944L1444,1944Z" style="fill:rgb(0,183,233);"/>
+    </g>
+    <g transform="matrix(2.737063,-1.600294,2.539522,4.343473,-7285.873086,-5308.097099)">
+        <path d="M1444,1944L1444.711,2234.097L975,2237L975,1944L1444,1944Z" style="fill:rgb(0,183,233);"/>
+    </g>
+    <g transform="matrix(2.737063,-1.600294,2.539522,4.343473,-5222.989183,-4254.997574)">
+        <path d="M1444,1944L1444.711,2234.097L975,2237L975,1944L1444,1944Z" style="fill:rgb(0,183,233);"/>
+    </g>
+  </g>
+</svg>

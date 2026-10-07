@@ -76,6 +76,28 @@ jobs:
       - name: Prepara il wrapper desktop
         run: pnpm desktop:prepare
 
+      # Icona Liquid Glass (assets/icon.icon): serve actool di Xcode 26. Si
+      # seleziona l'Xcode 26 più recente del runner e si prova a compilare
+      # l'icona; se non riesce, la build usa l'icona classica (.icns).
+      - name: Icona Liquid Glass (Xcode 26)
+        if: matrix.platform == 'mac'
+        shell: bash
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          if [ -n "$XCODE" ]; then sudo xcode-select -s "$XCODE"; fi
+          xcrun actool --version || true
+          TMP=$(mktemp -d)
+          cp -R assets/icon.icon "$TMP/Icon.icon"
+          if xcrun actool "$TMP/Icon.icon" --compile "$TMP" --app-icon Icon \
+               --output-partial-info-plist "$TMP/info.plist" --platform macosx \
+               --target-device mac --minimum-deployment-target 26.0 \
+               --output-format human-readable-text --errors --warnings; then
+            echo "Icona Liquid Glass compilata"
+          else
+            echo "::warning::Icona Liquid Glass non compilabile su questo runner: uso l'icona classica"
+            echo "MAC_LEGACY_ICON=1" >> "$GITHUB_ENV"
+          fi
+
       # Senza certificato Apple l'app viene firmata ad-hoc (scripts/desktop/after-pack.cjs).
       # Con i secret CSC_LINK / CSC_KEY_PASSWORD (Developer ID) + APPLE_ID /
       # APPLE_APP_SPECIFIC_PASSWORD / APPLE_TEAM_ID viene firmata e notarizzata.

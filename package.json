@@ -1,6 +1,6 @@
 {
   "name": "dieffe-preventivi",
-  "version": "3.17.0",
+  "version": "3.17.1",
   "private": true,
   "description": "Gestione preventivi edili — Dieffe Ristrutturazioni",
   "author": "Dieffe Ristrutturazioni <impresa.dieffe@gmail.com>",
@@ -18,7 +18,8 @@
     "electron:dev": "pnpm desktop:prepare && concurrently -k \"pnpm dev\" \"wait-on http://localhost:3847 && electron desktop-app\"",
     "electron:build:mac": "pnpm desktop:prepare && electron-builder --mac --config electron-builder.config.cjs --publish never",
     "electron:build:win": "pnpm desktop:prepare && electron-builder --win --config electron-builder.config.cjs --publish never",
-    "electron:icons": "electron-icon-builder --input=assets/icon.png --output=assets"
+    "electron:icons": "electron-icon-builder --input=assets/icon.png --output=assets",
+    "electron:icon:mac": "node scripts/desktop/gen-mac-icon.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

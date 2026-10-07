@@ -2,7 +2,23 @@
 // Configurazione electron-builder — app desktop Dieffe Preventivi.
 // Build: `pnpm electron:build:mac` / `pnpm electron:build:win` (vedi README).
 
+const { execFileSync } = require("node:child_process");
 const electronVersion = require("electron/package.json").version;
+
+// Icona macOS "Liquid Glass" (assets/icon.icon, formato Icon Composer — vedi
+// scripts/desktop/gen-mac-icon.mjs). Si compila con actool di Xcode 26: se
+// manca (o MAC_LEGACY_ICON=1) si usa la classica assets/icon.icns.
+function canBuildGlassIcon() {
+  if (process.platform !== "darwin" || process.env.MAC_LEGACY_ICON === "1") return false;
+  try {
+    const out = execFileSync("xcrun", ["actool", "--version"], { encoding: "utf8" });
+    const m = /short-bundle-version<\/key>\s*<string>(\d+)/.exec(out);
+    return !!m && Number(m[1]) >= 26;
+  } catch {
+    return false;
+  }
+}
+const macIcon = canBuildGlassIcon() ? "assets/icon.icon" : "assets/icon.icns";
 
 // Firma Apple ufficiale solo se è configurato un certificato Developer ID.
 const hasAppleCert = Boolean(process.env.CSC_LINK || process.env.CSC_NAME);
@@ -33,7 +49,7 @@ module.exports = {
 
   mac: {
     category: "public.app-category.business",
-    icon: "assets/icon.icns",
+    icon: macIcon,
     minimumSystemVersion: "12.0",
     darkModeSupport: true,
     // dmg = prima installazione · zip = aggiornamento automatico dall'app

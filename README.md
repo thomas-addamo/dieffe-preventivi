@@ -40,7 +40,8 @@ con un unico strumento, disponibile ovunque: in ufficio, in cantiere, dal telefo
 
 L'app desktop offre l'esperienza di un'applicazione nativa:
 
-- **macOS** — barra del titolo integrata, sidebar traslucida con i materiali di sistema,
+- **macOS** — icona Liquid Glass (logo Dieffe in tre strati di vetro, formato Icon Composer
+  in `assets/icon.icon`, rigenerabile con `pnpm electron:icon:mac`), barra del titolo integrata, sidebar traslucida con i materiali di sistema,
   font SF, modalità chiara/scura sincronizzata, badge delle notifiche nel Dock.
 - **Menu e scorciatoie** — `⌘N` nuovo preventivo, `⌘1…7` per le sezioni, `⌘[` / `⌘]`
   avanti e indietro, `⌘,` impostazioni; menu contestuale di sistema con correzione ortografica.

@@ -34,6 +34,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.17.1",
+    date: "2026-10-07",
+    headline: "Icona Liquid Glass su Mac.",
+    highlights: [
+      {
+        icon: "desktop",
+        title: "Nuova icona per macOS",
+        description: "Il logo Dieffe in vetro, a strati, come le app di sistema di macOS 26, anche in versione scura e trasparente.",
+      },
+    ],
+  },
+  {
     version: "3.17.0",
     date: "2026-10-06",
     headline: "Un listino che si mette in ordine da solo.",
