@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Home, Users, Plus, User, LayoutGrid } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { hasNewPage } from "@/lib/new-pages";
 import { usePermissions } from "@/hooks/use-permissions";
 import { NewQuoteModal } from "@/components/quote-editor/NewQuoteModal";
 
@@ -14,6 +15,8 @@ type TabItem = {
   icon: React.ElementType;
   /** Match attivo aggiuntivo (sezioni che ricadono sotto questa tab) */
   match: (path: string) => boolean;
+  /** Pagine raccolte nella tab: se una è nuova, puntino "Novità" (lib/new-pages) */
+  newPages?: string[];
 };
 
 const TABS: TabItem[] = [
@@ -39,6 +42,8 @@ const TABS: TabItem[] = [
     href: "/altro",
     label: "Altro",
     icon: LayoutGrid,
+    // Puntino "Novità" se una pagina raccolta qui è appena stata lanciata
+    newPages: ["/comunicazioni", "/listino", "/statistiche"],
     // "Altro" raccoglie tutte le sezioni secondarie
     match: (p) =>
       p.startsWith("/altro") ||
@@ -61,10 +66,16 @@ function TabLink({ tab, active }: { tab: TabItem; active: boolean }) {
     >
       <span
         className={cn(
-          "flex h-8 w-12 items-center justify-center rounded-full transition-colors",
+          "relative flex h-8 w-12 items-center justify-center rounded-full transition-colors",
           active ? "bg-primary/10" : "bg-transparent"
         )}
       >
+        {tab.newPages && hasNewPage(tab.newPages) && (
+          <span
+            aria-label="Novità"
+            className="absolute right-2 top-1 h-2 w-2 rounded-full bg-primary ring-2 ring-background"
+          />
+        )}
         <Icon
           className={cn(
             "h-[22px] w-[22px] transition-colors",

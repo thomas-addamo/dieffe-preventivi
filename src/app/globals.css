@@ -577,7 +577,7 @@ body {
   initial-value: 0px;
 }
 :root {
-  --sb-w: 15rem;              /* 240px aperta                  */
+  --sb-w: 16rem;              /* 256px aperta: voce + etichetta "Novità" intere */
   --sb-pad: 0.625rem;         /* 10px                          */
   --sb-pad-open: 0.625rem;
   --sb-item: 2.75rem;         /* 44px                          */

@@ -27,6 +27,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { NEW_BADGE_CLASS, isNewPage } from "@/lib/new-pages";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Barra laterale (desktop web + app desktop).
@@ -204,7 +205,9 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
     Icon: typeof LayoutDashboard,
     active: boolean,
     badge?: number
-  ) => (
+  ) => {
+    const fresh = isNewPage(href);
+    return (
     <Link
       key={href}
       href={href}
@@ -216,6 +219,18 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
       {active && activeIndicator}
       <Icon className="h-4 w-4 shrink-0" />
       <span className={cn("flex-1 truncate", reveal)}>{label}</span>
+      {fresh && (
+        <>
+          <span className={cn(NEW_BADGE_CLASS, "-ml-2", reveal)}>Novità</span>
+          {/* Da compressa: puntino blu sul quadrato */}
+          <span
+            className={cn(
+              "absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-primary transition-opacity",
+              expanded ? "opacity-0 duration-75" : "opacity-100 duration-200 delay-150"
+            )}
+          />
+        </>
+      )}
       {badge !== undefined && badge > 0 && (
         <>
           <span
@@ -236,7 +251,8 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
         </>
       )}
     </Link>
-  );
+    );
+  };
 
   /** Titolo di sezione: stessa altezza aperta/compressa (testo ↔ lineetta). */
   const sectionLabel = (text: string, icon?: React.ReactNode) => (
