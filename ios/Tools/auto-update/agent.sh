@@ -42,9 +42,9 @@ BUNDLE_ID="$(sed -n 's/^DIEFFE_BUNDLE_ID *= *//p' "$BASE/Signing.xcconfig" 2>/de
 BUNDLE_ID="${BUNDLE_ID:-it.dieffe.preventivi}"
 
 # Dispositivi: un UDID per riga (le versioni precedenti ne avevano uno in "device").
-if [[ ! -f "$BASE/devices" && -f "$BASE/device" ]]; then
-  cp "$BASE/device" "$BASE/devices"
-  OLD="$(head -1 "$BASE/device")"
+[[ ! -f "$BASE/devices" && -f "$BASE/device" ]] && cp "$BASE/device" "$BASE/devices"
+if [[ -f "$STATE/commit" || -f "$STATE/expires" ]]; then
+  OLD="$(head -1 "$BASE/devices")"
   mkdir -p "$STATE/$OLD"
   [[ -f "$STATE/commit" ]] && mv "$STATE/commit" "$STATE/$OLD/commit"
   [[ -f "$STATE/expires" ]] && mv "$STATE/expires" "$STATE/$OLD/expires"
