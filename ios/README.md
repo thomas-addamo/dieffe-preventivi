@@ -5,7 +5,7 @@ gratuito. Non serve l'Apple Developer Program e l'app non passa dall'App Store.
 
 ## Come è fatta
 
-- **Tab bar nativa** (Liquid Glass): Home, Clienti, Profilo, Altro, più il tasto
+- **Tab bar nativa** (Liquid Glass): Home, Clienti, Listino, Altro, più il tasto
   **＋** per un nuovo preventivo. Un secondo tap su una sezione torna alla sua
   pagina iniziale.
 - **Schermate native (SwiftUI):**
@@ -22,16 +22,21 @@ gratuito. Non serve l'Apple Developer Program e l'app non passa dall'App Store.
     duplica, riordina, elimina; totali con sconto e IVA; stato, PDF, Excel,
     CSV, link per il cliente con PIN, lavori extra, blocco (admin), cestino.
     Salvataggio automatico. "Apri nel sito" per chat AI e riassegnazione.
-  - **Listino:** catalogo per categoria e sottocategoria, ricerca, filtri,
-    nuova voce, modifica, attiva/disattiva, fissa, elimina.
-  - **Profilo** (in alto a sinistra nella Home): Profilo, Listino,
-    Impostazioni, Esci.
+  - **Listino** (sezione a sé): riepilogo (attive, fissate, mai usate,
+    disattivate), categorie del catalogo, sottocategorie, scheda della voce
+    con utilizzo; ricerca in tutto il listino, nuova voce, modifica,
+    attiva/disattiva, fissa, elimina.
+  - **Profilo** (tasto in alto a sinistra nella Home, o da Altro): aspetto
+    chiaro/scuro, Face ID, cambio password, Esci.
+  - **Altro:** Aiuto (assistente AI e messaggio all'amministratore), App
+    iPhone e i collegamenti alle altre pagine.
   - **Accesso** con email e password, compatibile con il riempimento automatico
     delle password.
 - Le schermate native usano le API JSON del sito (`/api/app/*`,
   `/api/clients`, `/api/quotes`, `/api/price-list`).
-- **Ancora web** (`WKWebView`): Profilo e Altro (statistiche, comunicazioni,
-  cestino, impostazioni azienda, utenti). Il sito riconosce l'app dallo User-Agent `DieffeiOS/x.y`,
+- **Ancora web** (`WKWebView`, dentro Altro con titolo e "indietro" nativi):
+  lavori extra, statistiche, comunicazioni, cestino, impostazioni azienda,
+  utenti e pagine di amministrazione. Il sito riconosce l'app dallo User-Agent `DieffeiOS/x.y`,
   nasconde la propria tab bar e segnala all'app ogni cambio di pagina: le
   pagine che hanno una versione nativa si aprono in nativo.
 - **PDF, Excel e CSV** si aprono nell'anteprima di sistema (Quick Look), con
@@ -40,9 +45,10 @@ gratuito. Non serve l'Apple Developer Program e l'app non passa dall'App Store.
   contenuto è coperto.
 - **Badge** con le notifiche non lette, tirare verso il basso per aggiornare,
   schermata nativa quando si è offline.
-- **Impostazioni native**: dal sito, *Altro › App iPhone*.
+- **Impostazioni native**: *Altro › App iPhone*.
 
-Prossime fasi: Profilo, Statistiche, Comunicazioni e Cestino in SwiftUI.
+Prossime fasi: le pagine di Altro ancora web (statistiche, comunicazioni,
+cestino, lavori extra, amministrazione).
 
 ```
 ios/
@@ -148,5 +154,10 @@ Testing) e installa il file `.ipa` con SideStore.
 - **Icona:** è la stessa icona Liquid Glass dell'app Mac (`assets/icon.icon`,
   formato Icon Composer). Dopo averla cambiata, dalla radice del repository:
   `node scripts/ios/gen-ios-icon.mjs`.
+- **Autotest (build Debug):** `xcrun simctl launch booted it.dieffe.preventivi
+  -DieffeSelfTest YES` prova contro il server, con l'account già connesso,
+  creazione e salvataggi di preventivo, sezioni, voci, foto, link, extra,
+  blocco, clienti e listino, poi elimina tutto. Risultato in
+  `Documents/selftest.log` del contenitore dell'app.
 - **Controllo automatico:** GitHub Actions (*Build app iPhone*) compila l'app
   senza firma a ogni modifica della cartella `ios/`.

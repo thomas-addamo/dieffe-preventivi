@@ -5,11 +5,14 @@ import WebKit
 /// nativa di errore/offline.
 struct WebPageView: View {
     let page: WebPageModel
+    /// L'editor del sito va sotto la status bar; le pagine incorporate stanno
+    /// sotto la barra di navigazione nativa.
+    var fullScreen = true
 
     var body: some View {
         ZStack(alignment: .top) {
             WebViewContainer(webView: page.webView)
-                .ignoresSafeArea()
+                .ignoresSafeArea(edges: fullScreen ? .all : .bottom)
                 .opacity(page.loadError == nil ? 1 : 0)
 
             if let error = page.loadError {

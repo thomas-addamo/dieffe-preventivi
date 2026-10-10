@@ -2,9 +2,8 @@ import Observation
 import SwiftUI
 import UserNotifications
 
-/// Stato condiviso dell'app: schermate native (Home, Clienti, creazione),
-/// pagine web rimaste (Profilo, Altro, editor dei preventivi), accesso,
-/// anteprima file (Quick Look) e impostazioni native.
+/// Stato condiviso dell'app: schermate native, pagine del sito aperte da
+/// Altro, accesso, anteprima file (Quick Look) e impostazioni.
 @MainActor
 @Observable
 final class AppModel {
@@ -29,8 +28,10 @@ final class AppModel {
 
     /// Editor del preventivo a tutto schermo: nativo, oppure il sito ("Apri nel sito").
     var editor: EditorSession?
-    var showPriceList = false
+    var showProfile = false
     var clientsPath = NavigationPath()
+    var priceListPath = NavigationPath()
+    var altroPath = NavigationPath()
 
     /// Cresce a ogni modifica dei dati: Home e Clienti si ricaricano.
     private(set) var dataVersion = 0
@@ -40,24 +41,12 @@ final class AppModel {
     let clients = ClientsStore()
     let recents = RecentQuotes()
     let priceList = PriceListStore()
-    @ObservationIgnored private(set) var pages: [AppTab: WebPageModel] = [:]
 
     init() {
-        for tab in AppTab.webSections {
-            pages[tab] = WebPageModel(path: tab.path, role: .section(tab), app: self)
-        }
         if let tab = PreviewOptions.startTab { selectedTab = tab }
         showSettings = PreviewOptions.showSettings
         needsLogin = PreviewOptions.showLogin
         APIClient.shared.onUnauthorized = { [weak self] in self?.sessionExpired() }
-    }
-
-    func page(_ tab: AppTab) -> WebPageModel {
-        pages[tab]!
-    }
-
-    func reloadWebPages() {
-        pages.values.forEach { $0.reload() }
     }
 
     func dataChanged() {
@@ -76,7 +65,8 @@ final class AppModel {
         if tab == selectedTab {
             switch tab {
             case .clienti: clientsPath = NavigationPath()
-            case .profilo, .altro: page(tab).navigate(to: tab.path)
+            case .listino: priceListPath = NavigationPath()
+            case .altro: altroPath = NavigationPath()
             default: break
             }
         }
@@ -125,12 +115,18 @@ final class AppModel {
 
     func didLogin(mustChangePassword: Bool) {
         needsLogin = false
-        reloadWebPages()
+        altroPath = NavigationPath()
         dataChanged()
         if mustChangePassword {
-            selectedTab = .profilo
+            showProfile = true
             lastError = "Per sicurezza imposta una nuova password dal Profilo."
         }
+    }
+
+    /// Una pagina del sito dentro Altro (con titolo e "indietro" nativi).
+    func openWebPage(_ path: String, title: String) {
+        selectedTab = .altro
+        altroPath.append(WebDestination(path: path, title: title))
     }
 
     /// Esci: chiude la sessione sul server e cancella il cookie dall'app.
@@ -140,12 +136,12 @@ final class AppModel {
         clients.reset()
         sessionExpired()
         selectedTab = .home
-        reloadWebPages()
+        altroPath = NavigationPath()
     }
 
     private func sessionExpired() {
         editor = nil
-        showPriceList = false
+        showProfile = false
         showNewQuote = false
         showImport = false
         needsLogin = true
@@ -185,7 +181,7 @@ final class AppModel {
             if case .quote = destination { return }
             closeEditor()
             open(destination, path: path)
-        case .section:
+        case .embedded:
             guard let destination else { return }
             page.goBack()
             open(destination, path: path)
@@ -197,17 +193,18 @@ final class AppModel {
         case .home: selectedTab = .home
         case .clients: selectedTab = .clienti
         case .quote(let id): openQuote(id)
-        case .priceList: showPriceList = true
+        case .priceList: selectedTab = .listino
+        case .profile: showProfile = true
+        case .more: selectedTab = .altro
         case nil:
-            // Altre pagine del sito (listino, cestino…) dalla sezione Altro.
-            selectedTab = .altro
-            page(.altro).navigate(to: path)
+            // Altre pagine del sito (cestino, statistiche…) dentro Altro.
+            openWebPage(path, title: WebDestination.title(for: path))
         }
     }
 
     private static var badgeAuthorized: Bool?
 
-    private static func setBadge(_ count: Int) async {
+    static func setBadge(_ count: Int) async {
         let center = UNUserNotificationCenter.current()
         if badgeAuthorized == nil {
             badgeAuthorized = (try? await center.requestAuthorization(options: [.badge])) ?? false
@@ -219,7 +216,7 @@ final class AppModel {
 
 /// Pagine del sito che nell'app sono schermate native.
 enum NativeDestination: Equatable {
-    case home, clients, quote(String), priceList
+    case home, clients, quote(String), priceList, profile, more
 
     init?(path: String) {
         let parts = path.split(separator: "/").map(String.init)
@@ -227,10 +224,26 @@ enum NativeDestination: Equatable {
         case "dashboard": self = .home
         case "clienti": self = .clients
         case "listino": self = .priceList
+        case "profilo": self = .profile
+        case "altro": self = .more
         case "preventivi":
             if parts.count >= 2, parts[1] != "nuovo" { self = .quote(parts[1]) } else { self = .home }
         default: return nil
         }
+    }
+}
+
+/// Pagina del sito aperta dentro la NavigationStack di Altro.
+struct WebDestination: Hashable {
+    let path: String
+    let title: String
+
+    static func title(for path: String) -> String {
+        let titles = ["/lavori-extra": "Lavori extra", "/statistiche": "Statistiche", "/comunicazioni": "Comunicazioni",
+                      "/cestino": "Cestino", "/impostazioni": "Impostazioni", "/utenti": "Utenti",
+                      "/admin/notifiche": "Invia notifica", "/admin/audit-log": "Audit Log",
+                      "/admin/sessioni": "Sessioni attive"]
+        return titles.first { path.hasPrefix($0.key) }?.value ?? "Dieffe"
     }
 }
 

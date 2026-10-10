@@ -44,13 +44,15 @@ final class APIClient {
         try decoder.decode(T.self, from: await perform(request(path, method: "GET")))
     }
 
+    /// `sessionOn401: false` quando 401 non vuol dire sessione scaduta
+    /// (es. password attuale sbagliata nel cambio password).
     @discardableResult
     func send<T: Decodable>(_ method: String, _ path: String, json: [String: Any?] = [:],
-                            as type: T.Type = T.self) async throws -> T {
+                            as type: T.Type = T.self, sessionOn401: Bool = true) async throws -> T {
         var req = request(path, method: method)
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = try JSONSerialization.data(withJSONObject: json.mapValues { $0 ?? NSNull() })
-        return try decoder.decode(T.self, from: await perform(req))
+        return try decoder.decode(T.self, from: await performWithResponse(req, sessionOn401: sessionOn401).0)
     }
 
     /// Corpo JSON come array (riordino di sezioni e voci).
@@ -164,7 +166,7 @@ final class APIClient {
         try await performWithResponse(request).0
     }
 
-    private func performWithResponse(_ request: URLRequest) async throws -> (Data, URLResponse) {
+    private func performWithResponse(_ request: URLRequest, sessionOn401: Bool = true) async throws -> (Data, URLResponse) {
         var request = request
         let host = request.url?.host() ?? ""
         let cookies = await cookieStore.allCookies().filter {
@@ -175,7 +177,7 @@ final class APIClient {
         }
         let (data, response) = try await data(for: request)
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
-        if status == 401 {
+        if status == 401 && sessionOn401 {
             onUnauthorized?()
             throw APIError.unauthorized
         }

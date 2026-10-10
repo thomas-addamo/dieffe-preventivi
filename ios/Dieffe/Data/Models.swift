@@ -7,6 +7,8 @@ struct HomeData: Decodable {
     let stats: Stats
     var quotes: [QuoteSummary]
     let clients: [ClientRef]
+    let trashCount: Int?
+    let unreadNotifications: Int?
 
     struct Stats: Decodable {
         let total: Int
@@ -19,7 +21,16 @@ struct HomeData: Decodable {
 struct CurrentUser: Decodable, Equatable {
     let id: String
     let name: String
+    let email: String?
     let role: String
+
+    var roleLabel: String {
+        switch role {
+        case "admin": "Amministratore"
+        case "editor": "Editor"
+        default: "Visualizzatore"
+        }
+    }
 
     /// Admin ed editor creano e modificano; il ruolo "viewer" consulta soltanto.
     var canEdit: Bool { role == "admin" || role == "editor" }

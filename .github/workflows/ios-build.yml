@@ -108,7 +108,7 @@ jobs:
           xcrun simctl ui "$UDID" appearance light
           shot 1-home -DieffeTab home
           shot 2-clienti -DieffeTab clienti
-          shot 3-profilo -DieffeTab profilo
+          shot 3-listino -DieffeTab listino
           shot 4-altro -DieffeTab altro
           shot 5-impostazioni-app -DieffeTab altro -DieffeSettings YES
           xcrun simctl ui "$UDID" appearance dark

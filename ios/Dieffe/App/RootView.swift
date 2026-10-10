@@ -1,8 +1,8 @@
 import QuickLook
 import SwiftUI
 
-/// Tab bar nativa (Liquid Glass): Home e Clienti in SwiftUI, Profilo e Altro
-/// dal sito; l'editor dei preventivi (ancora web) si apre a tutto schermo.
+/// Tab bar nativa (Liquid Glass): Home, Clienti, Listino, Altro e il tasto ＋.
+/// L'editor dei preventivi si apre a tutto schermo; il Profilo in un foglio.
 struct RootView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.scenePhase) private var scenePhase
@@ -17,11 +17,13 @@ struct RootView: View {
             Tab(AppTab.clienti.title, systemImage: AppTab.clienti.symbol, value: AppTab.clienti) {
                 ClientsView()
             }
-            ForEach(AppTab.webSections) { tab in
-                Tab(tab.title, systemImage: tab.symbol, value: tab) {
-                    WebPageView(page: model.page(tab))
-                }
+            Tab(AppTab.listino.title, systemImage: AppTab.listino.symbol, value: AppTab.listino) {
+                PriceListHome()
             }
+            Tab(AppTab.altro.title, systemImage: AppTab.altro.symbol, value: AppTab.altro) {
+                AltroView()
+            }
+            .badge(model.home.data?.trashCount.flatMap { $0 > 0 && model.canEdit ? $0 : nil } ?? 0)
             Tab(AppTab.nuovo.title, systemImage: AppTab.nuovo.symbol, value: AppTab.nuovo, role: .search) {
                 Color.clear
             }
@@ -43,8 +45,10 @@ struct RootView: View {
             }
             .appMessages(active: true)
         }
-        .sheet(isPresented: $model.showPriceList) {
-            PriceListView()
+        .sheet(isPresented: $model.showProfile) {
+            NavigationStack {
+                ProfileView(inSheet: true)
+            }
         }
         .appMessages(active: model.editor == nil)
         .sheet(isPresented: $model.showSettings) {
@@ -75,10 +79,12 @@ struct RootView: View {
             // Utente e permessi servono a tutte le schermate, non solo alla Home.
             await APIClient.shared.installPreviewSession()
             await model.home.load()
+            if let unread = model.home.data?.unreadNotifications { await AppModel.setBadge(unread) }
         }
         .task {
-            // La pagina Altro tiene aggiornato il badge delle notifiche.
-            _ = model.page(.altro).webView
+            #if DEBUG
+            if SelfTest.isRequested { await SelfTest.run(app: model) }
+            #endif
         }
     }
 }

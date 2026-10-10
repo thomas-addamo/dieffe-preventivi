@@ -2,14 +2,15 @@ import Observation
 import UIKit
 import WebKit
 
-/// Una pagina del sito in un WKWebView: una sezione della tab bar o l'editor
-/// di un preventivo. Tutte condividono lo stesso archivio dati (cookie di
+/// Una pagina del sito in un WKWebView: una pagina aperta da una schermata
+/// nativa (Altro › Statistiche…) o l'editor del sito ("Apri nel sito"). Tutte condividono lo stesso archivio dati (cookie di
 /// sessione `dieffe_session`) con le schermate native: un solo login.
 @MainActor
 @Observable
 final class WebPageModel: NSObject {
     enum Role {
-        case section(AppTab)
+        /// Dentro una NavigationStack nativa: titolo e "indietro" sono di iOS.
+        case embedded
         case editor
     }
 
@@ -42,6 +43,12 @@ final class WebPageModel: NSObject {
         config.allowsInlineMediaPlayback = true
         config.defaultWebpagePreferences.preferredContentMode = .mobile
         config.userContentController.add(MessageProxy(target: self), name: "dieffe")
+        if case .embedded = role {
+            // Nasconde la barra in alto del sito (vedi [data-embedded] in globals.css).
+            config.userContentController.addUserScript(WKUserScript(
+                source: "document.documentElement.setAttribute('data-embedded','ios')",
+                injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        }
 
         let view = WKWebView(frame: .zero, configuration: config)
         view.navigationDelegate = self

@@ -231,16 +231,15 @@ private struct ProfileMenu: View {
         Menu {
             if let user = model.currentUser {
                 Section(user.name) {
-                    Button("Profilo", systemImage: "person.crop.circle") { model.select(.profilo) }
+                    Button("Profilo", systemImage: "person.crop.circle") { model.showProfile = true }
                 }
             }
             Section {
-                Button("Listino prezzi", systemImage: "list.bullet.rectangle") { model.showPriceList = true }
+                Button("Listino prezzi", systemImage: "list.bullet.rectangle") { model.select(.listino) }
                 Button("Impostazioni app", systemImage: "gearshape") { model.showSettings = true }
                 if model.currentUser?.role == "admin" {
                     Button("Impostazioni azienda", systemImage: "building.2") {
-                        model.select(.altro)
-                        model.page(.altro).navigate(to: "/impostazioni")
+                        model.openWebPage("/impostazioni", title: "Impostazioni")
                     }
                 }
             }
