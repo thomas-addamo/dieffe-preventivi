@@ -1,7 +1,10 @@
 name: Build app iPhone
 
-# Verifica che l'app iPhone (cartella ios/) compili, senza firma: l'installazione
-# sull'iPhone si fa dal proprio Mac con Xcode (vedi ios/README.md).
+# 1. Verifica che l'app iPhone (cartella ios/) compili per il dispositivo, senza firma.
+# 2. La avvia nel Simulatore iPhone e salva le schermate (artifact "anteprima-iphone"),
+#    così l'anteprima si vede senza un Mac. Con i secret IOS_PREVIEW_EMAIL e
+#    IOS_PREVIEW_PASSWORD le schermate mostrano l'app dopo l'accesso; senza,
+#    solo la pagina di login. La sessione viene chiusa a fine giro.
 on:
   push:
     branches: [main]
@@ -9,6 +12,10 @@ on:
   pull_request:
     paths: ['ios/**', '.github/workflows/ios-build.yml']
   workflow_dispatch:
+
+env:
+  BASE_URL: https://dieffe-preventivi.vercel.app
+  BUNDLE_ID: it.dieffe.preventivi
 
 jobs:
   build:
@@ -28,7 +35,7 @@ jobs:
           brew install xcodegen
           xcodegen generate
 
-      - name: Compila per iOS (senza firma)
+      - name: Compila per iPhone (senza firma)
         working-directory: ios
         run: |
           set -o pipefail
@@ -36,4 +43,89 @@ jobs:
             -project Dieffe.xcodeproj -scheme Dieffe \
             -destination 'generic/platform=iOS' -configuration Debug \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
-            | tail -n 80
+            | tail -n 40
+
+      - name: Compila per il Simulatore
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project Dieffe.xcodeproj -scheme Dieffe \
+            -destination 'generic/platform=iOS Simulator' -configuration Debug \
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO \
+            | tail -n 20
+
+      - name: Avvia il Simulatore iPhone
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, re, sys
+          data = json.load(sys.stdin)["devices"]
+          best = None
+          for runtime, devices in data.items():
+              m = re.search(r"iOS-(\d+)-(\d+)", runtime)
+              if not m: continue
+              ver = (int(m.group(1)), int(m.group(2)))
+              for d in devices:
+                  name = d["name"]
+                  if not name.startswith("iPhone"): continue
+                  score = (ver, "Pro" in name and "Max" not in name, name)
+                  if best is None or score > best[0]: best = (score, d["udid"], name, runtime)
+          print(best[1]); print(best[2], best[3], file=sys.stderr)
+          ')
+          echo "UDID=$UDID" >> "$GITHUB_ENV"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl status_bar "$UDID" override --time "9:41" --batteryState charged \
+            --batteryLevel 100 --cellularMode active --cellularBars 4 --wifiBars 3
+          xcrun simctl install "$UDID" ios/build/Build/Products/Debug-iphonesimulator/Dieffe.app
+
+      - name: Accesso con l'account anteprima
+        env:
+          EMAIL: ${{ secrets.IOS_PREVIEW_EMAIL }}
+          PASSWORD: ${{ secrets.IOS_PREVIEW_PASSWORD }}
+        run: |
+          if [ -z "$EMAIL" ] || [ -z "$PASSWORD" ]; then
+            echo "Secret non impostati: anteprima della sola pagina di login."; exit 0
+          fi
+          BODY=$(python3 -c 'import json, os; print(json.dumps({"email": os.environ["EMAIL"], "password": os.environ["PASSWORD"]}))')
+          TOKEN=$(curl -s -D - -o /dev/null -H 'Content-Type: application/json' \
+            -d "$BODY" "$BASE_URL/api/auth/login" \
+            | sed -n 's/^[Ss]et-[Cc]ookie: dieffe_session=\([^;]*\).*/\1/p' | head -1)
+          if [ -z "$TOKEN" ]; then echo "::warning::Accesso non riuscito"; exit 0; fi
+          echo "::add-mask::$TOKEN"
+          echo "TOKEN=$TOKEN" >> "$GITHUB_ENV"
+
+      - name: Schermate
+        run: |
+          mkdir -p shots
+          shot() { # nome, argomenti di avvio…
+            local name=$1; shift
+            xcrun simctl terminate "$UDID" "$BUNDLE_ID" 2>/dev/null || true
+            xcrun simctl launch "$UDID" "$BUNDLE_ID" -DieffeSession "${TOKEN:-}" "$@" >/dev/null
+            sleep 14
+            xcrun simctl io "$UDID" screenshot --type=png "shots/$name.png"
+          }
+          xcrun simctl ui "$UDID" appearance light
+          shot 1-home -DieffeTab home
+          shot 2-clienti -DieffeTab clienti
+          shot 3-profilo -DieffeTab profilo
+          shot 4-altro -DieffeTab altro
+          shot 5-impostazioni-app -DieffeTab altro -DieffeSettings YES
+          xcrun simctl ui "$UDID" appearance dark
+          shot 6-home-scuro -DieffeTab home
+          shot 7-altro-scuro -DieffeTab altro
+          ls -la shots
+
+      - name: Chiudi la sessione anteprima
+        if: always()
+        run: |
+          if [ -n "${TOKEN:-}" ]; then
+            curl -s -o /dev/null -X POST -H "Cookie: dieffe_session=$TOKEN" "$BASE_URL/api/auth/logout" || true
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: anteprima-iphone
+          path: shots/
+          retention-days: 14

@@ -61,7 +61,12 @@ final class WebPageModel: NSObject {
                 MainActor.assumeIsolated { self?.isLoading = v.isLoading }
             },
         ]
-        view.load(URLRequest(url: AppConfig.url(for: tab.path)))
+        let start = URLRequest(url: AppConfig.url(for: tab.path))
+        if let cookie = PreviewOptions.sessionCookie {
+            config.websiteDataStore.httpCookieStore.setCookie(cookie) { view.load(start) }
+        } else {
+            view.load(start)
+        }
         return view
     }
 

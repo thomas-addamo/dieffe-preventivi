@@ -20,6 +20,8 @@ final class AppModel {
         for tab in AppTab.sections {
             pages[tab] = WebPageModel(tab: tab, app: self)
         }
+        if let tab = PreviewOptions.startTab { selectedTab = tab }
+        showSettings = PreviewOptions.showSettings
     }
 
     func page(_ tab: AppTab) -> WebPageModel {
