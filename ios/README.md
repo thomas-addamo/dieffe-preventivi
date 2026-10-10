@@ -33,7 +33,7 @@ ios/
     ├── App/                 avvio, tab bar, stato condiviso
     ├── Web/                 WKWebView, download, messaggi sito ↔ app
     ├── Native/              Face ID, impostazioni
-    └── Resources/           icona, logo, colore principale
+    └── Resources/           icona Liquid Glass (AppIcon.icon), logo, colore
 ```
 
 ## Primo avvio, passo per passo
@@ -122,7 +122,8 @@ Testing) e installa il file `.ipa` con SideStore.
   Sviluppo › il tuo iPhone › Dieffe. Le pagine si ispezionano come sul web.
 - **Cambiare server** (ad esempio un'anteprima Vercel): `DIEFFE_BASE_URL` in
   `Config/App.xcconfig` oppure in `Signing.xcconfig`.
-- **Rigenerare l'icona:** `node scripts/ios/gen-ios-icon.mjs`, dalla radice del
-  repository.
+- **Icona:** è la stessa icona Liquid Glass dell'app Mac (`assets/icon.icon`,
+  formato Icon Composer). Dopo averla cambiata, dalla radice del repository:
+  `node scripts/ios/gen-ios-icon.mjs`.
 - **Controllo automatico:** GitHub Actions (*Build app iPhone*) compila l'app
   senza firma a ogni modifica della cartella `ios/`.
