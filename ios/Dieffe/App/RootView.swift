@@ -1,5 +1,6 @@
 import QuickLook
 import SwiftUI
+import WebKit
 
 /// Tab bar nativa (Liquid Glass): Home, Clienti, Listino, Altro e il tasto ＋.
 /// L'editor dei preventivi si apre a tutto schermo; il Profilo in un foglio.
@@ -81,7 +82,16 @@ struct RootView: View {
         }
         .task(id: model.dataVersion) {
             // Utente e permessi servono a tutte le schermate, non solo alla Home.
-            await APIClient.shared.installPreviewSession()
+            #if DEBUG
+            // -DieffeDropWebSession YES: simula il cookie web perso (iPhone senza pagine web aperte).
+            if UserDefaults.standard.bool(forKey: "DieffeDropWebSession") {
+                let store = WKWebsiteDataStore.default().httpCookieStore
+                for cookie in await store.allCookies() where cookie.name == SessionStore.cookieName {
+                    await store.deleteCookie(cookie)
+                }
+            }
+            #endif
+            await APIClient.shared.restoreSession()
             await model.home.load()
             if let unread = model.home.data?.unreadNotifications { await AppModel.setBadge(unread) }
             if let start = PreviewOptions.startQuote, model.editor == nil {
@@ -94,6 +104,7 @@ struct RootView: View {
         }
         .task {
             #if DEBUG
+            if UserDefaults.standard.bool(forKey: "DieffeKeychainTest") { SelfTest.runKeychainTest() }
             if SelfTest.isRequested { await SelfTest.run(app: model) }
             if SelfTest.notificationTestRequested { await SelfTest.runNotificationTest(app: model) }
             #endif

@@ -12,6 +12,18 @@ import UserNotifications
 @MainActor
 enum SelfTest {
     static var isRequested: Bool { UserDefaults.standard.bool(forKey: "DieffeSelfTest") }
+    /// -DieffeKeychainTest YES: il Portachiavi è utilizzabile? (scrive, rilegge, cancella)
+    static func runKeychainTest() {
+        log = []
+        failures = 0
+        let previous = SessionStore.load()
+        SessionStore.save(token: "prova-portachiavi", expires: Date(timeIntervalSinceNow: 3600))
+        check(SessionStore.load()?.token == "prova-portachiavi", "Portachiavi: scrittura e lettura")
+        if let previous { SessionStore.save(token: previous.token, expires: previous.expires) } else { SessionStore.clear() }
+        note(failures == 0 ? "RISULTATO: tutto OK" : "RISULTATO: \(failures) errori")
+        write()
+    }
+
     static var notificationTestRequested: Bool { UserDefaults.standard.bool(forKey: "DieffeNotificationTest") }
 
     /// -DieffeNotificationTest YES: attiva le notifiche locali, manda a se

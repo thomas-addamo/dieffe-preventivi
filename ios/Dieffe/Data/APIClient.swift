@@ -15,9 +15,9 @@ enum APIError: LocalizedError {
     }
 }
 
-/// Chiamate alle API JSON del sito per le schermate native. La sessione è la
-/// stessa delle pagine web: il cookie `dieffe_session` sta nell'archivio del
-/// WKWebView, che resta l'unica fonte (login nativo o web, logout dal Profilo).
+/// Chiamate alle API JSON del sito per le schermate native. La sessione
+/// (cookie `dieffe_session`) sta nel Portachiavi (SessionStore) e viene
+/// copiata nell'archivio del WKWebView per le pagine web: un solo login.
 @MainActor
 final class APIClient {
     static let shared = APIClient()
@@ -146,6 +146,7 @@ final class APIClient {
         }
         let url = http.url ?? AppConfig.baseURL
         for cookie in HTTPCookie.cookies(withResponseHeaderFields: headers, for: url) {
+            SessionStore.save(cookie)
             await cookieStore.setCookie(cookie)
         }
         return try decoder.decode(LoginResult.self, from: data)
@@ -154,14 +155,25 @@ final class APIClient {
     /// Chiude la sessione sul server e toglie il cookie da app e pagine web.
     func logout() async {
         _ = try? await perform(request("/api/auth/logout", method: "POST"))
-        for cookie in await cookieStore.allCookies() where cookie.name == "dieffe_session" {
+        SessionStore.clear()
+        for cookie in await cookieStore.allCookies() where cookie.name == SessionStore.cookieName {
             await cookieStore.deleteCookie(cookie)
         }
     }
 
-    /// Imposta il cookie delle anteprime automatiche (solo build Debug).
-    func installPreviewSession() async {
-        if let cookie = PreviewOptions.sessionCookie { await cookieStore.setCookie(cookie) }
+    /// All'avvio: la sessione del Portachiavi torna anche nelle pagine web.
+    /// Chi aveva fatto l'accesso da una pagina web la ritrova nel Portachiavi.
+    func restoreSession() async {
+        if let cookie = PreviewOptions.sessionCookie { SessionStore.save(cookie) }
+        let web = await cookieStore.allCookies().first { $0.name == SessionStore.cookieName }
+        if let saved = SessionStore.load() {
+            if web?.value != saved.token, let host = AppConfig.baseURL.host(),
+               let cookie = SessionStore.cookie(for: host) {
+                await cookieStore.setCookie(cookie)
+            }
+        } else if let web {
+            SessionStore.save(web)
+        }
     }
 
     // MARK: Interni
@@ -181,8 +193,16 @@ final class APIClient {
     private func performWithResponse(_ request: URLRequest, sessionOn401: Bool = true) async throws -> (Data, URLResponse) {
         var request = request
         let host = request.url?.host() ?? ""
-        let cookies = await cookieStore.allCookies().filter {
+        var cookies = await cookieStore.allCookies().filter {
             host.hasSuffix($0.domain.trimmingCharacters(in: ["."]))
+        }
+        // La sessione viene dal Portachiavi (quella delle pagine web la sostituisce solo se manca).
+        if SessionStore.load() == nil, let web = cookies.first(where: { $0.name == SessionStore.cookieName }) {
+            SessionStore.save(web)
+        }
+        if let session = SessionStore.cookie(for: host) {
+            cookies.removeAll { $0.name == SessionStore.cookieName }
+            cookies.append(session)
         }
         for (key, value) in HTTPCookie.requestHeaderFields(with: cookies) {
             request.setValue(value, forHTTPHeaderField: key)
@@ -190,6 +210,11 @@ final class APIClient {
         let (data, response) = try await data(for: request)
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
         if status == 401 && sessionOn401 {
+            // Sessione non più valida: via dal Portachiavi e dalle pagine web.
+            SessionStore.clear()
+            for cookie in await cookieStore.allCookies() where cookie.name == SessionStore.cookieName {
+                await cookieStore.deleteCookie(cookie)
+            }
             onUnauthorized?()
             throw APIError.unauthorized
         }
