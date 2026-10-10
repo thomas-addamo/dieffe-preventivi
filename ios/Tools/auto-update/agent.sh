@@ -52,8 +52,16 @@ fi
 REMOTE="$(git -C "$REPO" rev-parse "origin/$BRANCH")"
 BUILT="$(cat "$STATE/commit" 2>/dev/null)"
 NEED_UPDATE=0
-if [[ -z "$BUILT" ]] || ! git -C "$REPO" diff --quiet "$BUILT" "$REMOTE" -- ios 2>/dev/null; then
+# Contano solo i file dell'app: README e script del servizio no.
+if [[ -z "$BUILT" ]] || ! git -C "$REPO" diff --quiet "$BUILT" "$REMOTE" -- ios ':!ios/README.md' ':!ios/Tools' 2>/dev/null; then
   NEED_UPDATE=1
+fi
+
+# Lo script stesso si aggiorna dal repository (vale dal giro successivo).
+NEW_AGENT="$(git -C "$REPO" show "$REMOTE:ios/Tools/auto-update/agent.sh" 2>/dev/null)"
+if [[ -n "$NEW_AGENT" && "$NEW_AGENT" != "$(cat "$BASE/agent.sh")" ]]; then
+  print -r -- "$NEW_AGENT" > "$BASE/agent.sh"
+  log "Script del servizio aggiornato"
 fi
 
 # 2. Firma in scadenza?
