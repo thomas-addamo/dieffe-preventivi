@@ -1,8 +1,8 @@
 #!/bin/zsh
 # Installa sul Mac il servizio che rinnova la firma dell'app iPhone e la
-# aggiorna da solo (vedi agent.sh). Da eseguire una volta, dalla cartella ios/:
-#   Tools/auto-update/install.sh [UDID-iPhone]
-# Senza UDID usa il primo iPhone associato a questo Mac.
+# aggiorna da solo (vedi agent.sh). Dalla cartella ios/:
+#   Tools/auto-update/install.sh [UDID]   aggiunge un iPhone (rieseguibile)
+# Senza UDID aggiunge tutti gli iPhone associati a questo Mac.
 # Per toglierlo: Tools/auto-update/uninstall.sh
 set -euo pipefail
 
@@ -17,21 +17,29 @@ export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 command -v xcodegen >/dev/null || { echo "Manca xcodegen: brew install xcodegen"; exit 1; }
 [[ -f "$IOS/Config/Signing.xcconfig" ]] || { echo "Manca ios/Config/Signing.xcconfig (vedi ios/README.md)"; exit 1; }
 
-DEVICE="${1:-}"
-if [[ -z "$DEVICE" ]]; then
+NEW="${1:-}"
+if [[ -z "$NEW" ]]; then
   JSON="$(mktemp)"
   xcrun devicectl list devices --json-output "$JSON" >/dev/null
-  DEVICE="$(plutil -convert json -o - "$JSON" | python3 -c '
+  NEW="$(python3 - "$JSON" <<'PY'
 import json, sys
-for d in json.load(sys.stdin)["result"]["devices"]:
-    if d.get("hardwareProperties", {}).get("reality") == "physical" and d.get("hardwareProperties", {}).get("platform") == "iOS":
-        print(d["hardwareProperties"]["udid"]); break')"
+for d in json.load(open(sys.argv[1]))["result"]["devices"]:
+    hw = d.get("hardwareProperties", {})
+    if hw.get("platform") == "iOS" and hw.get("reality", "physical") == "physical" and hw.get("udid"):
+        print(hw["udid"])
+PY
+)"
   rm -f "$JSON"
 fi
-[[ -n "$DEVICE" ]] || { echo "Nessun iPhone associato: collegalo una volta con il cavo e autorizza il Mac."; exit 1; }
+[[ -n "$NEW" ]] || { echo "Nessun iPhone associato: collegalo una volta con il cavo e autorizza il Mac."; exit 1; }
 
 mkdir -p "$BASE" "$HOME/Library/LaunchAgents"
-print -r -- "$DEVICE" > "$BASE/device"
+[[ -f "$BASE/devices" ]] || { [[ -f "$BASE/device" ]] && cp "$BASE/device" "$BASE/devices"; }
+touch "$BASE/devices"
+for UDID in ${(f)NEW}; do
+  grep -qx "$UDID" "$BASE/devices" || { print -r -- "$UDID" >> "$BASE/devices"; echo "Aggiunto: $UDID"; }
+done
+DEVICE="$(tr '\n' ' ' < "$BASE/devices")"
 cp "$IOS/Config/Signing.xcconfig" "$BASE/Signing.xcconfig"
 cp "$HERE/agent.sh" "$BASE/agent.sh"
 chmod +x "$BASE/agent.sh"
@@ -62,5 +70,5 @@ PLIST
 
 launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
 launchctl bootstrap "gui/$(id -u)" "$PLIST"
-echo "Servizio installato per l'iPhone $DEVICE."
+echo "Servizio installato per: $DEVICE"
 echo "Controlla ogni 3 ore; registro: $BASE/agent.log"
