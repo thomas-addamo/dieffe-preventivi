@@ -253,10 +253,9 @@ private struct NotificationsSection: View {
         } header: {
             Text("Notifiche")
         } footer: {
-            Text(notifier.isEnabled && !notifier.alertsAllowed
-                 ? "iOS mostra solo il numero sull'icona: in Impostazioni › Notifiche › Dieffe attiva gli avvisi. "
-                 : "")
-            + Text("Con l'app aperta arrivano subito. In background iOS controlla periodicamente, di solito entro qualche decina di minuti: tieni attivo Aggiorna app in background.")
+            Text((notifier.isEnabled && !notifier.alertsAllowed
+                  ? "iOS mostra solo il numero sull'icona: in Impostazioni › Notifiche › Dieffe attiva gli avvisi. "
+                  : "") + "Con l'app aperta arrivano subito. In background iOS controlla periodicamente, di solito entro qualche decina di minuti: tieni attivo Aggiorna app in background.")
         }
     }
 }

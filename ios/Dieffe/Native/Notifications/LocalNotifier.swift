@@ -53,7 +53,26 @@ final class LocalNotifier: NSObject {
 
     func start() {
         UNUserNotificationCenter.current().delegate = self
-        Task { await refreshAuthorization() }
+        Task {
+            await refreshAuthorization()
+            await scheduleSignatureReminder()
+        }
+    }
+
+    /// Promemoria il giorno prima della scadenza della firma (7 giorni).
+    func scheduleSignatureReminder() async {
+        let center = UNUserNotificationCenter.current()
+        center.removePendingNotificationRequests(withIdentifiers: ["signature-expiry"])
+        guard authorization == .authorized, let expiry = AppConfig.signatureExpiry else { return }
+        let fireIn = expiry.addingTimeInterval(-86400).timeIntervalSinceNow
+        guard fireIn > 60 else { return }
+        let content = UNMutableNotificationContent()
+        content.title = "La firma di Dieffe scade domani"
+        content.body = "Tieni l'iPhone sulla stessa Wi‑Fi del Mac (o collegalo): il Mac la rinnova da solo."
+        content.sound = .default
+        content.userInfo = ["link": "/dashboard"]
+        try? await center.add(UNNotificationRequest(identifier: "signature-expiry", content: content,
+                                                    trigger: UNTimeIntervalNotificationTrigger(timeInterval: fireIn, repeats: false)))
     }
 
     // MARK: Attivazione
@@ -62,6 +81,7 @@ final class LocalNotifier: NSObject {
         let center = UNUserNotificationCenter.current()
         let granted = (try? await center.requestAuthorization(options: [.alert, .sound, .badge])) ?? false
         await refreshAuthorization()
+        await scheduleSignatureReminder()
         guard granted else { isEnabled = false; return false }
         isEnabled = true
         // Le notifiche già presenti non diventano avvisi: solo quelle nuove.

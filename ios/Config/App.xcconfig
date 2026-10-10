@@ -4,5 +4,6 @@
 DIEFFE_BASE_URL = https:/$()/dieffe-preventivi.vercel.app
 DIEFFE_BUNDLE_ID = it.dieffe.preventivi
 DIEFFE_TEAM_ID =
+DIEFFE_COMMIT =
 
 #include? "Signing.xcconfig"

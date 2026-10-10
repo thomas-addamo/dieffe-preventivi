@@ -44,6 +44,8 @@ targets:
       path: Dieffe/Info.plist
       properties:
         DieffeBaseURL: $(DIEFFE_BASE_URL)
+        # Commit della build (lo imposta Tools/auto-update/agent.sh).
+        DieffeCommit: $(DIEFFE_COMMIT)
         ITSAppUsesNonExemptEncryption: false
         # Notifiche locali in background (niente push Apple con l'Apple ID gratuito).
         UIBackgroundModes: [fetch]

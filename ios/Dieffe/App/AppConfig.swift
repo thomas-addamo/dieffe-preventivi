@@ -15,6 +15,24 @@ enum AppConfig {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
     }
 
+    /// Commit da cui è stata compilata (vuoto nelle build da Xcode).
+    static var commit: String {
+        Bundle.main.object(forInfoDictionaryKey: "DieffeCommit") as? String ?? ""
+    }
+
+    /// Scadenza della firma: con l'Apple ID gratuito il profilo dura 7 giorni.
+    /// Si legge dal profilo incluso nell'app (nel Simulatore non c'è).
+    static let signatureExpiry: Date? = {
+        guard let url = Bundle.main.url(forResource: "embedded", withExtension: "mobileprovision"),
+              let data = try? Data(contentsOf: url),
+              let text = String(data: data, encoding: .isoLatin1),
+              let start = text.range(of: "<?xml"), let end = text.range(of: "</plist>"),
+              let plist = try? PropertyListSerialization.propertyList(
+                  from: Data(text[start.lowerBound..<end.upperBound].utf8), format: nil) as? [String: Any]
+        else { return nil }
+        return plist["ExpirationDate"] as? Date
+    }()
+
     static var build: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"
     }

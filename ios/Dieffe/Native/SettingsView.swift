@@ -36,7 +36,23 @@ struct SettingsView: View {
 
             Section("Informazioni") {
                 LabeledContent("Versione app", value: "\(AppConfig.version) (\(AppConfig.build))")
+                if !AppConfig.commit.isEmpty { LabeledContent("Commit", value: AppConfig.commit).monospaced() }
                 LabeledContent("Server", value: AppConfig.baseURL.host() ?? "")
+            }
+
+            Section {
+                if let expiry = AppConfig.signatureExpiry {
+                    LabeledContent("Firma valida fino al") {
+                        Text(expiry.formatted(date: .abbreviated, time: .shortened))
+                            .foregroundStyle(expiry.timeIntervalSinceNow < 2 * 86400 ? .red : .secondary)
+                    }
+                } else {
+                    LabeledContent("Firma", value: "non disponibile qui")
+                }
+            } header: {
+                Text("Firma e aggiornamenti")
+            } footer: {
+                Text("Con l'Apple ID gratuito la firma dura 7 giorni. Il servizio sul Mac (ios/Tools/auto-update) la rinnova e installa le nuove versioni da solo quando l'iPhone è sulla stessa Wi‑Fi del Mac o collegato con il cavo. Il giorno prima della scadenza arriva un promemoria.")
             }
 
             Section {

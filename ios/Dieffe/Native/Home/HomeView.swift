@@ -55,6 +55,14 @@ struct HomeView: View {
         let filtering = !search.isEmpty || statusFilter != nil || clientFilter != nil
 
         return List {
+            if let expiry = AppConfig.signatureExpiry, expiry.timeIntervalSinceNow < 2 * 86400 {
+                Section {
+                    Label("La firma dell'app scade \(expiry.formatted(.relative(presentation: .named))). Tieni l'iPhone sulla stessa Wi‑Fi del Mac o collegalo: il Mac la rinnova da solo.",
+                          systemImage: "clock.badge.exclamationmark")
+                        .font(.subheadline)
+                        .foregroundStyle(.orange)
+                }
+            }
             if !filtering {
                 Section {
                     StatsGrid(stats: data.stats)
