@@ -2,12 +2,19 @@ import Observation
 import UIKit
 import WebKit
 
-/// Una sezione dell'app = un WKWebView sul sito. Tutte le sezioni condividono
-/// lo stesso archivio dati (cookie di sessione `dieffe_session`): un solo login.
+/// Una pagina del sito in un WKWebView: una sezione della tab bar o l'editor
+/// di un preventivo. Tutte condividono lo stesso archivio dati (cookie di
+/// sessione `dieffe_session`) con le schermate native: un solo login.
 @MainActor
 @Observable
 final class WebPageModel: NSObject {
-    let tab: AppTab
+    enum Role {
+        case section(AppTab)
+        case editor
+    }
+
+    let role: Role
+    let startPath: String
     @ObservationIgnored weak var app: AppModel?
 
     var isLoading = false
@@ -19,8 +26,9 @@ final class WebPageModel: NSObject {
     @ObservationIgnored private var observations: [NSKeyValueObservation] = []
     @ObservationIgnored private var downloads: [WKDownload: URL] = [:]
 
-    init(tab: AppTab, app: AppModel) {
-        self.tab = tab
+    init(path: String, role: Role, app: AppModel) {
+        self.startPath = path
+        self.role = role
         self.app = app
         super.init()
     }
@@ -61,7 +69,7 @@ final class WebPageModel: NSObject {
                 MainActor.assumeIsolated { self?.isLoading = v.isLoading }
             },
         ]
-        let start = URLRequest(url: AppConfig.url(for: tab.path))
+        let start = URLRequest(url: AppConfig.url(for: startPath))
         if let cookie = PreviewOptions.sessionCookie {
             config.websiteDataStore.httpCookieStore.setCookie(cookie) { view.load(start) }
         } else {
@@ -93,10 +101,19 @@ final class WebPageModel: NSObject {
 
     func reload() {
         loadError = nil
-        if webView.url == nil {
-            webView.load(URLRequest(url: AppConfig.url(for: tab.path)))
+        if webView.url == nil || webView.url?.path() == "/login" {
+            webView.load(URLRequest(url: AppConfig.url(for: startPath)))
         } else {
             webView.reload()
+        }
+    }
+
+    /// Torna alla pagina precedente (la successiva è stata aperta in nativo).
+    func goBack() {
+        if webView.canGoBack {
+            webView.goBack()
+        } else {
+            webView.load(URLRequest(url: AppConfig.url(for: startPath)))
         }
     }
 

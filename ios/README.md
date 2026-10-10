@@ -3,25 +3,37 @@
 App iPhone personale, da installare sui propri dispositivi con un Apple ID
 gratuito. Non serve l'Apple Developer Program e l'app non passa dall'App Store.
 
-## Come è fatta (fase 1)
+## Come è fatta
 
 - **Tab bar nativa** (Liquid Glass): Home, Clienti, Profilo, Altro, più il tasto
   **＋** per un nuovo preventivo. Un secondo tap su una sezione torna alla sua
   pagina iniziale.
-- Ogni sezione mostra il sito in un `WKWebView`. Tutte condividono lo stesso
-  accesso, quindi si fa il login una volta sola. Il sito riconosce l'app dallo
-  User-Agent `DieffeiOS/x.y` e nasconde la propria tab bar.
+- **Schermate native (SwiftUI):**
+  - **Home:** statistiche, aperti di recente, archivio con ricerca, filtri per
+    stato e cliente, ordinamento, lavori extra sotto il loro preventivo; scorri
+    a sinistra per spostare nel cestino.
+  - **Clienti:** elenco con ricerca e ordinamento, scheda con Chiama,
+    Messaggio, Email e Indicazioni, preventivi collegati, nuovo e modifica.
+  - **Nuovo preventivo** (titolo, cliente, cantiere) e **Importa da file** (PDF,
+    Word, Excel: l'AI del sito ricava sezioni e voci).
+  - **Accesso** con email e password, compatibile con il riempimento automatico
+    delle password.
+- Le schermate native usano le API JSON del sito (`/api/app/home`,
+  `/api/app/clients`, `/api/clients`, `/api/quotes`).
+- **Ancora web** (`WKWebView`): l'editor dei preventivi (a tutto schermo),
+  Profilo e Altro. Il sito riconosce l'app dallo User-Agent `DieffeiOS/x.y`,
+  nasconde la propria tab bar e segnala all'app ogni cambio di pagina: le
+  pagine che hanno una versione nativa si aprono in nativo.
 - **PDF, Excel e CSV** si aprono nell'anteprima di sistema (Quick Look), con
   Condividi, Salva su File, AirDrop e Stampa.
 - **Face ID** all'apertura e dopo un minuto in background. Nel selettore app il
   contenuto è coperto.
 - **Badge** con le notifiche non lette, tirare verso il basso per aggiornare,
-  pagina nativa quando si è offline.
+  schermata nativa quando si è offline.
 - **Impostazioni native**: dal sito, *Altro › App iPhone*.
 
-Le prossime fasi sostituiranno le pagine web con schermate SwiftUI, una alla
-volta: Home, Clienti, Listino, Lavori extra e alla fine l'editor dei
-preventivi. Le schermate useranno le stesse API JSON del sito.
+Prossime fasi: Listino, Lavori extra e alla fine l'editor dei preventivi in
+SwiftUI.
 
 ```
 ios/
@@ -30,9 +42,11 @@ ios/
 │   ├── App.xcconfig         indirizzo del sito, identificativo
 │   └── Signing.example.xcconfig   modello per la tua firma personale
 └── Dieffe/
-    ├── App/                 avvio, tab bar, stato condiviso
+    ├── App/                 avvio, tab bar, stato condiviso, instradamento
+    ├── Data/                API del sito, modelli, archivi dei dati
+    ├── Native/              schermate SwiftUI (Home, Clienti, Nuovo,
+    │                        Importa, Accesso), Face ID, impostazioni
     ├── Web/                 WKWebView, download, messaggi sito ↔ app
-    ├── Native/              Face ID, impostazioni
     └── Resources/           icona Liquid Glass (AppIcon.icon), logo, colore
 ```
 

@@ -26,7 +26,7 @@ struct SettingsView: View {
 
                 Section {
                     Button("Ricarica tutte le sezioni") {
-                        AppTab.sections.forEach { model.page($0).reload() }
+                        model.reloadWebPages()
                         dismiss()
                     }
                     Button("Svuota cache dell'app", role: .destructive) { confirmReset = true }
@@ -52,7 +52,7 @@ struct SettingsView: View {
         let types: Set<String> = [WKWebsiteDataTypeDiskCache, WKWebsiteDataTypeMemoryCache,
                                   WKWebsiteDataTypeFetchCache, WKWebsiteDataTypeOfflineWebApplicationCache]
         WKWebsiteDataStore.default().removeData(ofTypes: types, modifiedSince: .distantPast) {
-            AppTab.sections.forEach { model.page($0).reload() }
+            model.reloadWebPages()
         }
         try? FileManager.default.removeItem(at: FileManager.default.temporaryDirectory.appendingPathComponent("Documenti"))
         dismiss()

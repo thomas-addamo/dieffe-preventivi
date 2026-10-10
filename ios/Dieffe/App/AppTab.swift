@@ -1,7 +1,8 @@
 import Foundation
 
 /// Le sezioni della tab bar nativa: le stesse della tab bar mobile del sito
-/// (src/components/shared/mobile/MobileTabBar.tsx).
+/// (src/components/shared/mobile/MobileTabBar.tsx). Home e Clienti sono
+/// schermate SwiftUI; Profilo e Altro sono ancora pagine web.
 enum AppTab: String, CaseIterable, Identifiable, Hashable {
     case home, clienti, profilo, altro
     /// Non è una sezione: il tap apre "Nuovo preventivo" nella Home.
@@ -10,6 +11,8 @@ enum AppTab: String, CaseIterable, Identifiable, Hashable {
     var id: String { rawValue }
 
     static let sections: [AppTab] = [.home, .clienti, .profilo, .altro]
+    /// Sezioni mostrate con il sito in un WKWebView.
+    static let webSections: [AppTab] = [.profilo, .altro]
 
     var title: String {
         switch self {

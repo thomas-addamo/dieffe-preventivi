@@ -16,6 +16,11 @@ enum PreviewOptions {
         defaults.bool(forKey: "DieffeSettings")
     }
 
+    /// Mostra il login nativo anche con una sessione valida (solo per le schermate).
+    static var showLogin: Bool {
+        defaults.bool(forKey: "DieffeLogin")
+    }
+
     /// Cookie di sessione ottenuto dal workflow con il login dell'account anteprima.
     static var sessionCookie: HTTPCookie? {
         guard let token = defaults.string(forKey: "DieffeSession"), !token.isEmpty,
@@ -32,6 +37,7 @@ enum PreviewOptions {
     #else
     static let startTab: AppTab? = nil
     static let showSettings = false
+    static let showLogin = false
     static let sessionCookie: HTTPCookie? = nil
     #endif
 }
