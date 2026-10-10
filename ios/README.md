@@ -125,6 +125,8 @@ repository.
 
 ## Aggiornare l'app
 
+Ci pensa il servizio di rinnovo (vedi sotto). A mano:
+
 ```sh
 cd dieffe-preventivi && git pull
 cd ios && xcodegen && open Dieffe.xcodeproj    # poi ⌘R con l'iPhone collegato
@@ -133,17 +135,51 @@ cd ios && xcodegen && open Dieffe.xcodeproj    # poi ⌘R con l'iPhone collegato
 Le modifiche al **sito** arrivano subito nell'app, senza reinstallare. Serve
 reinstallare solo quando cambia il codice della cartella `ios/`.
 
+## Firma e aggiornamenti automatici
+
+Con l'Apple ID gratuito la firma dell'app dura **7 giorni**. Un servizio sul
+Mac la rinnova e installa da solo le nuove versioni:
+
+```sh
+cd ios && Tools/auto-update/install.sh      # una volta sola
+```
+
+- Ogni 3 ore controlla se mancano meno di 2 giorni alla scadenza o se su
+  `main` è cambiata la cartella `ios/`. Se sì, compila (Release), chiede ad
+  Apple una firma nuova di 7 giorni e installa sull'iPhone.
+- L'iPhone deve essere raggiungibile dal Mac: **stessa rete Wi‑Fi** (dopo il
+  primo collegamento con il cavo) oppure cavo. Il Mac deve essere acceso con
+  la sessione aperta.
+- Notifica sul Mac a ogni aggiornamento; registro in
+  `~/Library/Application Support/DieffeiOS/agent.log`.
+- Nell'app, *Altro › App iPhone* mostra la scadenza della firma. Negli ultimi
+  2 giorni compare un avviso nella Home e il giorno prima arriva un promemoria.
+- Usa una copia del repository tutta sua: le modifiche in corso non vengono
+  toccate. Per toglierlo: `Tools/auto-update/uninstall.sh`. Per forzare un
+  giro: `~/Library/Application\ Support/DieffeiOS/agent.sh --force`.
+
+**Senza Mac (facoltativo).** [SideStore](https://sidestore.io) rinnova la firma
+direttamente dall'iPhone, ma va configurato a parte (file di associazione e
+VPN locale) e gli aggiornamenti vanno installati da lì.
+
+## Notifiche
+
+Le notifiche push di Apple non sono disponibili con l'Apple ID gratuito. L'app
+usa le **notifiche locali**: dal *Profilo › Notifiche su questo iPhone*.
+
+- Con l'app aperta controlla ogni minuto e mostra subito il banner.
+- In background iOS la risveglia periodicamente (Aggiorna app in background):
+  di solito entro qualche decina di minuti, non all'istante.
+- Il tocco su una notifica apre la pagina giusta e la segna come letta. Tutte
+  le notifiche sono nel centro notifiche (campanella nella Home, o Altro ›
+  Notifiche).
+
 ## Limiti dell'Apple ID gratuito
 
-- **La firma scade dopo 7 giorni.** Dopo la scadenza l'app non si apre finché
-  non la reinstalli con ⌘R dal Mac. I dati e l'accesso restano.
+- La firma scade dopo 7 giorni (vedi sopra il rinnovo automatico). I dati e
+  l'accesso restano.
 - Puoi installare al massimo **3 app** firmate così per dispositivo.
-- Niente notifiche push di sistema (APNs). Il badge sull'icona invece funziona.
-
-**Rinnovo automatico (facoltativo).** [SideStore](https://sidestore.io)
-rinnova la firma ogni settimana direttamente dall'iPhone, senza Mac. Esporta
-l'archivio da Xcode (Product › Archive › Distribute App › Custom › Release
-Testing) e installa il file `.ipa` con SideStore.
+- Niente notifiche push di Apple (vedi *Notifiche*).
 
 ## Sviluppo
 
