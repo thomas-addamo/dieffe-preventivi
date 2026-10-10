@@ -53,26 +53,58 @@ final class APIClient {
         return try decoder.decode(T.self, from: await perform(req))
     }
 
+    /// Corpo JSON come array (riordino di sezioni e voci).
+    func send(_ method: String, _ path: String, array: [[String: Any]]) async throws {
+        var req = request(path, method: method)
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try JSONSerialization.data(withJSONObject: array)
+        _ = try await perform(req)
+    }
+
     func delete(_ path: String) async throws {
         _ = try await perform(request(path, method: "DELETE"))
     }
 
-    /// Invio di un file (multipart/form-data, campo "file"); risposta JSON grezza.
-    func upload(_ path: String, file: URL, mimeType: String) async throws -> [String: Any] {
+    /// Invio di un file (multipart/form-data, campo "file" più eventuali campi
+    /// di testo); risposta JSON grezza.
+    func upload(_ path: String, data fileData: Data, filename: String, mimeType: String,
+                fields: [String: String] = [:]) async throws -> [String: Any] {
         let boundary = "dieffe-\(UUID().uuidString)"
         var req = request(path, method: "POST")
         req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         req.timeoutInterval = 90 // l'analisi con l'AI può richiedere fino a 60 secondi
 
         var body = Data()
-        let name = file.lastPathComponent.replacingOccurrences(of: "\"", with: "")
+        for (key, value) in fields {
+            body.append(Data("--\(boundary)\r\nContent-Disposition: form-data; name=\"\(key)\"\r\n\r\n\(value)\r\n".utf8))
+        }
+        let name = filename.replacingOccurrences(of: "\"", with: "")
         body.append(Data("--\(boundary)\r\nContent-Disposition: form-data; name=\"file\"; filename=\"\(name)\"\r\nContent-Type: \(mimeType)\r\n\r\n".utf8))
-        body.append(try Data(contentsOf: file))
+        body.append(fileData)
         body.append(Data("\r\n--\(boundary)--\r\n".utf8))
         req.httpBody = body
 
         let data = try await perform(req)
         return (try JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
+    }
+
+    func upload(_ path: String, file: URL, mimeType: String) async throws -> [String: Any] {
+        try await upload(path, data: try Data(contentsOf: file), filename: file.lastPathComponent, mimeType: mimeType)
+    }
+
+    /// Scarica un file del sito (PDF, Excel…) in una cartella temporanea, con il
+    /// nome suggerito dal server: pronto per Quick Look e Condividi.
+    func download(_ path: String) async throws -> URL {
+        var req = request(path, method: "GET")
+        req.setValue("*/*", forHTTPHeaderField: "Accept")
+        req.timeoutInterval = 90
+        let (data, response) = try await performWithResponse(req)
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("Documenti", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let dest = dir.appendingPathComponent(response.suggestedFilename ?? "documento.pdf")
+        try? FileManager.default.removeItem(at: dest)
+        try data.write(to: dest)
+        return dest
     }
 
     /// JSON grezzo in entrata e in uscita (import: i dati analizzati tornano tali e quali).
@@ -105,6 +137,14 @@ final class APIClient {
         return try decoder.decode(LoginResult.self, from: data)
     }
 
+    /// Chiude la sessione sul server e toglie il cookie da app e pagine web.
+    func logout() async {
+        _ = try? await perform(request("/api/auth/logout", method: "POST"))
+        for cookie in await cookieStore.allCookies() where cookie.name == "dieffe_session" {
+            await cookieStore.deleteCookie(cookie)
+        }
+    }
+
     /// Imposta il cookie delle anteprime automatiche (solo build Debug).
     func installPreviewSession() async {
         if let cookie = PreviewOptions.sessionCookie { await cookieStore.setCookie(cookie) }
@@ -121,6 +161,10 @@ final class APIClient {
     }
 
     private func perform(_ request: URLRequest) async throws -> Data {
+        try await performWithResponse(request).0
+    }
+
+    private func performWithResponse(_ request: URLRequest) async throws -> (Data, URLResponse) {
         var request = request
         let host = request.url?.host() ?? ""
         let cookies = await cookieStore.allCookies().filter {
@@ -136,7 +180,7 @@ final class APIClient {
             throw APIError.unauthorized
         }
         guard (200..<300).contains(status) else { throw Self.error(from: data, status: status) }
-        return data
+        return (data, response)
     }
 
     private func data(for request: URLRequest) async throws -> (Data, URLResponse) {

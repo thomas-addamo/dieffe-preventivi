@@ -23,6 +23,8 @@ final class HomeStore {
         }
     }
 
+    func reset() { data = nil; error = nil }
+
     /// Sposta nel cestino (recuperabile dal sito: Altro › Cestino).
     func trash(_ quote: QuoteSummary) async throws {
         try await APIClient.shared.delete("/api/quotes/\(quote.id)")
@@ -48,6 +50,8 @@ final class ClientsStore {
             self.error = error.localizedDescription
         }
     }
+
+    func reset() { clients = nil; error = nil }
 
     func client(_ id: String) -> ClientRecord? {
         clients?.first { $0.id == id }

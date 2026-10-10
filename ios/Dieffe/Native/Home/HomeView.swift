@@ -11,6 +11,7 @@ struct HomeView: View {
     @State private var sort: QuoteSort = .recent
     @State private var expanded: Set<String> = []
     @State private var pendingTrash: QuoteSummary?
+    @State private var confirmLogout = false
 
     private var store: HomeStore { model.home }
 
@@ -38,6 +39,11 @@ struct HomeView: View {
             Button("Sposta nel cestino", role: .destructive) { trash(quote) }
         } message: { _ in
             Text("Si può recuperare da Altro › Cestino.")
+        }
+        .confirmationDialog("Vuoi uscire?", isPresented: $confirmLogout, titleVisibility: .visible) {
+            Button("Esci", role: .destructive) { Task { await model.logout() } }
+        } message: {
+            Text("Per rientrare servono email e password.")
         }
     }
 
@@ -142,6 +148,9 @@ struct HomeView: View {
 
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
+        ToolbarItem(placement: .topBarLeading) {
+            ProfileMenu(confirmLogout: $confirmLogout)
+        }
         ToolbarItem(placement: .topBarTrailing) {
             Menu {
                 Picker("Stato", selection: $statusFilter) {
@@ -208,6 +217,42 @@ struct HomeView: View {
                 model.lastError = error.localizedDescription
             }
         }
+    }
+}
+
+// MARK: - Profilo
+
+/// Tasto profilo in alto a sinistra: profilo, impostazioni, listino, esci.
+private struct ProfileMenu: View {
+    @Environment(AppModel.self) private var model
+    @Binding var confirmLogout: Bool
+
+    var body: some View {
+        Menu {
+            if let user = model.currentUser {
+                Section(user.name) {
+                    Button("Profilo", systemImage: "person.crop.circle") { model.select(.profilo) }
+                }
+            }
+            Section {
+                Button("Listino prezzi", systemImage: "list.bullet.rectangle") { model.showPriceList = true }
+                Button("Impostazioni app", systemImage: "gearshape") { model.showSettings = true }
+                if model.currentUser?.role == "admin" {
+                    Button("Impostazioni azienda", systemImage: "building.2") {
+                        model.select(.altro)
+                        model.page(.altro).navigate(to: "/impostazioni")
+                    }
+                }
+            }
+            Section {
+                Button("Esci", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) {
+                    confirmLogout = true
+                }
+            }
+        } label: {
+            InitialsAvatar(name: model.currentUser?.name ?? "", size: 32)
+        }
+        .accessibilityLabel("Profilo")
     }
 }
 

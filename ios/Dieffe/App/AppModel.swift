@@ -27,8 +27,9 @@ final class AppModel {
     /// Preventivo appena creato: l'editor si apre quando il foglio è chiuso.
     @ObservationIgnored var quoteToOpen: String?
 
-    /// Editor del preventivo (ancora web), a tutto schermo.
+    /// Editor del preventivo a tutto schermo: nativo, oppure il sito ("Apri nel sito").
     var editor: EditorSession?
+    var showPriceList = false
     var clientsPath = NavigationPath()
 
     /// Cresce a ogni modifica dei dati: Home e Clienti si ricaricano.
@@ -38,6 +39,7 @@ final class AppModel {
     let home = HomeStore()
     let clients = ClientsStore()
     let recents = RecentQuotes()
+    let priceList = PriceListStore()
     @ObservationIgnored private(set) var pages: [AppTab: WebPageModel] = [:]
 
     init() {
@@ -96,7 +98,12 @@ final class AppModel {
 
     func openQuote(_ id: String) {
         recents.add(id)
-        if editor?.quoteID == id { return }
+        if editor?.quoteID == id, editor?.page == nil { return }
+        editor = EditorSession(quoteID: id, page: nil)
+    }
+
+    /// L'editor del sito, per le funzioni non ancora native (chat AI, riassegna…).
+    func openWebEditor(_ id: String) {
         editor = EditorSession(quoteID: id, page: WebPageModel(path: "/preventivi/\(id)", role: .editor, app: self))
     }
 
@@ -126,8 +133,19 @@ final class AppModel {
         }
     }
 
+    /// Esci: chiude la sessione sul server e cancella il cookie dall'app.
+    func logout() async {
+        await APIClient.shared.logout()
+        home.reset()
+        clients.reset()
+        sessionExpired()
+        selectedTab = .home
+        reloadWebPages()
+    }
+
     private func sessionExpired() {
         editor = nil
+        showPriceList = false
         showNewQuote = false
         showImport = false
         needsLogin = true
@@ -179,6 +197,7 @@ final class AppModel {
         case .home: selectedTab = .home
         case .clients: selectedTab = .clienti
         case .quote(let id): openQuote(id)
+        case .priceList: showPriceList = true
         case nil:
             // Altre pagine del sito (listino, cestino…) dalla sezione Altro.
             selectedTab = .altro
@@ -200,13 +219,14 @@ final class AppModel {
 
 /// Pagine del sito che nell'app sono schermate native.
 enum NativeDestination: Equatable {
-    case home, clients, quote(String)
+    case home, clients, quote(String), priceList
 
     init?(path: String) {
         let parts = path.split(separator: "/").map(String.init)
         switch parts.first {
         case "dashboard": self = .home
         case "clienti": self = .clients
+        case "listino": self = .priceList
         case "preventivi":
             if parts.count >= 2, parts[1] != "nuovo" { self = .quote(parts[1]) } else { self = .home }
         default: return nil
@@ -216,8 +236,9 @@ enum NativeDestination: Equatable {
 
 struct EditorSession: Identifiable {
     let quoteID: String
-    let page: WebPageModel
-    var id: String { quoteID }
+    /// nil = editor nativo; altrimenti la pagina del sito.
+    let page: WebPageModel?
+    var id: String { page == nil ? quoteID : "web-\(quoteID)" }
 }
 
 /// Ultimi preventivi aperti dall'app (come "Aperti di recente" sul sito).

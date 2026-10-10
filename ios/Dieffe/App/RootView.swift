@@ -34,8 +34,17 @@ struct RootView: View {
             ImportQuoteView()
         }
         .fullScreenCover(item: $model.editor, onDismiss: model.closeEditor) { session in
-            QuoteEditorScreen(page: session.page)
-                .appMessages(active: true)
+            Group {
+                if let page = session.page {
+                    QuoteEditorScreen(page: page)
+                } else {
+                    QuoteEditorView(quoteID: session.quoteID)
+                }
+            }
+            .appMessages(active: true)
+        }
+        .sheet(isPresented: $model.showPriceList) {
+            PriceListView()
         }
         .appMessages(active: model.editor == nil)
         .sheet(isPresented: $model.showSettings) {
@@ -74,8 +83,8 @@ struct RootView: View {
     }
 }
 
-/// Editor del preventivo (pagina web) a tutto schermo: la sua freccia
-/// "indietro" porta alla dashboard, e l'app chiude l'editor (vedi AppModel.route).
+/// Editor del preventivo del sito ("Apri nel sito") a tutto schermo: la sua
+/// freccia "indietro" porta alla dashboard, e l'app chiude l'editor (vedi AppModel.route).
 private struct QuoteEditorScreen: View {
     let page: WebPageModel
 

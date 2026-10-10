@@ -16,12 +16,22 @@ gratuito. Non serve l'Apple Developer Program e l'app non passa dall'App Store.
     Messaggio, Email e Indicazioni, preventivi collegati, nuovo e modifica.
   - **Nuovo preventivo** (titolo, cliente, cantiere) e **Importa da file** (PDF,
     Word, Excel: l'AI del sito ricava sezioni e voci).
+  - **Editor dei preventivi:** intestazione, sezioni (anche opzionali e a
+    corpo) e voci con descrizione formattata, quantità, unità, prezzo, sconto,
+    note e foto; aggiunta dal listino, suggerimenti AI (testo e prezzo),
+    duplica, riordina, elimina; totali con sconto e IVA; stato, PDF, Excel,
+    CSV, link per il cliente con PIN, lavori extra, blocco (admin), cestino.
+    Salvataggio automatico. "Apri nel sito" per chat AI e riassegnazione.
+  - **Listino:** catalogo per categoria e sottocategoria, ricerca, filtri,
+    nuova voce, modifica, attiva/disattiva, fissa, elimina.
+  - **Profilo** (in alto a sinistra nella Home): Profilo, Listino,
+    Impostazioni, Esci.
   - **Accesso** con email e password, compatibile con il riempimento automatico
     delle password.
-- Le schermate native usano le API JSON del sito (`/api/app/home`,
-  `/api/app/clients`, `/api/clients`, `/api/quotes`).
-- **Ancora web** (`WKWebView`): l'editor dei preventivi (a tutto schermo),
-  Profilo e Altro. Il sito riconosce l'app dallo User-Agent `DieffeiOS/x.y`,
+- Le schermate native usano le API JSON del sito (`/api/app/*`,
+  `/api/clients`, `/api/quotes`, `/api/price-list`).
+- **Ancora web** (`WKWebView`): Profilo e Altro (statistiche, comunicazioni,
+  cestino, impostazioni azienda, utenti). Il sito riconosce l'app dallo User-Agent `DieffeiOS/x.y`,
   nasconde la propria tab bar e segnala all'app ogni cambio di pagina: le
   pagine che hanno una versione nativa si aprono in nativo.
 - **PDF, Excel e CSV** si aprono nell'anteprima di sistema (Quick Look), con
@@ -32,8 +42,7 @@ gratuito. Non serve l'Apple Developer Program e l'app non passa dall'App Store.
   schermata nativa quando si è offline.
 - **Impostazioni native**: dal sito, *Altro › App iPhone*.
 
-Prossime fasi: Listino, Lavori extra e alla fine l'editor dei preventivi in
-SwiftUI.
+Prossime fasi: Profilo, Statistiche, Comunicazioni e Cestino in SwiftUI.
 
 ```
 ios/
