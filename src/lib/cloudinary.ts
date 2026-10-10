@@ -27,6 +27,13 @@ export async function uploadToCloudinary(
   });
 }
 
+/** Indirizzo del logo aziendale: nel database c'è il public_id di Cloudinary. */
+export function logoUrl(publicId: string | null | undefined, width = 560): string | null {
+  if (!publicId) return null;
+  if (/^https?:\/\//.test(publicId)) return publicId;
+  return cloudinary.url(publicId, { fetch_format: "auto", quality: "auto", width, crop: "limit", secure: true });
+}
+
 export async function deleteCloudinaryAsset(publicId: string) {
   return cloudinary.uploader.destroy(publicId);
 }

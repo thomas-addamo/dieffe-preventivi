@@ -2,6 +2,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db/client";
 import { companySettings } from "@/lib/db/schema";
+import { logoUrl } from "@/lib/cloudinary";
 import { ImpostazioniClient } from "./ImpostazioniClient";
 
 export default async function ImpostazioniPage() {
@@ -17,7 +18,8 @@ export default async function ImpostazioniPage() {
 
   return (
     <ImpostazioniClient
-      initialSettings={settings ?? null}
+      // Anteprima del logo: nel database c'è il public_id di Cloudinary.
+      initialSettings={settings ? { ...settings, logoPath: logoUrl(settings.logoPath) } : null}
       isAdmin={isAdmin}
       userName={session.user.name}
       userEmail={session.user.email}

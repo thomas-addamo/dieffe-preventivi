@@ -4,6 +4,7 @@ import { sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { companySettings } from "@/lib/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { logoUrl } from "@/lib/cloudinary";
 
 const schema = z.object({
   companyName: z.string().optional(),
@@ -32,7 +33,7 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: "Non autorizzato" }, { status: 401 });
 
   const [settings] = await db.select().from(companySettings).limit(1);
-  return NextResponse.json(settings ?? null);
+  return NextResponse.json(settings ? { ...settings, logoUrl: logoUrl(settings.logoPath) } : null);
 }
 
 export async function PUT(req: NextRequest) {
@@ -61,5 +62,5 @@ export async function PUT(req: NextRequest) {
   }
 
   const [updated] = await db.select().from(companySettings).limit(1);
-  return NextResponse.json(updated);
+  return NextResponse.json({ ...updated, logoUrl: logoUrl(updated?.logoPath) });
 }
