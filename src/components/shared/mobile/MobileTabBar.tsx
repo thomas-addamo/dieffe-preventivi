@@ -130,7 +130,7 @@ export function MobileTabBar() {
   return (
     <>
       <nav
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-border/60 bg-[var(--card)]/80 pb-safe backdrop-blur-xl lg:hidden"
+        className="mobile-tabbar fixed inset-x-0 bottom-0 z-40 border-t border-border/60 bg-[var(--card)]/80 pb-safe backdrop-blur-xl lg:hidden"
         style={{ boxShadow: "var(--shadow-float)" }}
       >
         <div className="mx-auto flex h-[var(--mobile-tabbar-h)] max-w-lg items-stretch px-2">

@@ -5,6 +5,7 @@
 /* App desktop (Electron) — attributi impostati su <html> da layout.tsx.
    desktop: = macOS + Windows · mac: = solo macOS · win: = solo Windows */
 @custom-variant desktop (&:where([data-shell="desktop"], [data-shell="desktop"] *));
+@custom-variant ios (&:where([data-shell="ios"], [data-shell="ios"] *));
 @custom-variant mac (&:where([data-platform="mac"], [data-platform="mac"] *));
 @custom-variant win (&:where([data-platform="win"], [data-platform="win"] *));
 
@@ -238,6 +239,17 @@ body {
   /* Padding-top contenuto = top bar + safe area (clearance header mobile fisso) */
   .pt-topbar {
     padding-top: calc(var(--mobile-topbar-h) + env(safe-area-inset-top, 0px));
+  }
+}
+
+/* App iPhone nativa: la tab bar è di sistema (Liquid Glass) e il WKWebView
+   riceve come safe area inferiore anche la sua altezza. */
+[data-shell="ios"] .mobile-tabbar {
+  display: none;
+}
+@media (max-width: 1023.98px) {
+  [data-shell="ios"] .pb-tabbar {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.5rem);
   }
 }
 

@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { isIOSApp } from "@/lib/ios-app";
 
 /**
  * Collega i menu nativi dell'app desktop (Vai, File, Dock…) al router della
@@ -10,6 +11,17 @@ import { useRouter } from "next/navigation";
  */
 export function DesktopBridge() {
   const router = useRouter();
+
+  // App iPhone: la tab bar nativa naviga con window.__dieffeIOSNavigate(path).
+  useEffect(() => {
+    if (!isIOSApp()) return;
+    window.__dieffeIOSNavigate = (path) => {
+      if (path.startsWith("/")) router.push(path);
+    };
+    return () => {
+      delete window.__dieffeIOSNavigate;
+    };
+  }, [router]);
 
   useEffect(() => {
     const electron = window.electron;

@@ -1,0 +1,10 @@
+// Copia questo file in Signing.xcconfig (stessa cartella) e compila i valori.
+// Signing.xcconfig resta sul tuo Mac: non va nel repository.
+//
+// DIEFFE_TEAM_ID: il Team ID del tuo "Personal Team" (10 caratteri,
+//   es. AB12CD34EF). Come trovarlo: ios/README.md, punto 5.
+// DIEFFE_BUNDLE_ID: deve essere unico per il tuo Apple ID; aggiungi un
+//   suffisso tuo se Xcode dice che è già in uso.
+
+DIEFFE_TEAM_ID =
+DIEFFE_BUNDLE_ID = it.dieffe.preventivi

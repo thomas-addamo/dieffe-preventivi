@@ -17,7 +17,9 @@ import {
   Settings,
   ChevronRight,
   Shield,
+  Smartphone,
 } from "lucide-react";
+import { postToIOSApp } from "@/lib/ios-app";
 import { MobilePage } from "@/components/shared/mobile/MobilePage";
 import { NEW_BADGE_CLASS, isNewPage } from "@/lib/new-pages";
 
@@ -175,6 +177,21 @@ export function AltroClient({ userRole, trashCount }: AltroClientProps) {
             <span className="block truncate text-xs text-muted-foreground">
               Chiedi all&apos;assistente o scrivi all&apos;amministratore
             </span>
+          </span>
+          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+        </button>
+        {/* Solo dentro l'app iPhone: impostazioni native (Face ID, ecc.) */}
+        <button
+          type="button"
+          onClick={() => postToIOSApp({ action: "settings" })}
+          className="hidden w-full items-center gap-3 px-4 py-3.5 text-left transition-colors active:bg-accent ios:flex"
+        >
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-500/10 text-gray-600 dark:text-gray-300">
+            <Smartphone className="h-5 w-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-medium leading-tight">App iPhone</span>
+            <span className="block truncate text-xs text-muted-foreground">Face ID, versione e aggiornamenti</span>
           </span>
           <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
         </button>

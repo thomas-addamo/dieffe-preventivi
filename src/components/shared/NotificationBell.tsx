@@ -1,5 +1,6 @@
 "use client";
 
+import { postToIOSApp } from "@/lib/ios-app";
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -74,6 +75,7 @@ export function NotificationBell() {
   // App desktop: numero di notifiche non lette sull'icona nel Dock / barra applicazioni.
   useEffect(() => {
     window.electron?.setBadgeCount?.(unreadCount);
+    postToIOSApp({ action: "badge", count: unreadCount });
   }, [unreadCount]);
 
   const handleClick = useCallback(

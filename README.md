@@ -8,7 +8,7 @@
 
 Web app, app per iPhone (installabile da Safari) e app desktop per macOS e Windows.
 
-[Sito](https://dieffe-preventivi.vercel.app) · [Scarica l'app desktop](https://github.com/thomas-addamo/dieffe-preventivi/releases/latest) · [Novità](#novità-e-versioni)
+[Sito](https://dieffe-preventivi.vercel.app) · [Scarica l'app desktop](https://github.com/thomas-addamo/dieffe-preventivi/releases/latest) · [App iPhone](ios/README.md) · [Novità](#novità-e-versioni)
 
 </div>
 

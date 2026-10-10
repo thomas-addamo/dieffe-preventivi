@@ -1,0 +1,39 @@
+name: Build app iPhone
+
+# Verifica che l'app iPhone (cartella ios/) compili, senza firma: l'installazione
+# sull'iPhone si fa dal proprio Mac con Xcode (vedi ios/README.md).
+on:
+  push:
+    branches: [main]
+    paths: ['ios/**', '.github/workflows/ios-build.yml']
+  pull_request:
+    paths: ['ios/**', '.github/workflows/ios-build.yml']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Xcode più recente
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_2[6-9]*.app 2>/dev/null | sort -V | tail -1)
+          if [ -n "$XCODE" ]; then sudo xcode-select -s "$XCODE"; fi
+          xcodebuild -version
+
+      - name: Genera il progetto (XcodeGen)
+        working-directory: ios
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      - name: Compila per iOS (senza firma)
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project Dieffe.xcodeproj -scheme Dieffe \
+            -destination 'generic/platform=iOS' -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            | tail -n 80

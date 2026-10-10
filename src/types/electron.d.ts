@@ -47,6 +47,8 @@ declare global {
     electron?: ElectronBridge;
     /** Presente quando la pagina accetta navigazioni dai menu nativi. */
     __dieffeNavigate?: () => void;
+    /** App iPhone: navigazione richiesta dalla tab bar nativa. */
+    __dieffeIOSNavigate?: (path: string) => void;
   }
 }
 

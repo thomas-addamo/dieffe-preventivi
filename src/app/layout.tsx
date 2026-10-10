@@ -52,6 +52,9 @@ export default function RootLayout({
             Marca <html> prima del primo paint: il design desktop è solo CSS
             (varianti desktop:/mac: in globals.css), quindi nessun mismatch SSR. */}
         <script dangerouslySetInnerHTML={{ __html: `(function(){var m=navigator.userAgent.match(/DieffeDesktop\\/([\\d.]+) \\((\\w+)(?:; (\\d+))?\\)/);if(m){var d=document.documentElement;d.setAttribute('data-shell','desktop');d.setAttribute('data-platform',m[2]);if(m[2]==='mac'&&m[3]&&+m[3]<26)d.setAttribute('data-os-legacy','');}})()` }} />
+        {/* App iPhone (cartella ios/): User-Agent "DieffeiOS/x.y". La tab bar è nativa,
+            quindi quella web si nasconde (vedi [data-shell="ios"] in globals.css). */}
+        <script dangerouslySetInnerHTML={{ __html: `(function(){if(/DieffeiOS\\/[\\d.]+/.test(navigator.userAgent))document.documentElement.setAttribute('data-shell','ios');})()` }} />
         {/* Inline script: applica il tema PRIMA del render per evitare il flash */}
         <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||((!t||t==='system')&&window.matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.classList.add('dark');}}catch(e){}})()` }} />
       </head>

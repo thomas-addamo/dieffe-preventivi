@@ -1,0 +1,8 @@
+// Valori condivisi dell'app iPhone. Quelli personali (Team ID, identificativo)
+// stanno in Signing.xcconfig, che non va nel repository.
+
+DIEFFE_BASE_URL = https:/$()/dieffe-preventivi.vercel.app
+DIEFFE_BUNDLE_ID = it.dieffe.preventivi
+DIEFFE_TEAM_ID =
+
+#include? "Signing.xcconfig"

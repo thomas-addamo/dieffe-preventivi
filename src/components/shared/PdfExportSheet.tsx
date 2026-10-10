@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Download, ExternalLink, FileText, Loader2, RotateCw, Share, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { postToIOSApp } from "@/lib/ios-app";
 
 // Pannello "PDF pronto" per mobile/tablet.
 //
@@ -47,6 +48,11 @@ export function PdfExportSheet({
 }) {
   const [state, setState] = useState<State>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
+
+  // App iPhone: il PDF lo apre l'anteprima nativa (Quick Look) con Condividi.
+  useEffect(() => {
+    if (postToIOSApp({ action: "pdf", url: new URL(url, location.href).href, title })) onClose();
+  }, [url, title, onClose]);
 
   useEffect(() => {
     let blobUrl: string | null = null;
