@@ -31,6 +31,13 @@ struct AltroView: View {
                 }
 
                 Section {
+                    Button {
+                        model.showNotifications = true
+                    } label: {
+                        MoreRow(title: "Notifiche", subtitle: "Firme, stati, assegnazioni, comunicazioni",
+                                symbol: "bell.fill", color: .red, badge: model.unreadNotifications, chevron: true)
+                    }
+                    .tint(.primary)
                     NavigationLink {
                         HelpView()
                     } label: {

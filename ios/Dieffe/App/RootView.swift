@@ -45,6 +45,9 @@ struct RootView: View {
             }
             .appMessages(active: true)
         }
+        .sheet(isPresented: $model.showNotifications) {
+            NotificationsView()
+        }
         .sheet(isPresented: $model.showProfile) {
             NavigationStack {
                 ProfileView(inSheet: true)
@@ -74,6 +77,7 @@ struct RootView: View {
         .animation(.easeInOut(duration: 0.25), value: model.needsLogin)
         .onChange(of: scenePhase) { _, phase in
             model.lock.scenePhaseChanged(phase)
+            if phase != .inactive { LocalNotifier.shared.scenePhaseChanged(active: phase == .active) }
         }
         .task(id: model.dataVersion) {
             // Utente e permessi servono a tutte le schermate, non solo alla Home.
@@ -85,8 +89,13 @@ struct RootView: View {
             }
         }
         .task {
+            LocalNotifier.shared.start()
+            LocalNotifier.shared.scenePhaseChanged(active: true)
+        }
+        .task {
             #if DEBUG
             if SelfTest.isRequested { await SelfTest.run(app: model) }
+            if SelfTest.notificationTestRequested { await SelfTest.runNotificationTest(app: model) }
             #endif
         }
     }

@@ -152,6 +152,15 @@ struct HomeView: View {
             ProfileMenu(confirmLogout: $confirmLogout)
         }
         ToolbarItem(placement: .topBarTrailing) {
+            Button {
+                model.showNotifications = true
+            } label: {
+                Label("Notifiche", systemImage: model.unreadNotifications > 0 ? "bell.badge.fill" : "bell")
+            }
+            .badge(model.unreadNotifications)
+            .accessibilityValue(model.unreadNotifications > 0 ? "\(model.unreadNotifications) da leggere" : "")
+        }
+        ToolbarItem(placement: .topBarTrailing) {
             Menu {
                 Picker("Stato", selection: $statusFilter) {
                     Text("Tutti gli stati").tag(QuoteStatus?.none)

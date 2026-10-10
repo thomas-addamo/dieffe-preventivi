@@ -1,6 +1,7 @@
 #if DEBUG
 import SwiftUI
 import UIKit
+import UserNotifications
 
 /// Autotest delle schermate native contro il server vero, solo nelle build
 /// Debug: `xcrun simctl launch booted <bundle> -DieffeSelfTest YES`.
@@ -11,6 +12,36 @@ import UIKit
 @MainActor
 enum SelfTest {
     static var isRequested: Bool { UserDefaults.standard.bool(forKey: "DieffeSelfTest") }
+    static var notificationTestRequested: Bool { UserDefaults.standard.bool(forKey: "DieffeNotificationTest") }
+
+    /// -DieffeNotificationTest YES: attiva le notifiche locali, manda a se
+    /// stessi una notifica (admin), la mostra e poi la elimina dal server.
+    static func runNotificationTest(app: AppModel) async {
+        log = []
+        failures = 0
+        await app.home.load()
+        guard let user = app.currentUser, user.role == "admin" else { return note("FAIL serve un admin") }
+        let enabled = await LocalNotifier.shared.enable()
+        check(enabled, "notifiche locali autorizzate")
+        let title = "Preventivo PREV-TEST firmato dal cliente"
+        _ = await step("notifica di prova inviata", {
+            try await APIClient.shared.send("POST", "/api/admin/notifications",
+                                            json: ["type": "announcement", "title": title,
+                                                   "body": "Prova dell'app iPhone: tocca per aprire il listino.",
+                                                   "link": "/listino", "target": user.id], as: Empty.self)
+        })
+        await LocalNotifier.shared.check()
+        try? await Task.sleep(for: .seconds(1))
+        let delivered = await UNUserNotificationCenter.current().deliveredNotifications()
+        check(delivered.contains { $0.request.content.title == title }, "notifica mostrata da iOS")
+        try? await Task.sleep(for: .seconds(12))
+        let list = (try? await APIClient.shared.getRaw("/api/notifications?limit=20"))?["notifications"] as? [[String: Any]] ?? []
+        if let id = list.first(where: { $0["title"] as? String == title })?["id"] as? String {
+            _ = await step("notifica di prova eliminata", { try await APIClient.shared.delete("/api/notifications/\(id)") })
+        }
+        note(failures == 0 ? "RISULTATO: tutto OK" : "RISULTATO: \(failures) errori")
+        write()
+    }
 
     private static var log: [String] = []
     private static var failures = 0

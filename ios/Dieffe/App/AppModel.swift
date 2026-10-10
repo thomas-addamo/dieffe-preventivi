@@ -29,6 +29,8 @@ final class AppModel {
     /// Editor del preventivo a tutto schermo: nativo, oppure il sito ("Apri nel sito").
     var editor: EditorSession?
     var showProfile = false
+    var showNotifications = false
+    var unreadNotifications: Int { home.data?.unreadNotifications ?? 0 }
     var clientsPath = NavigationPath()
     var priceListPath = NavigationPath()
     var altroPath = NavigationPath()
@@ -46,8 +48,9 @@ final class AppModel {
         if let tab = PreviewOptions.startTab { selectedTab = tab }
         showSettings = PreviewOptions.showSettings
         needsLogin = PreviewOptions.showLogin
-        if let page = PreviewOptions.startPage { openWebPage(page, title: WebDestination.title(for: page)) }
+        if let page = PreviewOptions.startPage { openPath(page) }
         APIClient.shared.onUnauthorized = { [weak self] in self?.sessionExpired() }
+        LocalNotifier.shared.open = { [weak self] path in self?.openPath(path) }
     }
 
     func dataChanged() {
@@ -135,6 +138,17 @@ final class AppModel {
         }
     }
 
+    /// Apre un percorso del sito (notifiche, link dieffe://): schermata nativa se c'è.
+    func openPath(_ path: String) {
+        guard path.hasPrefix("/") else { return }
+        editor = nil
+        if let destination = NativeDestination(path: path) {
+            open(destination, path: path)
+        } else {
+            openWebPage(path, title: WebDestination.title(for: path))
+        }
+    }
+
     func open(_ route: AltroRoute) {
         selectedTab = .altro
         altroPath = NavigationPath()
@@ -200,7 +214,7 @@ final class AppModel {
         }
     }
 
-    private func open(_ destination: NativeDestination?, path: String) {
+    fileprivate func open(_ destination: NativeDestination?, path: String) {
         switch destination {
         case .home: selectedTab = .home
         case .clients: selectedTab = .clienti
@@ -208,6 +222,7 @@ final class AppModel {
         case .priceList: selectedTab = .listino
         case .profile: showProfile = true
         case .more: selectedTab = .altro
+        case .notifications: showNotifications = true
         case nil:
             // Altre pagine del sito (cestino, statistiche…) dentro Altro.
             openWebPage(path, title: WebDestination.title(for: path))
@@ -228,7 +243,7 @@ final class AppModel {
 
 /// Pagine del sito che nell'app sono schermate native.
 enum NativeDestination: Equatable {
-    case home, clients, quote(String), priceList, profile, more
+    case home, clients, quote(String), priceList, profile, more, notifications
 
     init?(path: String) {
         let parts = path.split(separator: "/").map(String.init)
@@ -238,6 +253,7 @@ enum NativeDestination: Equatable {
         case "listino": self = .priceList
         case "profilo": self = .profile
         case "altro": self = .more
+        case "notifiche": self = .notifications
         case "preventivi":
             if parts.count >= 2, parts[1] != "nuovo" { self = .quote(parts[1]) } else { self = .home }
         default: return nil

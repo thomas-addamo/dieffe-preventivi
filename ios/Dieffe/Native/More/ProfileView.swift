@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Aspetto dell'app: segue iOS oppure chiaro/scuro fissi.
 enum Appearance: String, CaseIterable, Identifiable {
@@ -93,6 +94,8 @@ struct ProfileView: View {
             } footer: {
                 Text("\(AppLock.biometryName) all'apertura e quando torni all'app dopo più di un minuto.")
             }
+
+            NotificationsSection()
 
             Section("App") {
                 NavigationLink {
@@ -213,6 +216,47 @@ struct ChangePasswordView: View {
             } catch {
                 self.error = error.localizedDescription
             }
+        }
+    }
+}
+
+/// Notifiche di sistema per questo iPhone (vedi LocalNotifier).
+private struct NotificationsSection: View {
+    @Environment(\.openURL) private var openURL
+    private var notifier: LocalNotifier { .shared }
+    @State private var working = false
+
+    var body: some View {
+        Section {
+            Toggle(isOn: Binding(
+                get: { notifier.isEnabled },
+                set: { on in
+                    if on {
+                        working = true
+                        Task { _ = await notifier.enable(); working = false }
+                    } else {
+                        notifier.disable()
+                    }
+                }
+            )) {
+                Label("Notifiche su questo iPhone", systemImage: "bell.badge")
+            }
+            .disabled(working || notifier.authorization == .denied)
+            if notifier.authorization == .denied || (notifier.isEnabled && !notifier.alertsAllowed) {
+                Button("Consenti le notifiche in Impostazioni", systemImage: "gear") {
+                    if let url = URL(string: UIApplication.openNotificationSettingsURLString) { openURL(url) }
+                }
+            }
+            if notifier.isEnabled, let last = notifier.lastCheck {
+                LabeledContent("Ultimo controllo", value: last.formatted(date: .omitted, time: .shortened))
+            }
+        } header: {
+            Text("Notifiche")
+        } footer: {
+            Text(notifier.isEnabled && !notifier.alertsAllowed
+                 ? "iOS mostra solo il numero sull'icona: in Impostazioni › Notifiche › Dieffe attiva gli avvisi. "
+                 : "")
+            + Text("Con l'app aperta arrivano subito. In background iOS controlla periodicamente, di solito entro qualche decina di minuti: tieni attivo Aggiorna app in background.")
         }
     }
 }

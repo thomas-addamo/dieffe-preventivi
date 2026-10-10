@@ -45,3 +45,10 @@ targets:
       properties:
         DieffeBaseURL: $(DIEFFE_BASE_URL)
         ITSAppUsesNonExemptEncryption: false
+        # Notifiche locali in background (niente push Apple con l'Apple ID gratuito).
+        UIBackgroundModes: [fetch]
+        BGTaskSchedulerPermittedIdentifiers: [it.dieffe.preventivi.refresh]
+        # dieffe://open?path=/preventivi/<id> apre una pagina dell'app.
+        CFBundleURLTypes:
+          - CFBundleURLName: it.dieffe.preventivi
+            CFBundleURLSchemes: [dieffe]
