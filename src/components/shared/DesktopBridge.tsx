@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { isIOSApp } from "@/lib/ios-app";
+import { usePathname, useRouter } from "next/navigation";
+import { isIOSApp, postToIOSApp } from "@/lib/ios-app";
 
 /**
  * Collega i menu nativi dell'app desktop (Vai, File, Dock…) al router della
@@ -11,6 +11,7 @@ import { isIOSApp } from "@/lib/ios-app";
  */
 export function DesktopBridge() {
   const router = useRouter();
+  const pathname = usePathname();
 
   // App iPhone: la tab bar nativa naviga con window.__dieffeIOSNavigate(path).
   useEffect(() => {
@@ -22,6 +23,11 @@ export function DesktopBridge() {
       delete window.__dieffeIOSNavigate;
     };
   }, [router]);
+
+  // App iPhone: ogni cambio di pagina (anche senza ricaricare) arriva all'app.
+  useEffect(() => {
+    postToIOSApp({ action: "route", path: pathname });
+  }, [pathname]);
 
   useEffect(() => {
     const electron = window.electron;

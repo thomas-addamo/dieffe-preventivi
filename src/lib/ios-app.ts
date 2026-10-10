@@ -4,7 +4,9 @@
 type IOSMessage =
   | { action: "pdf"; url: string; title: string }
   | { action: "badge"; count: number }
-  | { action: "settings" };
+  | { action: "settings" }
+  /** Cambio di pagina: l'app apre al suo posto le schermate native (Home, Clienti…). */
+  | { action: "route"; path: string };
 
 interface IOSWindow {
   webkit?: { messageHandlers?: { dieffe?: { postMessage: (m: IOSMessage) => void } } };
