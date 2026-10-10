@@ -239,7 +239,7 @@ private struct ProfileMenu: View {
                 Button("Impostazioni app", systemImage: "gearshape") { model.showSettings = true }
                 if model.currentUser?.role == "admin" {
                     Button("Impostazioni azienda", systemImage: "building.2") {
-                        model.openWebPage("/impostazioni", title: "Impostazioni")
+                        model.open(.company)
                     }
                 }
             }

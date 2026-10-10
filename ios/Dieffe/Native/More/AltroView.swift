@@ -1,8 +1,8 @@
 import SwiftUI
 
 /// Altro nativo (come src/app/(app)/altro/AltroClient.tsx): profilo, aiuto,
-/// operatività e amministrazione. Le pagine non ancora native si aprono qui
-/// dentro, con titolo e "indietro" di iOS.
+/// operatività e amministrazione, tutto in SwiftUI. Audit log e Sessioni
+/// attive restano solo sul sito e nell'app desktop.
 struct AltroView: View {
     @Environment(AppModel.self) private var model
 
@@ -46,7 +46,7 @@ struct AltroView: View {
                 }
 
                 Section("Operatività") {
-                    web("/lavori-extra", "Lavori extra", "Lavorazioni aggiuntive di un preventivo", "doc.badge.plus", .orange)
+                    link(.extras, "Lavori extra", "Lavorazioni aggiuntive di un preventivo", "doc.badge.plus", .orange)
                     Button {
                         model.select(.listino)
                     } label: {
@@ -54,23 +54,23 @@ struct AltroView: View {
                                 symbol: "list.bullet.rectangle.portrait.fill", color: .blue, chevron: true)
                     }
                     .tint(.primary)
-                    web("/statistiche", "Statistiche", "Andamento preventivi e conversioni", "chart.bar.fill", .green)
-                    web("/comunicazioni", "Comunicazioni", "Lettere su carta intestata con timbro", "envelope.fill", .purple)
+                    link(.stats, "Statistiche", "Andamento preventivi e conversioni", "chart.bar.fill", .green)
+                    link(.communications, "Comunicazioni", "Lettere su carta intestata con timbro", "envelope.fill", .purple)
                     if model.canEdit {
-                        web("/cestino", "Cestino", "Preventivi eliminati di recente", "trash.fill", .orange,
-                            badge: model.home.data?.trashCount ?? 0)
+                        link(.trash, "Cestino", "Preventivi eliminati di recente", "trash.fill", .orange,
+                             badge: model.home.data?.trashCount ?? 0)
                     }
                 }
 
                 if user?.role == "admin" {
                     Section {
-                        web("/admin/notifiche", "Invia notifica", "Comunicazioni agli utenti", "bell.badge.fill", .pink)
-                        web("/admin/audit-log", "Audit Log", "Registro delle azioni", "scroll.fill", .gray)
-                        web("/admin/sessioni", "Sessioni attive", "Dispositivi connessi", "dot.radiowaves.left.and.right", .teal)
-                        web("/utenti", "Utenti", "Gestione account e ruoli", "person.2.badge.gearshape.fill", .indigo)
-                        web("/impostazioni", "Impostazioni", "Dati azienda e preferenze", "gearshape.fill", .gray)
+                        link(.notify, "Invia notifica", "Comunicazioni agli utenti", "bell.badge.fill", .pink)
+                        link(.users, "Utenti", "Gestione account e ruoli", "person.2.badge.gearshape.fill", .indigo)
+                        link(.company, "Impostazioni azienda", "Dati, logo, PDF, numerazione, team", "gearshape.fill", .gray)
                     } header: {
                         Label("Amministrazione", systemImage: "shield.lefthalf.filled")
+                    } footer: {
+                        Text("Audit log e Sessioni attive sono disponibili sul sito e nell'app desktop.")
                     }
                 }
 
@@ -84,14 +84,44 @@ struct AltroView: View {
             .navigationDestination(for: WebDestination.self) { destination in
                 WebScreen(path: destination.path, title: destination.title)
             }
+            .navigationDestination(for: AltroRoute.self) { route in
+                switch route {
+                case .extras: ExtrasView()
+                case .stats: StatsView()
+                case .communications: CommunicationsView()
+                case .trash: TrashView()
+                case .notify: SendNotificationView()
+                case .users: UsersView()
+                case .company: CompanySettingsView()
+                }
+            }
             .refreshable { model.dataChanged() }
         }
     }
 
-    private func web(_ path: String, _ title: String, _ subtitle: String, _ symbol: String, _ color: Color,
-                     badge: Int = 0) -> some View {
-        NavigationLink(value: WebDestination(path: path, title: title)) {
+    private func link(_ route: AltroRoute, _ title: String, _ subtitle: String, _ symbol: String, _ color: Color,
+                      badge: Int = 0) -> some View {
+        NavigationLink(value: route) {
             MoreRow(title: title, subtitle: subtitle, symbol: symbol, color: color, badge: badge)
+        }
+    }
+}
+
+/// Schermate native raggiungibili da Altro.
+enum AltroRoute: Hashable {
+    case extras, stats, communications, trash, notify, users, company
+
+    /// La pagina del sito corrispondente (link dai PDF, notifiche, menu).
+    init?(path: String) {
+        switch path.split(separator: "/").map(String.init) {
+        case ["lavori-extra"]: self = .extras
+        case ["statistiche"]: self = .stats
+        case ["comunicazioni"]: self = .communications
+        case ["cestino"]: self = .trash
+        case ["admin", "notifiche"]: self = .notify
+        case ["utenti"]: self = .users
+        case ["impostazioni"]: self = .company
+        default: return nil
         }
     }
 }

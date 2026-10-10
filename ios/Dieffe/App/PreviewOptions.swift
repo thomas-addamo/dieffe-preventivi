@@ -16,6 +16,11 @@ enum PreviewOptions {
         defaults.bool(forKey: "DieffeSettings")
     }
 
+    /// Apre una pagina all'avvio, es. -DieffePage /statistiche (schermata nativa se c'è).
+    static var startPage: String? {
+        defaults.string(forKey: "DieffePage")
+    }
+
     /// Mostra il login nativo anche con una sessione valida (solo per le schermate).
     static var showLogin: Bool {
         defaults.bool(forKey: "DieffeLogin")
@@ -38,6 +43,7 @@ enum PreviewOptions {
     static let startTab: AppTab? = nil
     static let showSettings = false
     static let showLogin = false
+    static let startPage: String? = nil
     static let sessionCookie: HTTPCookie? = nil
     #endif
 }

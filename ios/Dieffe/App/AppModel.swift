@@ -46,6 +46,7 @@ final class AppModel {
         if let tab = PreviewOptions.startTab { selectedTab = tab }
         showSettings = PreviewOptions.showSettings
         needsLogin = PreviewOptions.showLogin
+        if let page = PreviewOptions.startPage { openWebPage(page, title: WebDestination.title(for: page)) }
         APIClient.shared.onUnauthorized = { [weak self] in self?.sessionExpired() }
     }
 
@@ -123,10 +124,21 @@ final class AppModel {
         }
     }
 
-    /// Una pagina del sito dentro Altro (con titolo e "indietro" nativi).
+    /// Una pagina dentro Altro: la schermata nativa se c'è, altrimenti il
+    /// sito con titolo e "indietro" nativi.
     func openWebPage(_ path: String, title: String) {
         selectedTab = .altro
-        altroPath.append(WebDestination(path: path, title: title))
+        if let route = AltroRoute(path: path) {
+            altroPath.append(route)
+        } else {
+            altroPath.append(WebDestination(path: path, title: title))
+        }
+    }
+
+    func open(_ route: AltroRoute) {
+        selectedTab = .altro
+        altroPath = NavigationPath()
+        altroPath.append(route)
     }
 
     /// Esci: chiude la sessione sul server e cancella il cookie dall'app.

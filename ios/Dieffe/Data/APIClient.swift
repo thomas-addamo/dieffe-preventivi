@@ -109,6 +109,18 @@ final class APIClient {
         return dest
     }
 
+    /// Oggetto JSON grezzo.
+    func getRaw(_ path: String) async throws -> [String: Any] {
+        let data = try await perform(request(path, method: "GET"))
+        return (try JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
+    }
+
+    /// Array JSON grezzo (documenti con struttura libera, es. le comunicazioni).
+    func getRawArray(_ path: String) async throws -> [[String: Any]] {
+        let data = try await perform(request(path, method: "GET"))
+        return (try JSONSerialization.jsonObject(with: data)) as? [[String: Any]] ?? []
+    }
+
     /// JSON grezzo in entrata e in uscita (import: i dati analizzati tornano tali e quali).
     func sendRaw(_ method: String, _ path: String, json: [String: Any]) async throws -> [String: Any] {
         var req = request(path, method: method)
