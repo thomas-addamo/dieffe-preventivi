@@ -247,6 +247,14 @@ body {
 [data-shell="ios"] .mobile-tabbar {
   display: none;
 }
+/* Pagine aperte dentro una schermata nativa dell'app iPhone: titolo e
+   "indietro" li mostra la barra di navigazione di iOS. */
+[data-embedded="ios"] .mobile-topbar {
+  display: none;
+}
+[data-embedded="ios"] {
+  --mobile-topbar-h: 0px;
+}
 @media (max-width: 1023.98px) {
   [data-shell="ios"] .pb-tabbar {
     padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.5rem);

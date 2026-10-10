@@ -46,7 +46,7 @@ export function MobileTopBar({ userName }: MobileTopBarProps) {
   const title = titleFor(pathname);
 
   return (
-    <header className="fixed inset-x-0 top-0 z-40 border-b border-border/50 bg-[var(--background)]/80 pt-safe backdrop-blur-xl lg:hidden">
+    <header className="mobile-topbar fixed inset-x-0 top-0 z-40 border-b border-border/50 bg-[var(--background)]/80 pt-safe backdrop-blur-xl lg:hidden">
       <div className="flex h-[var(--mobile-topbar-h)] items-center justify-between gap-2 px-3">
         <div className="flex min-w-0 items-center gap-1.5">
           {isHome ? (

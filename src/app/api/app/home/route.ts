@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
-import { quotes, clients, users } from "@/lib/db/schema";
-import { eq, desc, isNull } from "drizzle-orm";
+import { quotes, clients, users, notifications } from "@/lib/db/schema";
+import { and, count, eq, desc, isNull, isNotNull } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 import { getQuoteNetTotals } from "@/lib/db/quote-totals";
 import { startOfMonth, endOfMonth, format } from "date-fns";
@@ -18,7 +18,7 @@ export async function GET() {
   const monthStart = format(startOfMonth(now), "yyyy-MM-dd");
   const monthEnd = format(endOfMonth(now), "yyyy-MM-dd") + "T23:59:59";
 
-  const [rows, totals, clientRows] = await Promise.all([
+  const [rows, totals, clientRows, [trash], [unread]] = await Promise.all([
     db
       .select({
         id: quotes.id,
@@ -42,6 +42,11 @@ export async function GET() {
       .orderBy(desc(quotes.createdAt)),
     getQuoteNetTotals(),
     db.select({ id: clients.id, name: clients.name }).from(clients).orderBy(clients.name),
+    db.select({ value: count() }).from(quotes).where(isNotNull(quotes.deletedAt)),
+    db
+      .select({ value: count() })
+      .from(notifications)
+      .where(and(eq(notifications.userId, session.user.id), isNull(notifications.readAt))),
   ]);
 
   const quoteList = rows.map(({ publicToken, publicTokenExpiresAt, ...q }) => ({
@@ -52,7 +57,14 @@ export async function GET() {
   }));
 
   return NextResponse.json({
-    user: { id: session.user.id, name: session.user.name, role: session.user.role },
+    user: {
+      id: session.user.id,
+      name: session.user.name,
+      email: session.user.email,
+      role: session.user.role,
+    },
+    trashCount: session.user.role === "viewer" ? 0 : (trash?.value ?? 0),
+    unreadNotifications: unread?.value ?? 0,
     stats: {
       total: rows.length,
       acceptedThisMonth: rows.filter(
