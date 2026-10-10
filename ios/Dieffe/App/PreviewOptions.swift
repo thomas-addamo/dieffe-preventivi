@@ -21,6 +21,12 @@ enum PreviewOptions {
         defaults.string(forKey: "DieffePage")
     }
 
+    /// Apre un preventivo all'avvio: un id oppure "first" (il più recente).
+    static var startQuote: String? { defaults.string(forKey: "DieffeQuote") }
+
+    /// Nell'editor apre subito "summary" (riepilogo) o "chat" (assistente AI).
+    static var editorSheet: String? { defaults.string(forKey: "DieffeEditorSheet") }
+
     /// Mostra il login nativo anche con una sessione valida (solo per le schermate).
     static var showLogin: Bool {
         defaults.bool(forKey: "DieffeLogin")
@@ -44,6 +50,8 @@ enum PreviewOptions {
     static let showSettings = false
     static let showLogin = false
     static let startPage: String? = nil
+    static let startQuote: String? = nil
+    static let editorSheet: String? = nil
     static let sessionCookie: HTTPCookie? = nil
     #endif
 }

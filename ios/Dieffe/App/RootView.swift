@@ -80,6 +80,9 @@ struct RootView: View {
             await APIClient.shared.installPreviewSession()
             await model.home.load()
             if let unread = model.home.data?.unreadNotifications { await AppModel.setBadge(unread) }
+            if let start = PreviewOptions.startQuote, model.editor == nil {
+                if let id = start == "first" ? model.home.data?.quotes.first?.id : start { model.openQuote(id) }
+            }
         }
         .task {
             #if DEBUG

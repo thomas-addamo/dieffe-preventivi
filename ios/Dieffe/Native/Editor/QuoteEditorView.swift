@@ -15,6 +15,8 @@ struct QuoteEditorView: View {
     @State private var working = false
     @State private var reordering = false
     @State private var orderingSections = false
+    @State private var showSummary = false
+    @State private var showChat = false
 
     init(quoteID: String) {
         _editor = State(initialValue: QuoteEditorModel(quoteID: quoteID))
@@ -45,6 +47,11 @@ struct QuoteEditorView: View {
             editor.canEdit = model.canEdit
             editor.role = model.currentUser?.role ?? "viewer"
             await editor.load()
+            switch PreviewOptions.editorSheet {
+            case "summary": showSummary = true
+            case "chat": showChat = true
+            default: break
+            }
         }
         .onChange(of: model.canEdit) { _, value in editor.canEdit = value }
         .sheet(item: Binding(get: { editingItem.map(IDBox.init) }, set: { editingItem = $0?.id })) { box in
@@ -68,6 +75,12 @@ struct QuoteEditorView: View {
         }
         .sheet(isPresented: $orderingSections) {
             SectionsOrderView(editor: editor)
+        }
+        .sheet(isPresented: $showSummary) {
+            TotalsSummaryView(editor: editor)
+        }
+        .sheet(isPresented: $showChat) {
+            AIChatView(quote: editor.quote)
         }
         .confirmationDialog("Spostare il preventivo nel cestino?", isPresented: $confirmTrash, titleVisibility: .visible) {
             Button("Sposta nel cestino", role: .destructive) { trash() }
@@ -121,7 +134,21 @@ struct QuoteEditorView: View {
         .environment(\.editMode, .constant(reordering ? .active : .inactive))
         .refreshable { await editor.flush(); await editor.load() }
         .safeAreaInset(edge: .bottom) {
-            TotalBar(total: totals.total, taxable: totals.taxable, state: editor.saveState)
+            HStack(spacing: 10) {
+                TotalBar(total: totals.total, taxable: totals.taxable, state: editor.saveState) { showSummary = true }
+                if editor.canEdit {
+                    Button { showChat = true } label: {
+                        Image(systemName: "bubble.left.and.text.bubble.right.fill")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(width: 58, height: 58)
+                    }
+                    .glassEffect(.regular.tint(.purple).interactive(), in: Circle())
+                    .accessibilityLabel("Assistente AI")
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 4)
         }
         .navigationTitle(quote.code)
         .navigationSubtitle(quote.title)
@@ -574,28 +601,36 @@ private struct TotalBar: View {
     let total: Double
     let taxable: Double
     let state: QuoteEditorModel.SaveState
+    let open: () -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 1) {
-                Text("Totale IVA inclusa")
+        Button(action: open) {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 1) {
+                    HStack(spacing: 4) {
+                        Text("Totale IVA inclusa")
+                        Image(systemName: "chevron.up").fontWeight(.bold)
+                    }
                     .font(.caption2)
                     .foregroundStyle(.secondary)
-                Text(Format.currency(total))
-                    .font(.title3.weight(.bold))
-                    .monospacedDigit()
-                    .contentTransition(.numericText())
+                    Text(Format.currency(total))
+                        .font(.title3.weight(.bold))
+                        .monospacedDigit()
+                        .foregroundStyle(Color.primary)
+                        .contentTransition(.numericText())
+                }
+                Spacer()
+                saveLabel
+                    .font(.caption.weight(.medium))
             }
-            Spacer()
-            saveLabel
-                .font(.caption.weight(.medium))
+            .padding(.horizontal, 20)
+            .padding(.vertical, 10)
+            .contentShape(Capsule())
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 10)
-        .glassEffect(.regular, in: Capsule())
-        .padding(.horizontal, 16)
-        .padding(.bottom, 4)
+        .buttonStyle(.plain)
+        .glassEffect(.regular.interactive(), in: Capsule())
         .animation(.default, value: total)
+        .accessibilityHint("Apre il riepilogo dei totali")
     }
 
     @ViewBuilder
