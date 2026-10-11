@@ -147,7 +147,7 @@ struct HomeView: View {
         .contextMenu {
             Button("Apri", systemImage: "arrow.up.right.square") { model.openQuote(quote.id) }
             if model.canEdit {
-                Button("Sposta nel cestino", systemImage: "trash", role: .destructive) { pendingTrash = quote }
+                DestructiveButton("Sposta nel cestino", systemImage: "trash") { pendingTrash = quote }
             }
         }
     }
@@ -259,7 +259,7 @@ private struct ProfileMenu: View {
                 }
             }
             Section {
-                Button("Esci", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) {
+                DestructiveButton("Esci", systemImage: "rectangle.portrait.and.arrow.right") {
                     confirmLogout = true
                 }
             }

@@ -335,7 +335,7 @@ struct PriceItemDetail: View {
                         Text("Le voci disattivate non compaiono quando aggiungi voci a un preventivo. Quelle fissate non vengono unite né eliminate dal riordino automatico.")
                     }
                     Section {
-                        Button("Elimina voce", systemImage: "trash", role: .destructive) { confirmDelete = true }
+                        DestructiveButton("Elimina voce", systemImage: "trash") { confirmDelete = true }
                     }
                 }
             }

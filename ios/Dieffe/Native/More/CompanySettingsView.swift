@@ -73,7 +73,7 @@ struct CompanySettingsView: View {
                             Label(settings?.logoPath == nil ? "Carica logo" : "Cambia logo", systemImage: "photo")
                         }
                         if settings?.logoPath != nil {
-                            Button("Rimuovi logo", systemImage: "trash", role: .destructive) { confirmRemoveLogo = true }
+                            DestructiveButton("Rimuovi logo", systemImage: "trash") { confirmRemoveLogo = true }
                         }
                     }
                     .buttonStyle(.borderless)

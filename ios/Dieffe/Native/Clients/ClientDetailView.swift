@@ -93,7 +93,7 @@ struct ClientDetailView: View {
 
             if model.canEdit {
                 Section {
-                    Button("Elimina cliente", systemImage: "trash", role: .destructive) { confirmDelete = true }
+                    DestructiveButton("Elimina cliente", systemImage: "trash") { confirmDelete = true }
                 }
             }
         }

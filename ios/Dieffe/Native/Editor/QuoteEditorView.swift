@@ -246,7 +246,7 @@ struct QuoteEditorView: View {
                     if editor.isEditable {
                         Button("Modifica", systemImage: "pencil") { editingItem = item.id }
                         Button("Duplica", systemImage: "plus.square.on.square") { Task { await editor.duplicateItem(item.id) } }
-                        Button("Elimina", systemImage: "trash", role: .destructive) { Task { await editor.deleteItem(item.id) } }
+                        DestructiveButton("Elimina", systemImage: "trash") { Task { await editor.deleteItem(item.id) } }
                     }
                 }
             }
@@ -333,7 +333,7 @@ struct QuoteEditorView: View {
                     Section {
                         Button("Apri nel sito", systemImage: "safari") { openWeb() }
                         if editor.isEditable {
-                            Button("Sposta nel cestino", systemImage: "trash", role: .destructive) { confirmTrash = true }
+                            DestructiveButton("Sposta nel cestino", systemImage: "trash") { confirmTrash = true }
                         }
                     }
                 } label: {
@@ -502,7 +502,7 @@ private struct SectionHeader: View {
             if editable {
                 Menu {
                     Button("Modifica sezione", systemImage: "pencil", action: edit)
-                    Button("Elimina sezione", systemImage: "trash", role: .destructive, action: delete)
+                    DestructiveButton("Elimina sezione", systemImage: "trash", action: delete)
                 } label: {
                     Image(systemName: "ellipsis.circle")
                         .font(.body)

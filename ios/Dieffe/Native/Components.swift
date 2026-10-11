@@ -136,3 +136,35 @@ struct LoadingOrError: View {
         }
     }
 }
+
+/// Tasto di eliminazione o uscita con icona rossa come il testo: con il solo
+/// role .destructive iOS colora la scritta ma lascia l'icona del colore dell'app.
+/// Non per le azioni a scorrimento (lì lo sfondo è già rosso).
+struct DestructiveButton: View {
+    let title: String
+    let systemImage: String
+    let action: () -> Void
+
+    init(_ title: String, systemImage: String, action: @escaping () -> Void) {
+        self.title = title
+        self.systemImage = systemImage
+        self.action = action
+    }
+
+    var body: some View {
+        Button(role: .destructive, action: action) {
+            Label {
+                Text(title)
+            } icon: {
+                // Rosso incorporato nell'immagine: i menu di iOS ricolorano le
+                // icone con il colore dell'app e ignorano foregroundStyle.
+                if let red = UIImage(systemName: systemImage)?.withTintColor(.systemRed, renderingMode: .alwaysOriginal) {
+                    Image(uiImage: red)
+                } else {
+                    Image(systemName: systemImage).foregroundStyle(.red)
+                }
+            }
+            .foregroundStyle(.red)
+        }
+    }
+}

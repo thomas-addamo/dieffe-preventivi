@@ -53,7 +53,7 @@ struct PublicLinkView: View {
                         }
                         Button("Copia link", systemImage: "link") { UIPasteboard.general.url = url }
                         if editor.canEdit {
-                            Button("Revoca link", systemImage: "xmark.circle", role: .destructive) { confirmRevoke = true }
+                            DestructiveButton("Revoca link", systemImage: "xmark.circle") { confirmRevoke = true }
                         }
                     }
                 } else {

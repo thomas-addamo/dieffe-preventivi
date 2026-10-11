@@ -32,7 +32,7 @@ struct TrashView: View {
                                 .contextMenu {
                                     Button("Ripristina", systemImage: "arrow.uturn.backward") { restore(item) }
                                     if isAdmin {
-                                        Button("Elimina definitivamente", systemImage: "trash.slash", role: .destructive) {
+                                        DestructiveButton("Elimina definitivamente", systemImage: "trash.slash") {
                                             pendingDelete = item
                                         }
                                     }

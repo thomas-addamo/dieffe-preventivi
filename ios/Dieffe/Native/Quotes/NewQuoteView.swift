@@ -44,7 +44,7 @@ struct NewQuoteView: View {
                         }
                     }
                     if client != nil {
-                        Button("Nessun cliente", systemImage: "xmark.circle", role: .destructive) { client = nil }
+                        DestructiveButton("Nessun cliente", systemImage: "xmark.circle") { client = nil }
                     }
                 }
 

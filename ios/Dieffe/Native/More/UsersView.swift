@@ -159,7 +159,7 @@ struct UserDetailView: View {
             }
             if !isMe {
                 Section {
-                    Button("Elimina utente", systemImage: "trash", role: .destructive) { confirmDelete = true }
+                    DestructiveButton("Elimina utente", systemImage: "trash") { confirmDelete = true }
                 }
             }
         }

@@ -46,7 +46,7 @@ struct ItemEditView: View {
                     photoSection(item)
                     if editable {
                         Section {
-                            Button("Elimina voce", systemImage: "trash", role: .destructive) { confirmDelete = true }
+                            DestructiveButton("Elimina voce", systemImage: "trash") { confirmDelete = true }
                         }
                     }
                 } else {
@@ -322,7 +322,7 @@ struct ItemEditView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                             .contextMenu {
                                 if editable {
-                                    Button("Elimina foto", systemImage: "trash", role: .destructive) {
+                                    DestructiveButton("Elimina foto", systemImage: "trash") {
                                         Task { await editor.deleteImage(image.id, from: itemID) }
                                     }
                                 }
