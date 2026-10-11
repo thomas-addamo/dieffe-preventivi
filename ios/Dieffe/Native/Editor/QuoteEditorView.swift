@@ -17,6 +17,7 @@ struct QuoteEditorView: View {
     @State private var orderingSections = false
     @State private var showSummary = false
     @State private var showChat = false
+    @State private var showSignature = false
 
     init(quoteID: String) {
         _editor = State(initialValue: QuoteEditorModel(quoteID: quoteID))
@@ -50,6 +51,7 @@ struct QuoteEditorView: View {
             switch PreviewOptions.editorSheet {
             case "summary": showSummary = true
             case "chat": showChat = true
+            case "signature": showSignature = editor.quote?.signature != nil
             default: break
             }
         }
@@ -82,6 +84,11 @@ struct QuoteEditorView: View {
         .sheet(isPresented: $showChat) {
             AIChatView(quote: editor.quote)
         }
+        .sheet(isPresented: $showSignature) {
+            if let signature = editor.quote?.signature {
+                SignatureDetailView(editor: editor, signature: signature)
+            }
+        }
         .confirmationDialog("Spostare il preventivo nel cestino?", isPresented: $confirmTrash, titleVisibility: .visible) {
             Button("Sposta nel cestino", role: .destructive) { trash() }
         } message: {
@@ -113,7 +120,7 @@ struct QuoteEditorView: View {
                 .tint(.primary)
             }
 
-            SignatureSection(editor: editor, quote: quote)
+            SignatureSection(quote: quote) { showSignature = true }
 
             ForEach(quote.sections) { section in
                 sectionView(section)

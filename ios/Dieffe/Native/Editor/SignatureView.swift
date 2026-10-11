@@ -3,25 +3,22 @@ import SwiftUI
 /// "Firma del cliente" nell'editor (come SignatureSection in
 /// src/components/quote-editor/QuoteEditor.tsx): firma disegnata dal cliente
 /// sul link pubblico, oppure il suo rifiuto. Il tocco apre i dettagli.
+/// La scheda dei dettagli la presenta QuoteEditorView: un .sheet dentro una
+/// riga della List si chiuderebbe da solo quando l'editor si aggiorna.
 struct SignatureSection: View {
-    let editor: QuoteEditorModel
     let quote: QuoteDetail
-    @State private var showDetail = false
+    let open: () -> Void
 
     var body: some View {
         if let signature = quote.signature {
             Section {
-                Button { showDetail = true } label: {
+                Button(action: open) {
                     SignatureSummary(signature: signature)
                 }
                 .tint(.primary)
             } header: {
                 Text(signature.accepted ? "Firma del cliente" : "Risposta del cliente")
             }
-            .sheet(isPresented: $showDetail) {
-                SignatureDetailView(editor: editor, signature: signature)
-            }
-            .task { if PreviewOptions.editorSheet == "signature" { showDetail = true } }
         } else if quote.status == .accepted {
             Section("Firma del cliente") {
                 Label("Accettato senza firma digitale: lo stato è stato impostato a mano.", systemImage: "signature")
@@ -139,10 +136,10 @@ struct SignatureDetailView: View {
                             HStack {
                                 Label(signature.accepted ? "Annulla accettazione" : "Annulla rifiuto",
                                       systemImage: "arrow.uturn.backward")
+                                    .foregroundStyle(.red)
                                 if revoking { Spacer(); ProgressView() }
                             }
                         }
-                        .tint(.red)
                         .disabled(revoking)
                     } footer: {
                         Text("Il preventivo torna «Inviato» e il link per il cliente viene disattivato.")
