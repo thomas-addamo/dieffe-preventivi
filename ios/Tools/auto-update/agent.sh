@@ -64,7 +64,8 @@ REMOTE="$(git -C "$REPO" rev-parse "origin/$BRANCH")"
 # Lo script stesso si aggiorna dal repository (vale dal giro successivo).
 NEW_AGENT="$(git -C "$REPO" show "$REMOTE:ios/Tools/auto-update/agent.sh" 2>/dev/null)"
 if [[ -n "$NEW_AGENT" && "$NEW_AGENT" != "$(cat "$BASE/agent.sh")" ]]; then
-  print -r -- "$NEW_AGENT" > "$BASE/agent.sh"
+  # Nuovo file e poi mv: zsh sta ancora leggendo quello in esecuzione.
+  print -r -- "$NEW_AGENT" > "$BASE/agent.sh.new" && chmod +x "$BASE/agent.sh.new" && mv -f "$BASE/agent.sh.new" "$BASE/agent.sh"
   log "Script del servizio aggiornato"
 fi
 
