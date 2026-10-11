@@ -46,7 +46,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         icon: "layout",
         title: "Tasto ＋ separato",
-        description: "Nell'app iPhone il tasto per un nuovo preventivo ha il suo pulsante, a parte rispetto alle sezioni.",
+        description: "Nell'app iPhone il nuovo preventivo ha un tastino rotondo a parte, in basso a sinistra sopra la barra.",
       },
       {
         icon: "sparkles",

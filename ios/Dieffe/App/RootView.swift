@@ -2,7 +2,7 @@ import QuickLook
 import SwiftUI
 import WebKit
 
-/// Barra in basso (Liquid Glass): Home, Clienti, Listino, Altro e, a parte, il tasto ＋.
+/// Tab bar nativa (Liquid Glass): Home, Clienti, Listino, Altro; il ＋ è un tastino a parte.
 /// L'editor dei preventivi si apre a tutto schermo; il Profilo in un foglio.
 struct RootView: View {
     @Environment(AppModel.self) private var model
@@ -11,20 +11,27 @@ struct RootView: View {
     var body: some View {
         @Bindable var model = model
 
-        // Barra Liquid Glass fatta in casa: con la tab bar di sistema il ＋
-        // resterebbe nella stessa capsula delle sezioni (iOS 27).
-        ZStack {
-            ForEach(AppTab.sections) { tab in
-                section(tab)
-                    .opacity(model.selectedTab == tab ? 1 : 0)
-                    .allowsHitTesting(model.selectedTab == tab)
-                    .accessibilityHidden(model.selectedTab != tab)
+        TabView(selection: Binding(get: { model.selectedTab }, set: { model.select($0) })) {
+            Tab(AppTab.home.title, systemImage: AppTab.home.symbol, value: AppTab.home) {
+                HomeView()
             }
+            Tab(AppTab.clienti.title, systemImage: AppTab.clienti.symbol, value: AppTab.clienti) {
+                ClientsView()
+            }
+            Tab(AppTab.listino.title, systemImage: AppTab.listino.symbol, value: AppTab.listino) {
+                PriceListHome()
+            }
+            Tab(AppTab.altro.title, systemImage: AppTab.altro.symbol, value: AppTab.altro) {
+                AltroView()
+            }
+            .badge(model.home.data?.trashCount.flatMap { $0 > 0 && model.canEdit ? $0 : nil } ?? 0)
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            AppTabBar()
+        // Barra sempre intera (niente rimpicciolimento scorrendo), così il ＋ resta
+        // allineato al suo bordo sinistro. A parte perché la tab bar di iOS 27
+        // lo terrebbe nella stessa capsula delle sezioni.
+        .overlay(alignment: .bottomLeading) {
+            NewQuoteButton()
         }
-        .ignoresSafeArea(.keyboard, edges: .bottom)
         .sheet(isPresented: $model.showNewQuote, onDismiss: model.openPendingQuote) {
             NewQuoteView()
         }
@@ -110,95 +117,24 @@ struct RootView: View {
     }
 }
 
-extension RootView {
-    @ViewBuilder
-    private func section(_ tab: AppTab) -> some View {
-        switch tab {
-        case .home: HomeView()
-        case .clienti: ClientsView()
-        case .listino: PriceListHome()
-        case .altro, .nuovo: AltroView()
-        }
-    }
-}
-
-/// Le quattro sezioni in una capsula di vetro e il ＋ in un cerchio separato.
-private struct AppTabBar: View {
+/// Tastino ＋ (nuovo preventivo) nell'angolo in basso a sinistra, sopra la tab bar.
+private struct NewQuoteButton: View {
     @Environment(AppModel.self) private var model
-    @Namespace private var selection
 
     var body: some View {
-        GlassEffectContainer(spacing: 14) {
-            HStack(spacing: 14) {
-                HStack(spacing: 0) {
-                    ForEach(AppTab.sections) { tab in
-                        button(tab)
-                    }
-                }
-                .padding(4)
-                .glassEffect(.regular.interactive(), in: .capsule)
-
-                Button { model.select(.nuovo) } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 24, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(width: 62, height: 62)
-                        .contentShape(.circle)
-                }
-                .buttonStyle(.plain)
-                .glassEffect(.regular.tint(.accentColor).interactive(), in: .circle)
-                .accessibilityLabel("Nuovo preventivo")
-            }
-        }
-        .padding(.horizontal, 20)
-        // Stessa altezza della tab bar di sistema: dentro la zona dell'indicatore Home.
-        .padding(.bottom, -16)
-    }
-
-    private func button(_ tab: AppTab) -> some View {
-        let selected = model.selectedTab == tab
-        return Button {
-            withAnimation(.snappy(duration: 0.3)) { model.select(tab) }
-        } label: {
-            VStack(spacing: 2) {
-                Image(systemName: tab.symbol)
-                    .symbolVariant(selected ? .fill : .none)
-                    .font(.system(size: 19, weight: .medium))
-                    .frame(height: 26)
-                    .overlay(alignment: .topTrailing) {
-                        if tab == .altro, badge > 0 {
-                            Text("\(badge)")
-                                .font(.caption2.weight(.bold))
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 5)
-                                .frame(minWidth: 17, minHeight: 17)
-                                .background(.red, in: .capsule)
-                                .offset(x: 10, y: -4)
-                        }
-                    }
-                Text(tab.title)
-                    .font(.system(size: 10, weight: .semibold))
-            }
-            .foregroundStyle(selected ? Color.accentColor : Color.primary)
-            .frame(maxWidth: .infinity)
-            .frame(height: 54)
-            .background {
-                if selected {
-                    Capsule()
-                        .fill(Color.primary.opacity(0.08))
-                        .matchedGeometryEffect(id: "selected", in: selection)
-                }
-            }
-            .contentShape(.capsule)
+        Button { model.select(.nuovo) } label: {
+            Image(systemName: "plus")
+                .font(.system(size: 19, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 48, height: 48)
+                .contentShape(.circle)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(tab.title)
-        .accessibilityAddTraits(selected ? .isSelected : [])
-    }
-
-    private var badge: Int {
-        guard model.canEdit else { return 0 }
-        return model.home.data?.trashCount ?? 0
+        .glassEffect(.regular.tint(.accentColor).interactive(), in: .circle)
+        .accessibilityLabel("Nuovo preventivo")
+        .padding(.leading, 20)
+        .padding(.bottom, 60)
+        .ignoresSafeArea(.keyboard)
     }
 }
 
