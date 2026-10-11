@@ -45,8 +45,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       },
       {
         icon: "layout",
-        title: "Tasto ＋ separato",
-        description: "Nell'app iPhone il nuovo preventivo ha un tastino rotondo a parte, in basso a sinistra sopra la barra.",
+        title: "Barra in alto più ordinata",
+        description: "Nella Home dell'app iPhone il ＋ blu per un nuovo preventivo è a parte, e il profilo è un tasto rotondo come gli altri.",
       },
       {
         icon: "sparkles",

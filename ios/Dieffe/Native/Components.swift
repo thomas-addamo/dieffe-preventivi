@@ -97,7 +97,9 @@ struct InitialsAvatar: View {
     let name: String
     var size: CGFloat = 40
 
-    private var initials: String {
+    private var initials: String { Self.initials(of: name) }
+
+    static func initials(of name: String) -> String {
         let value = name.split(separator: " ").prefix(2)
             .compactMap { $0.first.map { String($0).uppercased() } }.joined()
         return value.isEmpty ? "?" : value

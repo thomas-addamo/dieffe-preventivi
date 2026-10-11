@@ -199,15 +199,13 @@ struct HomeView: View {
             }
         }
         if model.canEdit {
+            // Il ＋ in un cerchio blu, staccato da campanella e filtri.
+            ToolbarSpacer(.fixed, placement: .topBarTrailing)
             ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Button("Nuovo preventivo", systemImage: "doc.badge.plus") { model.newQuote() }
-                    Button("Importa da file", systemImage: "doc.viewfinder") { model.showImport = true }
-                } label: {
-                    Label("Nuovo", systemImage: "plus")
-                } primaryAction: {
-                    model.newQuote()
-                }
+                // L'importazione da file è dentro "Nuovo preventivo".
+                Button("Nuovo preventivo", systemImage: "plus") { model.newQuote() }
+                    .buttonStyle(.glassProminent)
+                    .tint(.accentColor)
             }
         }
     }
@@ -266,9 +264,19 @@ private struct ProfileMenu: View {
                 }
             }
         } label: {
-            InitialsAvatar(name: model.currentUser?.name ?? "", size: 32)
+            // L'iniziale come simbolo di iOS: il tasto resta rotondo e di sistema come
+            // gli altri (stessa misura, allineamento e animazione del menu).
+            Label("Profilo", systemImage: Self.symbol(for: model.currentUser?.name ?? ""))
+                .labelStyle(.iconOnly)
         }
         .accessibilityLabel("Profilo")
+    }
+
+    /// "a.circle" per Admin (blu come campanella e filtri); senza lettera latina, la sagoma di persona.
+    static func symbol(for name: String) -> String {
+        guard let letter = name.trimmingCharacters(in: .whitespaces).first?.lowercased(),
+              letter.count == 1, ("a"..."z").contains(letter) else { return "person.crop.circle" }
+        return "\(letter).circle"
     }
 }
 

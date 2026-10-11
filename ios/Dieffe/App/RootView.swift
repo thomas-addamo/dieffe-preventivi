@@ -2,7 +2,8 @@ import QuickLook
 import SwiftUI
 import WebKit
 
-/// Tab bar nativa (Liquid Glass): Home, Clienti, Listino, Altro; il ＋ è un tastino a parte.
+/// Tab bar nativa (Liquid Glass): Home, Clienti, Listino, Altro. Il nuovo
+/// preventivo si crea dal ＋ blu in alto nella Home.
 /// L'editor dei preventivi si apre a tutto schermo; il Profilo in un foglio.
 struct RootView: View {
     @Environment(AppModel.self) private var model
@@ -26,12 +27,7 @@ struct RootView: View {
             }
             .badge(model.home.data?.trashCount.flatMap { $0 > 0 && model.canEdit ? $0 : nil } ?? 0)
         }
-        // Barra sempre intera (niente rimpicciolimento scorrendo), così il ＋ resta
-        // allineato al suo bordo sinistro. A parte perché la tab bar di iOS 27
-        // lo terrebbe nella stessa capsula delle sezioni.
-        .overlay(alignment: .bottomLeading) {
-            NewQuoteButton()
-        }
+        .tabBarMinimizeBehavior(.onScrollDown)
         .sheet(isPresented: $model.showNewQuote, onDismiss: model.openPendingQuote) {
             NewQuoteView()
         }
@@ -114,27 +110,6 @@ struct RootView: View {
             if SelfTest.notificationTestRequested { await SelfTest.runNotificationTest(app: model) }
             #endif
         }
-    }
-}
-
-/// Tastino ＋ (nuovo preventivo) nell'angolo in basso a sinistra, sopra la tab bar.
-private struct NewQuoteButton: View {
-    @Environment(AppModel.self) private var model
-
-    var body: some View {
-        Button { model.select(.nuovo) } label: {
-            Image(systemName: "plus")
-                .font(.system(size: 19, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(width: 48, height: 48)
-                .contentShape(.circle)
-        }
-        .buttonStyle(.plain)
-        .glassEffect(.regular.tint(.accentColor).interactive(), in: .circle)
-        .accessibilityLabel("Nuovo preventivo")
-        .padding(.leading, 20)
-        .padding(.bottom, 60)
-        .ignoresSafeArea(.keyboard)
     }
 }
 
