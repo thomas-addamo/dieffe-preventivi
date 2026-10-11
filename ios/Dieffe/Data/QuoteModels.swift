@@ -24,6 +24,8 @@ struct QuoteDetail: Codable, Identifiable, Equatable {
     var publicTokenExpiresAt: String?
     let author: Party?
     var sections: [QuoteSection]
+    /// Firma o rifiuto del cliente dal link pubblico (tabella quote_signatures).
+    var signature: QuoteSignature?
 
     var isExtra: Bool { kind == "extra" }
 
@@ -48,6 +50,27 @@ struct QuoteDetail: Codable, Identifiable, Equatable {
     }
 
     var totals: QuoteTotals { QuoteTotals(self) }
+}
+
+struct QuoteSignature: Codable, Equatable {
+    let signerName: String
+    let signerEmail: String?
+    let signatureDataUrl: String?
+    let ipAddress: String?
+    let ipConsent: Bool?
+    let privacyConsent: Bool?
+    let signedAt: String?
+    let action: String
+
+    var accepted: Bool { action == "accepted" }
+    var date: Date? { signedAt.flatMap(QuoteDetail.parseDate) }
+
+    /// Il disegno della firma: "data:image/png;base64,…".
+    var imageData: Data? {
+        guard accepted, let url = signatureDataUrl, let comma = url.firstIndex(of: ","),
+              url[..<comma].hasSuffix(";base64") else { return nil }
+        return Data(base64Encoded: String(url[url.index(after: comma)...]), options: .ignoreUnknownCharacters)
+    }
 }
 
 enum DiscountType: String, Codable, CaseIterable, Identifiable {

@@ -34,6 +34,28 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.18.2",
+    date: "2026-10-11",
+    headline: "Ritocchi all'app per iPhone.",
+    highlights: [
+      {
+        icon: "shield",
+        title: "Firma del cliente sull'iPhone",
+        description: "Nei preventivi accettati si vedono la firma disegnata dal cliente, data, email e consensi; l'admin può annullare l'accettazione.",
+      },
+      {
+        icon: "layout",
+        title: "Tasto ＋ separato",
+        description: "Nell'app iPhone il tasto per un nuovo preventivo ha il suo pulsante, a parte rispetto alle sezioni.",
+      },
+      {
+        icon: "sparkles",
+        title: "Nuova pagina di accesso",
+        description: "Più ordinata e leggera, con la password visibile a richiesta.",
+      },
+    ],
+  },
+  {
     version: "3.18.1",
     date: "2026-10-07",
     headline: "Tutto a portata di menu, su Mac e Windows.",

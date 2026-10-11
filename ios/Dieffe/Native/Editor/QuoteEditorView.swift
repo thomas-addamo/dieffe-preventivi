@@ -113,6 +113,8 @@ struct QuoteEditorView: View {
                 .tint(.primary)
             }
 
+            SignatureSection(editor: editor, quote: quote)
+
             ForEach(quote.sections) { section in
                 sectionView(section)
             }

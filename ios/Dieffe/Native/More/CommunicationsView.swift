@@ -59,7 +59,7 @@ struct CommunicationsView: View {
             }
         }
         .navigationTitle("Comunicazioni")
-        .searchable(text: $search, prompt: "Oggetto, protocollo, destinatario")
+        .searchable(text: $search, placement: .navigationBarDrawer, prompt: "Oggetto, protocollo, destinatario")
         .refreshable { await load() }
         .task { await load() }
         .toolbar {

@@ -195,5 +195,8 @@ usa le **notifiche locali**: dal *Profilo › Notifiche su questo iPhone*.
   creazione e salvataggi di preventivo, sezioni, voci, foto, link, extra,
   blocco, clienti e listino, poi elimina tutto. Risultato in
   `Documents/selftest.log` del contenitore dell'app.
+  `-DieffeSignatureTest YES` prova la firma del cliente senza toccare il
+  server (una firma vera manderebbe email): lettura, disegno vuoto, rifiuto,
+  e apertura dei preventivi accettati o rifiutati.
 - **Controllo automatico:** GitHub Actions (*Build app iPhone*) compila l'app
   senza firma a ogni modifica della cartella `ios/`.

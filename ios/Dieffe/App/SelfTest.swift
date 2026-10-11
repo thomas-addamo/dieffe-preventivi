@@ -24,6 +24,52 @@ enum SelfTest {
         write()
     }
 
+    static var signatureTestRequested: Bool { UserDefaults.standard.bool(forKey: "DieffeSignatureTest") }
+
+    /// -DieffeSignatureTest YES: firma del cliente, senza modificare nulla sul
+    /// server (una firma vera manderebbe email al cliente e all'azienda).
+    static func runSignatureTest(app: AppModel) async {
+        log = []
+        failures = 0
+        func signature(_ dataURL: String, action: String = "accepted") -> QuoteSignature? {
+            let json: [String: Any] = ["signerName": "Mario Rossi", "signerEmail": "mario@example.com",
+                                       "signatureDataUrl": dataURL, "ipAddress": "1.2.3.4", "ipConsent": true,
+                                       "privacyConsent": false, "signedAt": "2026-10-02T09:46:00.000Z", "action": action]
+            return (try? JSONSerialization.data(withJSONObject: json)).flatMap { try? JSONDecoder().decode(QuoteSignature.self, from: $0) }
+        }
+        func png(drawing: Bool) -> String {
+            let image = UIGraphicsImageRenderer(size: CGSize(width: 300, height: 120)).image { context in
+                guard drawing else { return }
+                UIColor(white: 0.1, alpha: 1).setStroke()
+                let path = UIBezierPath()
+                path.move(to: CGPoint(x: 20, y: 80)); path.addCurve(to: CGPoint(x: 280, y: 60), controlPoint1: CGPoint(x: 90, y: 0), controlPoint2: CGPoint(x: 200, y: 120))
+                path.lineWidth = 3
+                path.stroke()
+                _ = context
+            }
+            return "data:image/png;base64," + (image.pngData() ?? Data()).base64EncodedString()
+        }
+        let drawn = signature(png(drawing: true))
+        check(drawn != nil, "firma: lettura dal JSON del server")
+        check(drawn?.uiImage != nil, "firma disegnata: immagine mostrata")
+        check(drawn?.date != nil, "firma: data e ora lette")
+        check(signature(png(drawing: false))?.uiImage == nil, "riquadro lasciato vuoto: niente immagine")
+        check(signature("")?.uiImage == nil, "firma assente: niente immagine")
+        check(signature(png(drawing: true), action: "rejected")?.uiImage == nil, "rifiuto: nessuna firma mostrata")
+        check(signature("data:image/png;base64,@@@")?.uiImage == nil, "dati non validi: niente immagine")
+
+        // Preventivi veri: ogni accettato/rifiutato in archivio si apre e la firma si legge.
+        await app.home.load()
+        let closed = (app.home.data?.quotes ?? []).filter { $0.status == .accepted || $0.status == .rejected }
+        for summary in closed.prefix(5) {
+            if let quote: QuoteDetail = await step("\(summary.code): apertura", { try await APIClient.shared.get("/api/quotes/\(summary.id)") }) {
+                note("     \(summary.code): " + (quote.signature.map { "\($0.action), \($0.signerName), disegno \($0.uiImage != nil ? "sì" : "no")" } ?? "senza firma"))
+            }
+        }
+        note(failures == 0 ? "RISULTATO: tutto OK" : "RISULTATO: \(failures) errori")
+        write()
+    }
+
     static var notificationTestRequested: Bool { UserDefaults.standard.bool(forKey: "DieffeNotificationTest") }
 
     /// -DieffeNotificationTest YES: attiva le notifiche locali, manda a se

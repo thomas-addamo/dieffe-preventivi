@@ -27,7 +27,7 @@ struct HomeView: View {
             .navigationTitle("Preventivi")
             .navigationSubtitle(greeting)
             .toolbar { toolbar }
-            .searchable(text: $search, prompt: "Titolo, codice o cliente")
+            .searchable(text: $search, placement: .navigationBarDrawer, prompt: "Titolo, codice o cliente")
             .refreshable { await store.load() }
         }
         .confirmationDialog(

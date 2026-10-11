@@ -82,7 +82,7 @@ struct ExtrasView: View {
             }
         }
         .navigationTitle("Lavori extra")
-        .searchable(text: $search, prompt: "Preventivo, codice o cliente")
+        .searchable(text: $search, placement: .navigationBarDrawer, prompt: "Preventivo, codice o cliente")
         .refreshable { await model.home.load() }
         .toolbar {
             if model.canEdit {

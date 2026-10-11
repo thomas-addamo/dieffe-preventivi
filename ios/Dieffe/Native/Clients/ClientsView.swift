@@ -41,7 +41,7 @@ struct ClientsView: View {
                     }
                 }
             }
-            .searchable(text: $search, prompt: "Nome, email, telefono, P.IVA")
+            .searchable(text: $search, placement: .navigationBarDrawer, prompt: "Nome, email, telefono, P.IVA")
             .refreshable { await store.load() }
         }
         .task(id: model.dataVersion) { await store.load() }

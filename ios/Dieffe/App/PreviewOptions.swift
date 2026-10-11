@@ -21,10 +21,10 @@ enum PreviewOptions {
         defaults.string(forKey: "DieffePage")
     }
 
-    /// Apre un preventivo all'avvio: un id oppure "first" (il più recente).
+    /// Apre un preventivo all'avvio: un id, un codice (PREV-2026-031) oppure "first" (il più recente).
     static var startQuote: String? { defaults.string(forKey: "DieffeQuote") }
 
-    /// Nell'editor apre subito "summary" (riepilogo) o "chat" (assistente AI).
+    /// Nell'editor apre subito "summary" (riepilogo), "chat" (assistente AI) o "signature" (firma).
     static var editorSheet: String? { defaults.string(forKey: "DieffeEditorSheet") }
 
     /// Mostra il login nativo anche con una sessione valida (solo per le schermate).

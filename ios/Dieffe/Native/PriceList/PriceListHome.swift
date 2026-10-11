@@ -39,7 +39,7 @@ struct PriceListHome: View {
                 }
             }
             .navigationTitle("Listino")
-            .searchable(text: $search, prompt: "Cerca in tutto il listino")
+            .searchable(text: $search, placement: .navigationBarDrawer, prompt: "Cerca in tutto il listino")
             .refreshable { await store.load() }
             .toolbar {
                 if model.canEdit {
@@ -230,7 +230,7 @@ struct PriceCategoryView: View {
             }
             .navigationTitle(category)
             .navigationBarTitleDisplayMode(.inline)
-            .searchable(text: $search, prompt: "Cerca in \(category)")
+            .searchable(text: $search, placement: .navigationBarDrawer, prompt: "Cerca in \(category)")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Menu {

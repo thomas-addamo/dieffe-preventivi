@@ -227,6 +227,23 @@ final class QuoteEditorModel {
         }
     }
 
+    /// Annulla firma o rifiuto del cliente (solo admin): il preventivo torna
+    /// "Inviato" e il link pubblico viene disattivato, come nel sito.
+    func revokeSignature() async -> Bool {
+        guard role == "admin" else { return false }
+        do {
+            try await api.delete("/api/quotes/\(quoteID)/signature")
+            quote?.signature = nil
+            quote?.status = .sent
+            quote?.publicToken = nil
+            quote?.publicTokenExpiresAt = nil
+            return true
+        } catch {
+            fail(error)
+            return false
+        }
+    }
+
     func setLocked(_ locked: Bool) async {
         guard role == "admin" else { return }
         do {
