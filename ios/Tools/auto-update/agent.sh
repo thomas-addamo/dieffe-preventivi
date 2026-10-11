@@ -118,7 +118,10 @@ for DEVICE in $DEVICES; do
     notify "$NAME: attiva la Modalità sviluppatore per ricevere Dieffe."
     continue
   fi
-  if ! print -r -- "$INFO" | grep -q "Pairing State: paired" || print -r -- "$INFO" | grep -qi "error"; then
+  # "unavailable" nell'elenco: associato ma non raggiungibile ora (Wi‑Fi o iPhone in standby).
+  LISTED="$(xcrun devicectl list devices 2>/dev/null | grep -F "$DEVICE")"
+  if ! print -r -- "$INFO" | grep -q "Pairing State: paired" || print -r -- "$INFO" | grep -qi "error" \
+     || print -r -- "$LISTED" | grep -q "unavailable"; then
     log "$NAME non raggiungibile (aggiornamento=$NEED_UPDATE rinnovo=$NEED_RENEW): riprovo più tardi"
     if (( NEED_RENEW && EXPIRES > 0 && EXPIRES - NOW < 86400 )); then
       notify "$NAME: la firma scade entro un giorno. Tienilo sulla stessa Wi‑Fi del Mac o collegalo."
