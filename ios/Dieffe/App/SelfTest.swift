@@ -112,8 +112,13 @@ enum SelfTest {
         let saved = WhatsNew.seenVersion
         let current = AppConfig.version
         WhatsNew.seenVersion = nil
-        check(await WhatsNew.pending() == nil, "primo avvio: nessuna schermata")
-        check(WhatsNew.seenVersion == current, "primo avvio: si parte dalla versione installata (\(current))")
+        let first = await WhatsNew.pending()
+        note("     nessuna versione salvata: " + (first.map { "mostra \($0.version)" } ?? "nessuna novità importante"))
+        if let first {
+            check(first.highlights.count > 0, "nessuna versione salvata: mostra l'ultima novità importante (\(first.version))")
+            WhatsNew.markSeen()
+        }
+        check(WhatsNew.seenVersion == current, "poi la versione risulta vista (\(current))")
         check(await WhatsNew.pending() == nil, "stessa versione: nessuna schermata")
         WhatsNew.seenVersion = "0.0.1"
         let afterUpdate = await WhatsNew.pending()

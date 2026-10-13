@@ -34,13 +34,19 @@ struct WhatsNewEntry: Decodable, Identifiable, Equatable {
 }
 
 /// Quando mostrare le "Novità": solo per gli aggiornamenti importanti (decide
-/// il sito, `important` nel changelog) e una volta sola. Al primo avvio non si
-/// mostra niente: si parte dalla versione installata.
+/// il sito, `important` nel changelog) e una volta sola, anche se l'app è
+/// passata da una versione che non teneva traccia delle novità viste.
 enum WhatsNew {
-    private static let seenKey = "whatsNewSeenVersion"
+    // Le build 108-110 salvavano qui la versione installata anche senza aver
+    // mostrato nulla: quel valore si ignora (chiave nuova).
+    private static let seenKey = "whatsNewLastSeen"
+    private static let oldKey = "whatsNewSeenVersion"
 
     static var seenVersion: String? {
-        get { UserDefaults.standard.string(forKey: seenKey) }
+        get {
+            UserDefaults.standard.removeObject(forKey: oldKey)
+            return UserDefaults.standard.string(forKey: seenKey)
+        }
         set { UserDefaults.standard.set(newValue, forKey: seenKey) }
     }
 
@@ -52,13 +58,16 @@ enum WhatsNew {
             return await fetch("/api/app/whats-new?preview=\(preview)")
         }
         #endif
-        guard let seen = seenVersion else {
-            seenVersion = current
-            return nil
-        }
+        // Nessuna versione salvata (prima installazione, o aggiornamento da una
+        // versione che non la salvava): come il sito, mostra una volta l'ultima
+        // novità importante.
+        let seen = seenVersion
         guard seen != current else { return nil }
-        let query = "version=\(current)&seen=\(seen)".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        guard let entry = await fetch("/api/app/whats-new?\(query)") else {
+        let query = (seen.map { "version=\(current)&seen=\($0)" } ?? "version=\(current)")
+            .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        // Sito non raggiungibile: si riprova alla prossima apertura.
+        guard let response: Response = try? await APIClient.shared.get("/api/app/whats-new?\(query)") else { return nil }
+        guard let entry = response.entry else {
             // Nessuna novità importante: questa versione è già "vista".
             seenVersion = current
             return nil
