@@ -89,7 +89,8 @@ remove_profiles() {
     [[ -d "$dir" ]] || continue
     for f in "$dir"/*.mobileprovision(N); do
       appid="$(security cms -D -i "$f" 2>/dev/null | plutil -extract Entitlements.application-identifier raw -o - - 2>/dev/null)"
-      [[ "$appid" == *".$BUNDLE_ID" ]] && rm -f "$f" && log "Profilo vecchio rimosso: ${f:t}"
+      # L'app e la sua estensione (Dynamic Island): $BUNDLE_ID.widgets.
+      [[ "$appid" == *".$BUNDLE_ID" || "$appid" == *".$BUNDLE_ID".* ]] && rm -f "$f" && log "Profilo vecchio rimosso: ${f:t}"
     done
   done
   RENEWED=1

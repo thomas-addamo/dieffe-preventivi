@@ -18,7 +18,7 @@ settings:
     SWIFT_VERSION: "5.0"
     # La versione vera arriva da src/lib/version.ts (fonte unica per sito,
     # app desktop e iPhone): la imposta lo script "Versione" a ogni build.
-    MARKETING_VERSION: "3.18.3"
+    MARKETING_VERSION: "3.19.0"
     CURRENT_PROJECT_VERSION: "1"
 targets:
   Dieffe:
@@ -26,6 +26,11 @@ targets:
     platform: iOS
     sources:
       - path: Dieffe
+      - path: Shared
+    dependencies:
+      # Dynamic Island e schermata di blocco (attività in tempo reale).
+      - target: DieffeWidgets
+        embed: true
     postCompileScripts:
       - name: Versione da src/lib/version.ts
         basedOnDependencyAnalysis: false
@@ -72,6 +77,8 @@ targets:
         ITSAppUsesNonExemptEncryption: false
         CFBundleDevelopmentRegion: it
         CFBundleLocalizations: [it]
+        # Attività in tempo reale: Dynamic Island e schermata di blocco.
+        NSSupportsLiveActivities: true
         # Notifiche locali in background (niente push Apple con l'Apple ID gratuito).
         UIBackgroundModes: [fetch]
         BGTaskSchedulerPermittedIdentifiers: [it.dieffe.preventivi.refresh]
@@ -79,3 +86,44 @@ targets:
         CFBundleURLTypes:
           - CFBundleURLName: it.dieffe.preventivi
             CFBundleURLSchemes: [dieffe]
+
+  # Estensione per le attività in tempo reale (ios/DieffeWidgets): con
+  # l'Apple ID gratuito funziona, ma le aggiorna solo l'app (niente push).
+  DieffeWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: DieffeWidgets
+      - path: Shared
+    postCompileScripts:
+      - name: Versione da src/lib/version.ts
+        basedOnDependencyAnalysis: false
+        inputFiles:
+          - $(SRCROOT)/../src/lib/version.ts
+        outputFiles:
+          - $(DERIVED_FILE_DIR)/version.stamp
+        script: |
+          # L'estensione deve avere la stessa versione dell'app.
+          V=$(sed -n 's/.*APP_VERSION = "\([0-9.]*\)".*/\1/p' "$SRCROOT/../src/lib/version.ts")
+          if [ -n "$V" ]; then
+            /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $V" "$TARGET_BUILD_DIR/$INFOPLIST_PATH"
+            echo "$V" > "$DERIVED_FILE_DIR/version.stamp"
+          fi
+    settings:
+      base:
+        PRODUCT_NAME: DieffeWidgets
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+        PRODUCT_BUNDLE_IDENTIFIER: $(DIEFFE_BUNDLE_ID).widgets
+        DEVELOPMENT_TEAM: $(DIEFFE_TEAM_ID)
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "1"
+        SKIP_INSTALL: YES
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Dieffe
+    info:
+      path: DieffeWidgets/Info.plist
+      properties:
+        CFBundleDevelopmentRegion: it
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension

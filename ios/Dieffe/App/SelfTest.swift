@@ -70,6 +70,39 @@ enum SelfTest {
         write()
     }
 
+    static var liveTestRequested: Bool { UserDefaults.standard.bool(forKey: "DieffeLiveTest") }
+
+    /// -DieffeLiveTest YES: abbreviazioni per la Dynamic Island e collegamenti.
+    static func runLiveTest() {
+        log = []
+        failures = 0
+        let codes: [(String, String, String)] = [
+            ("PREV-2026-043", "043", "043/26"),
+            ("PREV-2026-043-E1", "043-E1", "043/26 E1"),
+            ("DF-2027-120", "120", "120/27"),
+            ("PREV-2026-1043", "1043", "1043/26"),
+            ("ALTRO", "ALTRO", "ALTRO"),
+        ]
+        for (code, short, medium) in codes {
+            check(QuoteCode.short(code) == short, "codice breve \(code) → \(QuoteCode.short(code))")
+            check(QuoteCode.medium(code) == medium, "codice medio \(code) → \(QuoteCode.medium(code))")
+        }
+        let money: [(Double, String)] = [(950, "950 €"), (1_250, "1,3k €"), (8_800, "8,8k €"), (12_958, "13k €"),
+                                         (150_000, "150k €"), (1_240_000, "1,2M €"), (0, "0 €")]
+        for (value, text) in money {
+            check(CompactMoney.format(value) == text, "importo \(value) → \(CompactMoney.format(value))")
+        }
+        let a = DieffeActivityAttributes(kind: .siteVisit, quoteID: "abc", code: "PREV-2026-043", clientName: nil,
+                                         address: nil, taskName: nil, startedAt: .now)
+        check(a.url.absoluteString == "dieffe://open?path=/preventivi/abc", "tocco: apre il preventivo")
+        check(a.addItemURL?.absoluteString == "dieffe://open?path=/preventivi/abc&action=item", "Aggiungi voce: collegamento")
+        check(a.endVisitURL?.absoluteString == "dieffe://open?path=/preventivi/abc&action=endvisit", "Termina: collegamento")
+        check(Format.duration(minutes: 45) == "45 min" && Format.duration(minutes: 80) == "1 h 20 min"
+              && Format.duration(minutes: 120) == "2 h", "durata del sopralluogo")
+        note(failures == 0 ? "RISULTATO: tutto OK" : "RISULTATO: \(failures) errori")
+        write()
+    }
+
     static var whatsNewTestRequested: Bool { UserDefaults.standard.bool(forKey: "DieffeWhatsNewTest") }
 
     /// -DieffeWhatsNewTest YES: quando l'iPhone mostra le "Novità".

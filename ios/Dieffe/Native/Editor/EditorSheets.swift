@@ -264,7 +264,12 @@ struct AIChatView: View {
             defer { loading = false }
             struct Reply: Decodable { let reply: String }
             do {
-                let r: Reply = try await APIClient.shared.send("POST", "/api/ai/chat", json: ["messages": history])
+                let r: Reply = try await LiveActivities.track(
+                    "Assistente AI", title: "Sto scrivendo la risposta…", quote: quote,
+                    done: { (r: Reply) in ("Risposta pronta", String(r.reply.prefix(80))) }
+                ) {
+                    try await APIClient.shared.send("POST", "/api/ai/chat", json: ["messages": history]) as Reply
+                }
                 messages.append(Message(role: "assistant", content: r.reply))
             } catch {
                 messages.append(Message(role: "assistant", content: error.localizedDescription))

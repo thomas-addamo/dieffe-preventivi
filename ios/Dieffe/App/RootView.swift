@@ -114,6 +114,7 @@ struct RootView: View {
             if SelfTest.isRequested { await SelfTest.run(app: model) }
             if SelfTest.signatureTestRequested { await SelfTest.runSignatureTest(app: model) }
             if SelfTest.whatsNewTestRequested { await SelfTest.runWhatsNewTest() }
+            if SelfTest.liveTestRequested { SelfTest.runLiveTest() }
             if SelfTest.notificationTestRequested { await SelfTest.runNotificationTest(app: model) }
             #endif
         }

@@ -5,3 +5,4 @@ DerivedData/
 build/
 Dieffe/Info.plist
 Config/Signing.xcconfig
+DieffeWidgets/Info.plist

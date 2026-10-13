@@ -40,6 +40,28 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.19.0",
+    date: "2026-10-13",
+    headline: "Dieffe nella Dynamic Island.",
+    highlights: [
+      {
+        icon: "layout",
+        title: "Preventivo sempre a portata",
+        description: "Sull'iPhone, uscendo dall'editor la Dynamic Island mostra codice abbreviato e totale; un tocco e si torna al preventivo.",
+      },
+      {
+        icon: "sparkles",
+        title: "Importazione e assistente AI",
+        description: "Mentre l'AI analizza un file o risponde si può usare altro: l'isola avvisa quando è pronto.",
+      },
+      {
+        icon: "zap",
+        title: "Sopralluogo in cantiere",
+        description: "Dal menu del preventivo: cronometro, cliente e indirizzo nell'isola e sulla schermata di blocco, con Aggiungi voce e Termina.",
+      },
+    ],
+  },
+  {
     version: "3.18.3",
     date: "2026-10-13",
     headline: "Novità solo quando contano.",

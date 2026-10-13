@@ -4,6 +4,7 @@ import SwiftUI
 /// totali e azioni (stato, PDF, link per il cliente, lavori extra, cestino).
 struct QuoteEditorView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.scenePhase) private var scenePhase
     @State private var editor: QuoteEditorModel
     @State private var editingItem: String?
     @State private var editingSection: String?
@@ -18,6 +19,8 @@ struct QuoteEditorView: View {
     @State private var showSummary = false
     @State private var showChat = false
     @State private var showSignature = false
+    /// Inizio del sopralluogo in corso su questo preventivo (Dynamic Island).
+    @State private var siteVisitStart: Date?
 
     init(quoteID: String) {
         _editor = State(initialValue: QuoteEditorModel(quoteID: quoteID))
@@ -48,6 +51,26 @@ struct QuoteEditorView: View {
             editor.canEdit = model.canEdit
             editor.role = model.currentUser?.role ?? "viewer"
             await editor.load()
+            if let quote = editor.quote {
+                LiveActivities.startEditing(quote)
+                siteVisitStart = LiveActivities.siteVisitStart(for: quote.id)
+                if model.pendingAddItem == quote.id {
+                    model.pendingAddItem = nil
+                    await addItemFromIsland()
+                }
+            }
+            #if DEBUG
+            // -DieffeLiveDemo visit|task: sopralluogo o lavoro AI di prova (Dynamic Island).
+            switch UserDefaults.standard.string(forKey: "DieffeLiveDemo") {
+            case "visit": startSiteVisit()
+            case "task":
+                _ = try? await LiveActivities.track("Importazione", title: "Analizzo computo-metrico.pdf…", quote: editor.quote,
+                                                    done: { (_: Void) in ("Pronto: 14 voci", "3 sezioni · Rifacimento bagno") }) {
+                    try await Task.sleep(for: .seconds(12))
+                }
+            default: break
+            }
+            #endif
             switch PreviewOptions.editorSheet {
             case "summary": showSummary = true
             case "chat": showChat = true
@@ -56,6 +79,14 @@ struct QuoteEditorView: View {
             }
         }
         .onChange(of: model.canEdit) { _, value in editor.canEdit = value }
+        .onChange(of: editor.quote) { _, quote in
+            if let quote { LiveActivities.updateEditing(quote) }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            // Il sopralluogo si può terminare anche dalla Dynamic Island.
+            if phase == .active { siteVisitStart = LiveActivities.siteVisitStart(for: editor.quoteID) }
+        }
+        .onDisappear { LiveActivities.endEditing() }
         .sheet(item: Binding(get: { editingItem.map(IDBox.init) }, set: { editingItem = $0?.id })) { box in
             ItemEditView(editor: editor, itemID: box.id)
         }
@@ -165,6 +196,26 @@ struct QuoteEditorView: View {
 
     @ViewBuilder
     private func banners(_ quote: QuoteDetail) -> some View {
+        if let start = siteVisitStart {
+            Section {
+                HStack(spacing: 12) {
+                    Image(systemName: "mappin.and.ellipse")
+                        .font(.title3)
+                        .foregroundStyle(.tint)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Sopralluogo in corso").font(.subheadline.weight(.semibold))
+                        Text(timerInterval: start...Date.distantFuture, countsDown: false)
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button("Termina") { endSiteVisit() }
+                        .buttonStyle(.glass)
+                }
+            } footer: {
+                Text("Lo trovi anche nella Dynamic Island e sulla schermata di blocco.")
+            }
+        }
         if quote.isLocked {
             Section {
                 Label(editor.role == "admin"
@@ -322,6 +373,11 @@ struct QuoteEditorView: View {
                             if !quote.isExtra {
                                 Button("Nuovo lavoro extra", systemImage: "doc.badge.plus") { createExtra() }
                             }
+                            if siteVisitStart == nil {
+                                Button("Inizia sopralluogo", systemImage: "mappin.and.ellipse") { startSiteVisit() }
+                            } else {
+                                Button("Termina sopralluogo", systemImage: "stop.circle") { endSiteVisit() }
+                            }
                             if editor.role == "admin" {
                                 Button(quote.isLocked ? "Sblocca modifiche" : "Blocca modifiche",
                                        systemImage: quote.isLocked ? "lock.open" : "lock") {
@@ -344,6 +400,33 @@ struct QuoteEditorView: View {
     }
 
     // MARK: Azioni
+
+    // MARK: Sopralluogo e Dynamic Island
+
+    private func startSiteVisit() {
+        guard let quote = editor.quote else { return }
+        if LiveActivities.startSiteVisit(quote) {
+            withAnimation { siteVisitStart = LiveActivities.siteVisitStart(for: quote.id) }
+        } else if !LiveActivities.isAvailable {
+            model.lastError = "Attiva le Attività in tempo reale per Dieffe in Impostazioni › Dieffe."
+        }
+    }
+
+    private func endSiteVisit() {
+        Task {
+            await LiveActivities.endSiteVisit(editor.quoteID)
+            withAnimation { siteVisitStart = nil }
+            if let quote = editor.quote { LiveActivities.startEditing(quote) }
+        }
+    }
+
+    /// "Aggiungi voce" dal sopralluogo: nuova voce nell'ultima sezione.
+    private func addItemFromIsland() async {
+        guard editor.isEditable, let quote = editor.quote else { return }
+        var sectionID = quote.sections.last?.id
+        if sectionID == nil { sectionID = await editor.addSection(optional: false) }
+        if let sectionID, let id = await editor.addItem(to: sectionID) { editingItem = id }
+    }
 
     private func close() {
         Task {

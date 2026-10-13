@@ -189,8 +189,18 @@ struct ImportQuoteView: View {
         Task {
             defer { try? FileManager.default.removeItem(at: copy) }
             do {
-                let json = try await APIClient.shared.upload("/api/quotes/import", file: copy, mimeType: mime)
-                guard let parsed = ImportResult(json) else { throw APIError.server("Risposta non valida dal server.") }
+                let parsed = try await LiveActivities.track(
+                    "Importazione", title: "Analizzo \(url.lastPathComponent)…",
+                    done: { (r: ImportResult) in
+                        let items = r.sections.reduce(0) { $0 + $1.itemCount }
+                        return ("Pronto: \(Format.count(items, "voce", "voci"))",
+                                "\(Format.count(r.sections.count, "sezione", "sezioni")) · \(r.title)")
+                    }
+                ) {
+                    let json = try await APIClient.shared.upload("/api/quotes/import", file: copy, mimeType: mime)
+                    guard let parsed = ImportResult(json) else { throw APIError.server("Risposta non valida dal server.") }
+                    return parsed
+                }
                 result = parsed
                 title = parsed.title
                 clientMode = parsed.defaultClientMode

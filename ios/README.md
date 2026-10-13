@@ -162,6 +162,24 @@ cd ios && Tools/auto-update/install.sh      # una volta sola
 direttamente dall'iPhone, ma va configurato a parte (file di associazione e
 VPN locale) e gli aggiornamenti vanno installati da lì.
 
+## Dynamic Island
+
+Attività in tempo reale (estensione `DieffeWidgets`, dati in
+`Shared/DieffeActivity.swift`), anche sulla schermata di blocco:
+
+- **Preventivo in modifica:** con l'editor aperto, uscendo dall'app l'isola
+  mostra codice abbreviato (`043`, esteso `043/26`; extra `043-E1`) e totale
+  (`13k €`). Si chiude con l'editor.
+- **Importazione e assistente AI:** avanzamento e poi l'esito ("Pronto:
+  14 voci"), con l'isola che si apre per avvisare se si sta usando altro.
+- **Sopralluogo:** dal menu ⋯ del preventivo, *Inizia sopralluogo*. Cronometro,
+  cliente e indirizzo; *Aggiungi voce* e *Termina* aprono l'app sul preventivo.
+
+Senza push di Apple le aggiorna solo l'app (Apple ID gratuito): bastano per
+questi usi, che nascono da un'azione nell'app. iOS le avvia solo con l'app in
+primo piano. Si possono spegnere in Impostazioni › Dieffe › Attività in tempo
+reale. Prove: `-DieffeLiveTest YES`, `-DieffeLiveDemo visit|task`.
+
 ## Novità dopo un aggiornamento
 
 Dopo un aggiornamento **importante** (`important: true` in

@@ -25,6 +25,8 @@ final class AppModel {
     var newQuoteClient: ClientRef?
     /// Preventivo appena creato: l'editor si apre quando il foglio è chiuso.
     @ObservationIgnored var quoteToOpen: String?
+    /// "Aggiungi voce" dalla Dynamic Island: id del preventivo (QuoteEditorView).
+    @ObservationIgnored var pendingAddItem: String?
 
     /// Editor del preventivo a tutto schermo: nativo, oppure il sito ("Apri nel sito").
     var editor: EditorSession?
