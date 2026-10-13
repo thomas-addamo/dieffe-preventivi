@@ -43,6 +43,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "3.19.0",
     date: "2026-10-13",
     headline: "Dieffe nella Dynamic Island.",
+    important: true,
     highlights: [
       {
         icon: "layout",
