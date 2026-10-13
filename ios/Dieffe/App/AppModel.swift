@@ -30,6 +30,8 @@ final class AppModel {
     var editor: EditorSession?
     var showProfile = false
     var showNotifications = false
+    /// "Novità" da mostrare dopo un aggiornamento importante (WhatsNew).
+    var whatsNew: WhatsNewEntry?
     var unreadNotifications: Int { home.data?.unreadNotifications ?? 0 }
     var clientsPath = NavigationPath()
     var priceListPath = NavigationPath()

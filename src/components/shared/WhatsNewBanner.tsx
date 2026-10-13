@@ -15,10 +15,12 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { APP_VERSION } from "@/lib/version";
-import { getChangelogFor, type ChangelogIcon } from "@/lib/changelog";
+import { getWhatsNew, type ChangelogIcon } from "@/lib/changelog";
 
-// Banner "Novità" in cima all'app: compare una volta per versione (se esiste
-// una voce in lib/changelog) e resta chiuso dopo la X, per questo dispositivo.
+// Banner "Novità" in cima all'app: solo per gli aggiornamenti importanti
+// (`important` in lib/changelog), una volta, e resta chiuso dopo la X per
+// questo dispositivo. Si salva la versione vista: chi ha chiuso le novità di
+// una versione non rivede quelle più vecchie.
 
 const STORAGE_KEY = "whats_new_dismissed";
 const CHANGE_EVENT = "dieffe:whats-new";
@@ -61,11 +63,11 @@ function fmtDate(iso: string) {
 }
 
 export function WhatsNewBanner() {
-  const entry = getChangelogFor(APP_VERSION);
   // Sul server "già visto": niente flash del banner prima dell'idratazione.
   const dismissed = useSyncExternalStore(subscribe, readDismissed, () => APP_VERSION);
+  const entry = getWhatsNew(APP_VERSION, dismissed);
 
-  if (!entry || dismissed === APP_VERSION) return null;
+  if (!entry) return null;
 
   function close() {
     try {

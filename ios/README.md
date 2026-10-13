@@ -162,14 +162,26 @@ cd ios && Tools/auto-update/install.sh      # una volta sola
 direttamente dall'iPhone, ma va configurato a parte (file di associazione e
 VPN locale) e gli aggiornamenti vanno installati da lì.
 
+## Novità dopo un aggiornamento
+
+Dopo un aggiornamento **importante** (`important: true` in
+`src/lib/changelog.ts`) l'app mostra una volta la schermata "Novità" in stile
+Apple, come il banner del sito e dell'app desktop. Per ritocchi e piccole
+aggiunte non compare niente. Al primo avvio si parte dalla versione installata.
+
 ## Notifiche
 
 Le notifiche push di Apple non sono disponibili con l'Apple ID gratuito. L'app
 usa le **notifiche locali**: dal *Profilo › Notifiche su questo iPhone*.
 
 - Con l'app aperta controlla ogni minuto e mostra subito il banner.
-- In background iOS la risveglia periodicamente (Aggiorna app in background):
-  di solito entro qualche decina di minuti, non all'istante.
+- In background iOS la risveglia quando decide lui (Aggiorna app in
+  background): può essere dopo pochi minuti come dopo ore, in base a uso,
+  batteria e rete. Non c'è modo di imporre un intervallo.
+- **Se l'app viene chiusa dal selettore app, iOS non la risveglia più** finché
+  non la si riapre: in quel caso le notifiche arrivano solo all'apertura.
+  Solo le notifiche push di Apple (APNs) superano questo limite, e richiedono
+  l'Apple Developer Program a pagamento.
 - Il tocco su una notifica apre la pagina giusta e la segna come letta. Tutte
   le notifiche sono nel centro notifiche (campanella nella Home, o Altro ›
   Notifiche).
@@ -195,6 +207,8 @@ usa le **notifiche locali**: dal *Profilo › Notifiche su questo iPhone*.
   creazione e salvataggi di preventivo, sezioni, voci, foto, link, extra,
   blocco, clienti e listino, poi elimina tutto. Risultato in
   `Documents/selftest.log` del contenitore dell'app.
+  `-DieffeWhatsNewTest YES` prova quando compaiono le "Novità";
+  `-DieffeWhatsNew 3.18.0` mostra la schermata di quella versione.
   `-DieffeSignatureTest YES` prova la firma del cliente senza toccare il
   server (una firma vera manderebbe email): lettura, disegno vuoto, rifiuto,
   e apertura dei preventivi accettati o rifiutati.

@@ -70,6 +70,38 @@ enum SelfTest {
         write()
     }
 
+    static var whatsNewTestRequested: Bool { UserDefaults.standard.bool(forKey: "DieffeWhatsNewTest") }
+
+    /// -DieffeWhatsNewTest YES: quando l'iPhone mostra le "Novità".
+    static func runWhatsNewTest() async {
+        log = []
+        failures = 0
+        let saved = WhatsNew.seenVersion
+        let current = AppConfig.version
+        WhatsNew.seenVersion = nil
+        check(await WhatsNew.pending() == nil, "primo avvio: nessuna schermata")
+        check(WhatsNew.seenVersion == current, "primo avvio: si parte dalla versione installata (\(current))")
+        check(await WhatsNew.pending() == nil, "stessa versione: nessuna schermata")
+        WhatsNew.seenVersion = "0.0.1"
+        let afterUpdate = await WhatsNew.pending()
+        note("     aggiornamento da 0.0.1: " + (afterUpdate.map { "mostra \($0.version)" } ?? "nessuna novità importante"))
+        if afterUpdate == nil {
+            check(WhatsNew.seenVersion == current, "senza novità importanti la versione risulta vista")
+        } else {
+            WhatsNew.markSeen()
+            check(WhatsNew.seenVersion == current, "chiusa la schermata, la versione risulta vista")
+        }
+        check(await WhatsNew.pending() == nil, "dopo averla vista: nessuna schermata")
+        let preview = await WhatsNew.fetch("/api/app/whats-new?preview=3.18.0")
+        check((preview?.highlights.count ?? 0) > 0, "dati del changelog dal sito (3.18.0: \(preview?.highlights.count ?? 0) novità)")
+        check(preview?.highlights.allSatisfy { UIImage(systemName: $0.symbol) != nil } ?? false, "icone: tutti i simboli esistono")
+        let none = await WhatsNew.fetch("/api/app/whats-new?preview=0.0.0")
+        check(none == nil, "versione inesistente: niente")
+        WhatsNew.seenVersion = saved
+        note(failures == 0 ? "RISULTATO: tutto OK" : "RISULTATO: \(failures) errori")
+        write()
+    }
+
     static var notificationTestRequested: Bool { UserDefaults.standard.bool(forKey: "DieffeNotificationTest") }
 
     /// -DieffeNotificationTest YES: attiva le notifiche locali, manda a se

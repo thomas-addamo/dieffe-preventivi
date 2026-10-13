@@ -18,7 +18,7 @@ settings:
     SWIFT_VERSION: "5.0"
     # La versione vera arriva da src/lib/version.ts (fonte unica per sito,
     # app desktop e iPhone): la imposta lo script "Versione" a ogni build.
-    MARKETING_VERSION: "3.18.2"
+    MARKETING_VERSION: "3.18.3"
     CURRENT_PROJECT_VERSION: "1"
 targets:
   Dieffe:

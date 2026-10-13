@@ -44,6 +44,9 @@ struct RootView: View {
             }
             .appMessages(active: true)
         }
+        .sheet(item: $model.whatsNew, onDismiss: { WhatsNew.markSeen() }) { entry in
+            WhatsNewView(entry: entry)
+        }
         .sheet(isPresented: $model.showNotifications) {
             NotificationsView()
         }
@@ -91,6 +94,9 @@ struct RootView: View {
             #endif
             await APIClient.shared.restoreSession()
             await model.home.load()
+            if model.whatsNew == nil, model.currentUser != nil, let entry = await WhatsNew.pending() {
+                model.whatsNew = entry
+            }
             if let unread = model.home.data?.unreadNotifications { await AppModel.setBadge(unread) }
             if let start = PreviewOptions.startQuote, model.editor == nil {
                 let quotes = model.home.data?.quotes ?? []
@@ -107,6 +113,7 @@ struct RootView: View {
             if UserDefaults.standard.bool(forKey: "DieffeKeychainTest") { SelfTest.runKeychainTest() }
             if SelfTest.isRequested { await SelfTest.run(app: model) }
             if SelfTest.signatureTestRequested { await SelfTest.runSignatureTest(app: model) }
+            if SelfTest.whatsNewTestRequested { await SelfTest.runWhatsNewTest() }
             if SelfTest.notificationTestRequested { await SelfTest.runNotificationTest(app: model) }
             #endif
         }

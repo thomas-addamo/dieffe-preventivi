@@ -1,9 +1,13 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Novità mostrate nel banner "Novità" in cima all'app (WhatsNewBanner).
+// Novità di ogni versione (changelog). Ad OGNI rilascio con modifiche visibili
+// agli utenti aggiungere in TESTA una voce con la stessa `version` di
+// APP_VERSION (src/lib/version.ts).
 //
-// Ad OGNI rilascio con modifiche visibili agli utenti aggiungere in TESTA una
-// voce con la stessa `version` di APP_VERSION (src/lib/version.ts). Il banner
-// compare una volta per versione e resta chiuso dopo la X.
+// La schermata "Novità" compare SOLO per le voci con `important: true`, e in
+// quel caso ovunque: sito, app Mac/Windows (WhatsNewBanner) e app iPhone
+// (WhatsNewView, via /api/app/whats-new). Ritocchi, correzioni e piccole
+// aggiunte restano qui senza `important`: nessuno viene disturbato.
+// Chi salta una versione importante la vede comunque una volta (getWhatsNew).
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type ChangelogIcon =
@@ -30,9 +34,28 @@ export interface ChangelogEntry {
   /** Frase di lancio, breve. */
   headline: string;
   highlights: ChangelogHighlight[];
+  /** Aggiornamento importante: mostra la schermata "Novità" su tutte le piattaforme. */
+  important?: boolean;
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: "3.18.3",
+    date: "2026-10-13",
+    headline: "Novità solo quando contano.",
+    highlights: [
+      {
+        icon: "sparkles",
+        title: "Novità solo per gli aggiornamenti importanti",
+        description: "La schermata Novità compare solo per le versioni importanti, su sito, Mac, Windows e iPhone.",
+      },
+      {
+        icon: "layout",
+        title: "Novità anche sull'iPhone",
+        description: "Dopo un aggiornamento importante l'app iPhone mostra le novità in una schermata in stile Apple.",
+      },
+    ],
+  },
   {
     version: "3.18.2",
     date: "2026-10-11",
@@ -357,4 +380,27 @@ export const CHANGELOG: ChangelogEntry[] = [
 
 export function getChangelogFor(version: string): ChangelogEntry | undefined {
   return CHANGELOG.find((e) => e.version === version);
+}
+
+/** Confronto semantico "3.18.10" > "3.18.9": negativo, zero o positivo. */
+export function compareVersions(a: string, b: string): number {
+  const pa = a.split(".").map((n) => Number.parseInt(n, 10) || 0);
+  const pb = b.split(".").map((n) => Number.parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const diff = (pa[i] ?? 0) - (pb[i] ?? 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
+}
+
+/**
+ * La "Novità" da mostrare a chi usa la versione `current` e ha già visto le
+ * novità fino a `seen` (null: mai viste). È l'ultima voce importante non più
+ * recente di `current`, se non l'ha ancora vista.
+ */
+export function getWhatsNew(current: string, seen: string | null): ChangelogEntry | undefined {
+  const entry = CHANGELOG.find((e) => e.important && compareVersions(e.version, current) <= 0);
+  if (!entry) return undefined;
+  if (seen && compareVersions(seen, entry.version) >= 0) return undefined;
+  return entry;
 }

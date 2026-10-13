@@ -7,8 +7,10 @@ import UserNotifications
 /// Apple ID gratuito): l'app legge le notifiche nuove del sito
 /// (GET /api/notifications) e le mostra come notifiche locali.
 /// - App aperta: controllo ogni minuto, banner immediato.
-/// - App in background: iOS la risveglia periodicamente (Background App
-///   Refresh, di solito entro qualche decina di minuti, a seconda dell'uso).
+/// - App in background: iOS la risveglia quando decide lui (Background App
+///   Refresh: da pochi minuti a ore). Un'app chiusa dal selettore app non
+///   viene più risvegliata finché non si riapre: limite di iOS, lo supera
+///   solo il push di Apple (APNs, con l'Apple Developer Program a pagamento).
 @MainActor
 @Observable
 final class LocalNotifier: NSObject {

@@ -255,7 +255,7 @@ private struct NotificationsSection: View {
         } footer: {
             Text((notifier.isEnabled && !notifier.alertsAllowed
                   ? "iOS mostra solo il numero sull'icona: in Impostazioni › Notifiche › Dieffe attiva gli avvisi. "
-                  : "") + "Con l'app aperta arrivano subito. In background iOS controlla periodicamente, di solito entro qualche decina di minuti: tieni attivo Aggiorna app in background.")
+                  : "") + "Con l'app aperta arrivano subito. In background è iOS a decidere quando controllare: a volte dopo pochi minuti, a volte dopo ore. Se chiudi l'app dal selettore app, iOS non la risveglia più e le notifiche arrivano solo quando la riapri.")
         }
     }
 }
