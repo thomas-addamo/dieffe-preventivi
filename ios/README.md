@@ -22,6 +22,13 @@ gratuito. Non serve l'Apple Developer Program e l'app non passa dall'App Store.
     duplica, riordina, elimina; totali con sconto e IVA; stato, PDF, Excel,
     CSV, link per il cliente con PIN, lavori extra, blocco (admin), cestino.
     Salvataggio automatico. "Apri nel sito" per chat AI e riassegnazione.
+  - **Gestione Cantieri** (in Altro): mappa di Apple con i cantieri e
+    l'avanzamento, panoramica (da fatturare, lavori in corso, ritardi),
+    prossimi eventi e consigli IA; pagina del cantiere con fasi da spuntare,
+    SAL con Fatturato/Incassato, calendario con eventi e analisi del ritardo
+    (simulatore e grafico), diario e consigli IA con meteo; Tempi e costi,
+    Indicazioni, Concludi lavori (elimina il cantiere, i preventivi restano).
+    Le notifiche dei cantieri aprono la scheda giusta.
   - **Listino** (sezione a sé): riepilogo (attive, fissate, mai usate,
     disattivate), categorie del catalogo, sottocategorie, scheda della voce
     con utilizzo; ricerca in tutto il listino, nuova voce, modifica,

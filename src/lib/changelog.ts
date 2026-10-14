@@ -43,6 +43,23 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "4.1.0",
+    date: "2026-10-14",
+    headline: "Gestione Cantieri anche su iPhone.",
+    highlights: [
+      {
+        icon: "site",
+        title: "Cantieri nativi su iPhone",
+        description: "Da Altro › Gestione Cantieri: mappa di Apple con indicazioni stradali, fasi da spuntare, SAL con Fatturato e Incassato, calendario con analisi del ritardo, diario e consigli dell'IA.",
+      },
+      {
+        icon: "zap",
+        title: "Dalle notifiche al cantiere",
+        description: "\"SAL da fatturare\" e i promemoria degli eventi aprono direttamente la scheda giusta del cantiere.",
+      },
+    ],
+  },
+  {
     version: "4.0.0",
     date: "2026-10-14",
     headline: "Arriva la Gestione Cantieri.",
