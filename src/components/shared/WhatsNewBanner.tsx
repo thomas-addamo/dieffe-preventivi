@@ -4,6 +4,7 @@ import { useSyncExternalStore } from "react";
 import {
   FileText,
   Keyboard,
+  HardHat,
   LayoutPanelLeft,
   Monitor,
   Settings2,
@@ -35,6 +36,7 @@ const ICONS: Record<ChangelogIcon, LucideIcon> = {
   zap: Zap,
   desktop: Monitor,
   keyboard: Keyboard,
+  site: HardHat,
 };
 
 function readDismissed(): string | null {

@@ -30,6 +30,7 @@ const GO_TO: { label: string; path: string; key: string }[] = [
   { label: 'Dashboard', path: '/dashboard', key: '1' },
   { label: 'Preventivi', path: '/preventivi', key: '2' },
   { label: 'Lavori extra', path: '/lavori-extra', key: '3' },
+  { label: 'Gestione Cantieri', path: '/cantieri', key: 'Shift+CmdOrCtrl+G' },
   { label: 'Clienti', path: '/clienti', key: '4' },
   { label: 'Crea comunicazione', path: '/comunicazioni', key: '5' },
   { label: 'Listino', path: '/listino', key: '6' },
@@ -194,7 +195,7 @@ export function buildAppMenu(getWindow: GetWindow) {
       { type: 'separator' },
       ...GO_TO.map(
         ({ label, path, key }) =>
-          ({ label, accelerator: `CmdOrCtrl+${key}`, click: go(path) }) as MenuItemConstructorOptions
+          ({ label, accelerator: key.includes('+') ? key : `CmdOrCtrl+${key}`, click: go(path) }) as MenuItemConstructorOptions
       ),
       { type: 'separator' },
       {
@@ -275,6 +276,7 @@ export function buildAppMenu(getWindow: GetWindow) {
         { type: 'separator' },
         { label: 'Dashboard', click: go('/dashboard') },
         { label: 'Lavori extra', click: go('/lavori-extra') },
+        { label: 'Gestione Cantieri', click: go('/cantieri') },
         { label: 'Clienti', click: go('/clienti') },
         { label: 'Listino', click: go('/listino') },
       ])

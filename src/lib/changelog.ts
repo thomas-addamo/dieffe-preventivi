@@ -19,7 +19,8 @@ export type ChangelogIcon =
   | "shield"
   | "zap"
   | "desktop"
-  | "keyboard";
+  | "keyboard"
+  | "site";
 
 export interface ChangelogHighlight {
   icon: ChangelogIcon;
@@ -39,6 +40,29 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: "4.0.0",
+    date: "2026-10-14",
+    headline: "Arriva la Gestione Cantieri.",
+    important: true,
+    highlights: [
+      {
+        icon: "site",
+        title: "I cantieri si creano da soli",
+        description: "Ogni preventivo inviato o accettato diventa un cantiere sulla mappa, con indicazioni stradali e le informazioni essenziali a portata di clic.",
+      },
+      {
+        icon: "sparkles",
+        title: "Fasi e SAL preparati dall'IA",
+        description: "Dalle sezioni e dalle condizioni di pagamento del preventivo: avanzamento pesato sugli importi, SAL da fatturare con le spunte Fatturato e Incassato.",
+      },
+      {
+        icon: "zap",
+        title: "Calendario e costo del ritardo",
+        description: "Scadenze ed eventi (suolo pubblico, interventi di altre ditte), ritardo stimato e quanto costa ogni giorno in più, con i consigli dell'IA per ogni cantiere.",
+      },
+    ],
+  },
   {
     version: "3.19.1",
     date: "2026-10-14",

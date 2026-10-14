@@ -670,3 +670,36 @@ aside {
 [data-sidebar-peek] .desktop-titlebar {
   -webkit-app-region: no-drag;
 }
+
+/* ─── Gestione Cantieri: mappa (Leaflet) ─────────────────────────────────────
+   Segnaposto con l'avanzamento % e popup coerenti con le card dell'app,
+   in chiaro e in scuro. */
+.site-pin { background: none; border: 0; }
+.site-pin__body {
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 9999px; background: var(--pin); color: #fff;
+  font: 600 12px/1 ui-sans-serif, system-ui, -apple-system, sans-serif;
+  box-shadow: 0 0 0 3px #fff, 0 4px 12px rgb(0 0 0 / 0.28);
+  transition: transform 0.15s ease;
+}
+.dark .site-pin__body { box-shadow: 0 0 0 3px #1c1f26, 0 4px 12px rgb(0 0 0 / 0.5); }
+.site-pin__body.is-selected { transform: scale(1.08); }
+.site-pin:hover .site-pin__body { transform: scale(1.08); }
+.site-pin__tip {
+  width: 0; height: 0; margin: -2px auto 0;
+  border-left: 6px solid transparent; border-right: 6px solid transparent;
+  border-top: 8px solid var(--pin);
+}
+.leaflet-container { font: inherit; background: var(--muted); z-index: 0; }
+.dark .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.88) saturate(0.6); }
+.leaflet-popup-content-wrapper {
+  border-radius: var(--radius-card); background: var(--card); color: var(--card-foreground);
+  box-shadow: var(--shadow-lg, 0 10px 30px rgb(0 0 0 / 0.18));
+}
+.leaflet-popup-content { margin: 12px 14px; }
+.leaflet-popup-tip { background: var(--card); }
+.leaflet-container a.leaflet-popup-close-button { color: var(--muted-foreground); }
+.leaflet-control-attribution { font-size: 10px; }
+.dark .leaflet-control-attribution { background: rgb(0 0 0 / 0.5) !important; color: #aaa; }
+.dark .leaflet-control-attribution a { color: #ccc; }
+.dark .leaflet-bar a { background: var(--card); color: var(--foreground); border-color: var(--border); }

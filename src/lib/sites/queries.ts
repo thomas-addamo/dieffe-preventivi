@@ -131,7 +131,7 @@ export async function getSitesOverview(): Promise<SitesOverview> {
   const in7 = isoDay(today + 7);
   const todayIso = isoDay(today);
 
-  const [siteRows, quoteRows, milestoneRows, eventRows, pendingSetup] = await Promise.all([
+  const [siteRows, quoteRows, milestoneRows, eventRows, pendingSetup, phaseRows] = await Promise.all([
     db
       .select({ site: sites, clientName: clients.name, clientPhone: clients.phone })
       .from(sites)
@@ -163,19 +163,25 @@ export async function getSitesOverview(): Promise<SitesOverview> {
     db.execute<{ n: number }>(sql`
       select count(*)::int as n from quotes q join sites s on s.id = q.site_id
       where s.status = 'active' and q.status = 'accepted' and q.site_setup_at is null and q.deleted_at is null`),
+    // Solo i campi del programma: servono per l'avanzamento atteso e il ritardo.
+    db
+      .select({ siteId: sitePhases.siteId, weight: sitePhases.weight, plannedStart: sitePhases.plannedStart, plannedEnd: sitePhases.plannedEnd })
+      .from(sitePhases),
   ]);
 
   const quotesBySite = new Map<string, SiteQuote[]>();
   for (const q of quoteRows) quotesBySite.set(q.siteId, [...(quotesBySite.get(q.siteId) ?? []), q]);
   const msBySite = new Map<string, typeof milestoneRows>();
   for (const m of milestoneRows) msBySite.set(m.siteId, [...(msBySite.get(m.siteId) ?? []), m]);
+  const phBySite = new Map<string, typeof phaseRows>();
+  for (const p of phaseRows) phBySite.set(p.siteId, [...(phBySite.get(p.siteId) ?? []), p]);
 
   const names = new Map(siteRows.map((r) => [r.site.id, r.site.name]));
   const upcoming = eventRows.map((e) => ({ ...e, siteName: names.get(e.siteId) ?? "" }));
 
   const list: SiteListItem[] = siteRows.map(({ site, clientName, clientPhone }) => {
     const q = orderQuotes(quotesBySite.get(site.id) ?? [], site.mainQuoteId);
-    const metrics = computeSiteMetrics({ site, quotes: q, milestones: msBySite.get(site.id) ?? [] });
+    const metrics = computeSiteMetrics({ site, quotes: q, milestones: msBySite.get(site.id) ?? [], phases: phBySite.get(site.id) ?? [] });
     const ev = upcoming.find((e) => e.siteId === site.id);
     const tips = (site.aiInsights as { tips?: { title: string; body: string; priority: string }[] } | null)?.tips;
     return {
@@ -254,7 +260,7 @@ export async function getSiteDetail(id: string): Promise<SiteDetail | null> {
   const quotes = orderQuotes(quoteRows, row.site.mainQuoteId);
   const quoteNet = new Map(quotes.map((q) => [q.id, q.net]));
   const mainNet = quotes[0]?.net ?? 0;
-  const metrics = computeSiteMetrics({ site: row.site, quotes, milestones });
+  const metrics = computeSiteMetrics({ site: row.site, quotes, milestones, phases });
   const valued = milestones.map((m) => ({
     ...m,
     value: milestoneAmount(m, quoteNet, mainNet),

@@ -27,6 +27,7 @@ struct WhatsNewEntry: Decodable, Identifiable, Equatable {
             case "zap": "bolt"
             case "desktop": "desktopcomputer"
             case "keyboard": "keyboard"
+            case "site": "hammer"
             default: "sparkles"
             }
         }

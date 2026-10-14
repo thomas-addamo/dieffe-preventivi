@@ -28,11 +28,13 @@ import {
   Search,
   Loader2,
   CircleHelp,
+  HardHat,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NEW_BADGE_CLASS, isNewPage } from "@/lib/new-pages";
 import { HelpDialog } from "./HelpDialog";
 import { MENU_EVENTS } from "@/hooks/use-menu-param";
+import { HEALTH_COLORS, type SiteHealth } from "@/lib/sites/metrics";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Barra laterale (desktop web + app desktop).
@@ -52,6 +54,7 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/preventivi", label: "Preventivi", icon: FileText },
   { href: "/lavori-extra", label: "Lavori extra", icon: FilePlus2 },
+  { href: "/cantieri", label: "Gestione Cantieri", icon: HardHat },
   { href: "/clienti", label: "Clienti", icon: Users },
   { href: "/comunicazioni", label: "Crea comunicazione", icon: Mail },
   { href: "/listino", label: "Listino", icon: List },
@@ -81,6 +84,14 @@ interface QuoteLite {
   parentQuoteId?: string | null;
 }
 
+interface SiteLite {
+  id: string;
+  name: string;
+  status: string;
+  clientName: string | null;
+  metrics: { progress: number; health: SiteHealth; toInvoice: number };
+}
+
 const STORAGE_KEY = "sidebar-collapsed";
 /** Ritardo prima di richiudere la barra aperta al passaggio del mouse. */
 const HOVER_CLOSE_DELAY = 220;
@@ -99,6 +110,12 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
   const [quotes, setQuotes] = useState<QuoteLite[]>([]);
   const [loadingQuotes, setLoadingQuotes] = useState(false);
   const [quoteSearch, setQuoteSearch] = useState("");
+  // Pannello scorrevole "Cantieri": dashboard + elenco dei cantieri.
+  const [sitesPanel, setSitesPanel] = useState(false);
+  const [siteList, setSiteList] = useState<SiteLite[]>([]);
+  const [loadingSites, setLoadingSites] = useState(false);
+  const [siteSearch, setSiteSearch] = useState("");
+  const [showPendingSites, setShowPendingSites] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [helpTab, setHelpTab] = useState<"ai" | "admin">("ai");
 
@@ -111,6 +128,7 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
 
   function toggleCollapsed() {
     setQuotesPanel(false);
+    setSitesPanel(false);
     setCollapsed((c) => {
       const next = !c;
       localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
@@ -166,6 +184,7 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
 
   // Il pannello preventivi esiste solo a barra aperta.
   const showQuotes = quotesPanel && expanded;
+  const showSites = sitesPanel && expanded;
 
   async function loadQuotes() {
     setLoadingQuotes(true);
@@ -180,9 +199,32 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
   }
 
   function openQuotesPanel() {
+    setSitesPanel(false);
     setQuotesPanel(true);
     loadQuotes();
   }
+
+  async function openSitesPanel() {
+    setQuotesPanel(false);
+    setSitesPanel(true);
+    setLoadingSites(true);
+    try {
+      const res = await fetch("/api/sites");
+      if (res.ok) setSiteList(((await res.json()) as { sites: SiteLite[] }).sites);
+    } catch {
+      /* silenzioso: lista resta com'è */
+    } finally {
+      setLoadingSites(false);
+    }
+  }
+
+  const activeSiteId = pathname.startsWith("/cantieri/") ? pathname.split("/")[2] : null;
+  const visibleSites = useMemo(() => {
+    const q = siteSearch.trim().toLowerCase();
+    return siteList.filter(
+      (s) => !q || s.name.toLowerCase().includes(q) || (s.clientName ?? "").toLowerCase().includes(q)
+    );
+  }, [siteList, siteSearch]);
 
   function openQuote(id: string) {
     router.push(`/preventivi/${id}`);
@@ -401,7 +443,7 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
       <div className="relative flex-1 overflow-hidden">
         <div
           className={`flex h-full transition-transform duration-300 ${EASE}`}
-          style={{ width: "200%", transform: showQuotes ? "translateX(-50%)" : "translateX(0)" }}
+          style={{ width: "200%", transform: showQuotes || showSites ? "translateX(-50%)" : "translateX(0)" }}
         >
           {/* ── Pannello 1: navigazione ── */}
           <nav className="h-full w-1/2 overflow-y-auto overflow-x-hidden pl-[var(--sb-pad-x)] pr-[var(--sb-pr)] pb-4 pt-3 mac:pt-0">
@@ -435,6 +477,20 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
                       <ChevronRight className="h-4 w-4" />
                     </button>
                   </div>
+                ) : href === "/cantieri" && expanded ? (
+                  // Da aperta la voce apre il pannello (dashboard + elenco cantieri)
+                  <button
+                    key={href}
+                    onClick={openSitesPanel}
+                    aria-label={label}
+                    className={itemClass(pathname === href || pathname.startsWith(href + "/"))}
+                  >
+                    {(pathname === href || pathname.startsWith(href + "/")) && activeIndicator}
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <span className={cn("flex-1 truncate text-left", reveal)}>{label}</span>
+                    {isNewPage(href) && <span className={cn(NEW_BADGE_CLASS, "-ml-2", reveal)}>Novità</span>}
+                    <ChevronRight className={cn("mr-1 h-4 w-4 shrink-0 text-muted-foreground", reveal)} />
+                  </button>
                 ) : (
                   renderLink(href, label, Icon, pathname === href || pathname.startsWith(href + "/"))
                 )
@@ -456,7 +512,82 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
             )}
           </nav>
 
-          {/* ── Pannello 2: elenco preventivi ── */}
+          {/* ── Pannello 2b: cantieri ── */}
+          {sitesPanel ? (
+          <div className="flex h-full w-1/2 flex-col">
+            <div className="flex h-11 shrink-0 items-center gap-1.5 border-b border-[var(--sidebar-border)] px-2 mac:h-9">
+              <button
+                onClick={() => setSitesPanel(false)}
+                className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                aria-label="Indietro"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="flex-1 truncate text-sm font-semibold">Cantieri</span>
+              {!loadingSites && (
+                <span className="pr-1 text-xs tabular-nums text-muted-foreground">
+                  {siteList.filter((s) => s.status === "active").length}
+                </span>
+              )}
+            </div>
+
+            <div className="shrink-0 space-y-2 px-2 pt-2">
+              <Link
+                href="/cantieri"
+                onClick={onClose}
+                className={cn(itemClass(pathname === "/cantieri"), "pr-2")}
+              >
+                <LayoutDashboard className="h-4 w-4 shrink-0" />
+                <span className="flex-1 truncate">Dashboard</span>
+              </Link>
+              <div className="relative px-1 pb-1">
+                <Search className="absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-[60%] text-muted-foreground" />
+                <input
+                  value={siteSearch}
+                  onChange={(e) => setSiteSearch(e.target.value)}
+                  placeholder="Cerca cantiere..."
+                  className="h-8 w-full rounded-md border bg-background pl-8 pr-2 text-sm outline-none focus:ring-2 focus:ring-ring/40 mac:h-7 mac:border-0 mac:bg-foreground/[0.06] mac:text-[13px]"
+                />
+              </div>
+            </div>
+
+            <div className="flex-1 space-y-0.5 overflow-y-auto px-2 pb-3">
+              {loadingSites && siteList.length === 0 ? (
+                <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Caricamento...
+                </div>
+              ) : visibleSites.length === 0 ? (
+                <div className="px-3 py-8 text-center text-sm text-muted-foreground">
+                  {siteList.length === 0 ? "Nessun cantiere" : "Nessun risultato"}
+                </div>
+              ) : (
+                <>
+                  {visibleSites
+                    .filter((s) => s.status === "active")
+                    .map((s) => (
+                      <SiteRowLink key={s.id} s={s} active={s.id === activeSiteId} onOpen={onClose} />
+                    ))}
+                  {visibleSites.some((s) => s.status === "pending") && (
+                    <>
+                      <button
+                        onClick={() => setShowPendingSites((v) => !v)}
+                        className="mt-2 flex w-full items-center gap-1 px-2.5 py-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/80 desktop:normal-case desktop:tracking-normal"
+                      >
+                        In attesa ({visibleSites.filter((s) => s.status === "pending").length})
+                        <ChevronDown className={cn("h-3 w-3 transition-transform", showPendingSites && "rotate-180")} />
+                      </button>
+                      {showPendingSites &&
+                        visibleSites
+                          .filter((s) => s.status === "pending")
+                          .map((s) => <SiteRowLink key={s.id} s={s} active={s.id === activeSiteId} onOpen={onClose} />)}
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+          ) : (
+          /* ── Pannello 2: elenco preventivi ── */
           <div className="flex h-full w-1/2 flex-col">
             <div className="flex h-11 shrink-0 items-center gap-1.5 border-b border-[var(--sidebar-border)] px-2 mac:h-9">
               <button
@@ -557,6 +688,7 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
               )}
             </div>
           </div>
+          )}
         </div>
       </div>
 
@@ -597,5 +729,41 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
       />
       {aside}
     </>
+  );
+}
+
+/** Riga di un cantiere nel pannello della barra laterale. */
+function SiteRowLink({ s, active, onOpen }: { s: SiteLite; active: boolean; onOpen?: () => void }) {
+  const pending = s.status === "pending";
+  const name = s.name.replace(/\s+/g, " ").trim();
+  const title = name === name.toUpperCase() ? name.charAt(0) + name.slice(1).toLowerCase() : name;
+  return (
+    <Link
+      href={`/cantieri/${s.id}`}
+      onClick={onOpen}
+      title={title}
+      className={cn(
+        "block w-full min-w-0 rounded-[var(--sb-item-radius)] px-2.5 py-2 transition-colors desktop:py-1.5",
+        active ? "bg-primary/10 desktop:bg-foreground/[0.08]" : "hover:bg-accent desktop:hover:bg-foreground/[0.05]"
+      )}
+    >
+      <div className="flex items-center gap-1.5">
+        <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: HEALTH_COLORS[s.metrics.health] }} />
+        <span className={cn("flex-1 truncate text-sm font-medium", active && "text-primary", pending && "text-muted-foreground")}>
+          {title}
+        </span>
+        {!pending && <span className="text-[11px] tabular-nums text-muted-foreground">{Math.round(s.metrics.progress)}%</span>}
+      </div>
+      {!pending ? (
+        <div className="mt-1 flex items-center gap-2 pl-3.5">
+          <div className="h-1 flex-1 overflow-hidden rounded-full bg-foreground/[0.08]">
+            <div className="h-full rounded-full" style={{ width: `${Math.min(100, s.metrics.progress)}%`, background: HEALTH_COLORS[s.metrics.health] }} />
+          </div>
+          {s.metrics.toInvoice > 0 && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" title="SAL da fatturare" />}
+        </div>
+      ) : (
+        <div className="mt-0.5 truncate pl-3.5 text-[11px] text-muted-foreground">{s.clientName ?? "Nessun cliente"} · in attesa</div>
+      )}
+    </Link>
   );
 }

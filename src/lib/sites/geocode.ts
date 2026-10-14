@@ -22,9 +22,9 @@ async function politeDelay() {
   lastCall = Date.now();
 }
 
-/** Zona di lavoro dell'impresa (Piemonte): gli indirizzi senza comune
+/** Zona di lavoro dell'impresa (Torino e provincia): gli indirizzi senza comune
  *  ("Via Moncenisio 1") si cercano prima qui, non nel resto d'Italia. */
-const HOME_VIEWBOX = "6.6,46.5,9.3,44.0";
+const HOME_VIEWBOX = "6.8,45.6,8.2,44.5";
 
 async function nominatim(query: string, bounded = false): Promise<{ lat: number; lng: number } | null> {
   await politeDelay();

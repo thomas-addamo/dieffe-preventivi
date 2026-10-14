@@ -63,7 +63,8 @@ Regole:
 - Soldi: SAL raggiunti e non fatturati, costo del ritardo, margine che si riduce, noli (es. ponteggio) che corrono.
 - Tempi: fasi in ritardo rispetto alle date previste, prossime fasi da organizzare (ditte, materiali), eventi in scadenza (es. occupazione suolo pubblico che scade prima della fine stimata).
 - Meteo: solo se ci sono lavorazioni all'aperto ancora da fare e previsioni di pioggia nei prossimi giorni.
-- title max 60 caratteri, body max 220 caratteri, in italiano, tono diretto.`;
+- title max 60 caratteri, body max 220 caratteri, in italiano, tono diretto.
+- Date in italiano (es. "24 set", "7 dic"), importi in euro all'italiana (es. "80.000 €").`;
 
 export function needsInsights(d: SiteDetail, force = false): boolean {
   if (d.site.status !== "active" || d.phases.length === 0) return false;

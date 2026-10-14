@@ -89,6 +89,18 @@ export function isoDay(dayNumber: number): string {
   return `${y}-${m}-${dd}`;
 }
 
+/** Aggiunge giorni lavorativi (lun–ven) a un giorno di calendario. */
+export function addWorkdays(day: number, workdays: number): number {
+  let d = day;
+  let left = Math.max(0, workdays);
+  while (left > 0) {
+    d += 1;
+    const wd = new Date(d * 86_400_000).getUTCDay();
+    if (wd !== 0 && wd !== 6) left -= 1;
+  }
+  return d;
+}
+
 /** Avanzamento pesato sull'importo delle fasi (a numero di fasi se senza importi). */
 export function computeProgress(phases: MetricsPhase[]): number {
   if (phases.length === 0) return 0;
@@ -104,6 +116,8 @@ export function computeSiteMetrics(input: {
   site: MetricsSite;
   quotes: MetricsQuote[];
   milestones: MetricsMilestone[];
+  /** Fasi con le date previste: servono per avanzamento atteso e ritardo. */
+  phases?: { weight: number; plannedStart: string | null; plannedEnd: string | null }[];
   today?: Date;
 }): SiteMetrics {
   const { site, milestones } = input;
@@ -129,19 +143,37 @@ export function computeSiteMetrics(input: {
 
   const elapsedDays = start != null ? Math.max(0, today - start) : null;
   const plannedDays = start != null && plannedEnd != null ? Math.max(1, plannedEnd - start) : null;
-  const expectedProgress =
-    elapsedDays != null && plannedDays != null ? Math.min(100, (elapsedDays / plannedDays) * 100) : null;
 
-  // Fine stimata: al ritmo osservato (serve un minimo di avanzamento per
-  // essere attendibile); se si è già oltre la fine prevista, almeno oggi.
-  let forecast: number | null = null;
-  if (start != null && progress >= 100) forecast = today;
-  else if (start != null && elapsedDays != null && elapsedDays > 0 && progress >= 5) {
-    forecast = start + Math.ceil(elapsedDays / (progress / 100));
-  } else if (plannedEnd != null) forecast = plannedEnd;
-  if (forecast != null && plannedEnd != null && progress < 100 && today > plannedEnd) forecast = Math.max(forecast, today);
+  // Programma delle fasi (date previste + peso): curva "avanzamento atteso nel
+  // tempo". Senza fasi programmate si usa una retta inizio → fine prevista.
+  const planned = (input.phases ?? [])
+    .filter((p) => p.plannedStart && p.plannedEnd)
+    .map((p) => ({ w: Math.max(0, p.weight), s: toDay(p.plannedStart!), e: toDay(p.plannedEnd!) + 1 }));
+  const plannedTotal = planned.reduce((a, p) => a + p.w, 0) || planned.length;
+  const plannedAt = (day: number): number => {
+    if (planned.length === 0) {
+      return start != null && plannedDays != null ? Math.min(100, Math.max(0, ((day - start) / plannedDays) * 100)) : 0;
+    }
+    let acc = 0;
+    for (const p of planned) acc += (plannedTotal === planned.length ? 1 : p.w) * Math.min(1, Math.max(0, (day - p.s) / Math.max(1, p.e - p.s)));
+    return (acc / plannedTotal) * 100;
+  };
+  const expectedProgress = start != null && (plannedDays != null || planned.length) ? Math.min(100, plannedAt(today)) : null;
 
-  const delayDays = forecast != null && plannedEnd != null && progress < 100 ? Math.max(0, forecast - plannedEnd) : 0;
+  // Ritardo con il metodo "Earned Schedule": il giorno in cui il programma
+  // prevedeva l'avanzamento raggiunto oggi; la distanza da oggi sono i giorni
+  // di ritardo, e la fine slitta di altrettanto (il resto al ritmo previsto).
+  // Più stabile della proiezione lineare, che all'inizio esagera.
+  let delayDays = 0;
+  if (start != null && plannedEnd != null && progress < 100 && today > start) {
+    let earned = start;
+    while (earned < today && plannedAt(earned + 1) <= progress + 0.01) earned++;
+    delayDays = Math.max(0, today - earned - 1);
+    if (today > plannedEnd) delayDays = Math.max(delayDays, today - plannedEnd);
+  }
+  const forecast: number | null =
+    start == null ? null : progress >= 100 ? today : plannedEnd != null ? plannedEnd + delayDays : null;
+
   const dailyBurn = (site.dailyCost ?? 0) + (site.penaltyPerDay ?? 0);
   const delayCost = delayDays * dailyBurn;
   const margin = (contractNet * site.marginPct) / 100;
@@ -152,8 +184,9 @@ export function computeSiteMetrics(input: {
   if (site.status === "pending") health = "pending";
   else if (progress >= 100) health = "done";
   else if (start == null || today < start) health = "not_started";
-  else if (delayDays > 0) health = "late";
-  else if (expectedProgress != null && expectedProgress - progress > 10) health = "at_risk";
+  // Qualche giorno di scarto è fisiologico: "in ritardo" da 5 giorni in su.
+  else if (delayDays >= 5) health = "late";
+  else if (delayDays > 0) health = "at_risk";
   else health = "on_track";
 
   return {

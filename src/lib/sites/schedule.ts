@@ -2,19 +2,7 @@ import "server-only";
 import { eq, asc } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { sites, sitePhases } from "@/lib/db/schema";
-import { isoDay, toDay } from "./metrics";
-
-/** Aggiunge giorni lavorativi (lun–ven) a un giorno di calendario. */
-export function addWorkdays(day: number, workdays: number): number {
-  let d = day;
-  let left = Math.max(0, workdays);
-  while (left > 0) {
-    d += 1;
-    const wd = new Date(d * 86_400_000).getUTCDay();
-    if (wd !== 0 && wd !== 6) left -= 1;
-  }
-  return d;
-}
+import { addWorkdays, isoDay, toDay } from "./metrics";
 
 /**
  * Distribuisce le fasi in sequenza dalla data di inizio lavori, in giorni
