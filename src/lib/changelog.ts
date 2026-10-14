@@ -40,6 +40,23 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.19.1",
+    date: "2026-10-14",
+    headline: "Database più leggero.",
+    highlights: [
+      {
+        icon: "shield",
+        title: "Firme dei clienti su Cloudinary",
+        description: "L'immagine della firma non occupa più spazio nel database: resta solo il link, come per le foto delle voci.",
+      },
+      {
+        icon: "zap",
+        title: "Pulizia automatica notturna",
+        description: "Ogni notte vengono rimosse le sessioni scadute, gli accessi più vecchi di 12 mesi e le notifiche lette da oltre 90 giorni.",
+      },
+    ],
+  },
+  {
     version: "3.19.0",
     date: "2026-10-13",
     headline: "Dieffe nella Dynamic Island.",

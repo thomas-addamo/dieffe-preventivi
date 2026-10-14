@@ -50,3 +50,25 @@ export async function deleteCloudinaryFolder(folder: string) {
 export function optimizedUrl(url: string, width = 800): string {
   return url.replace("/upload/", `/upload/f_auto,q_auto,w_${width}/`);
 }
+
+/**
+ * Salva su Cloudinary l'immagine di una firma (data URL base64) e ne restituisce
+ * il link, da conservare nel DB al posto dell'immagine. Il link è il PNG
+ * originale, senza trasformazioni: il PDF (react-pdf) non legge WebP/AVIF.
+ * Se il caricamento fallisce restituisce il data URL: una firma non va mai persa.
+ */
+export async function storeSignatureImage(dataUrl: string, quoteId: string): Promise<string> {
+  const match = /^data:image\/[\w+.-]+;base64,(.+)$/.exec(dataUrl);
+  if (!match) return dataUrl;
+  try {
+    const { url } = await uploadToCloudinary(
+      Buffer.from(match[1], "base64"),
+      `dieffe-preventivi/${quoteId}/firma`,
+      `firma-${Date.now()}`
+    );
+    return url;
+  } catch (err) {
+    console.error("Upload firma su Cloudinary fallito, resta nel DB:", err instanceof Error ? err.message : err);
+    return dataUrl;
+  }
+}
