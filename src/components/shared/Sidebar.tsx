@@ -52,10 +52,10 @@ import { HEALTH_COLORS, type SiteHealth } from "@/lib/sites/metrics";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/clienti", label: "Clienti", icon: Users },
   { href: "/preventivi", label: "Preventivi", icon: FileText },
   { href: "/lavori-extra", label: "Lavori extra", icon: FilePlus2 },
   { href: "/cantieri", label: "Gestione Cantieri", icon: HardHat },
-  { href: "/clienti", label: "Clienti", icon: Users },
   { href: "/comunicazioni", label: "Crea comunicazione", icon: Mail },
   { href: "/listino", label: "Listino", icon: List },
   { href: "/statistiche", label: "Statistiche", icon: BarChart2 },
@@ -291,7 +291,9 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
     label: string,
     Icon: typeof LayoutDashboard,
     active: boolean,
-    badge?: number
+    badge?: number,
+    /** La riga ha a destra la freccia isolata del pannello: spazio per i badge. */
+    withSub = false
   ) => {
     const fresh = isNewPage(href);
     return (
@@ -301,7 +303,7 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
       onClick={onClose}
       title={!expanded ? label : undefined}
       aria-label={label}
-      className={itemClass(active)}
+      className={cn(itemClass(active), withSub && expanded && "pr-[calc(var(--sb-sub)+8px)]")}
     >
       {active && activeIndicator}
       <Icon className="h-4 w-4 shrink-0" />
@@ -440,7 +442,14 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
       </div>
 
       {/* Area centrale scorrevole: navigazione ↔ elenco preventivi */}
-      <div className="relative flex-1 overflow-hidden">
+      <div
+        className="relative flex-1 overflow-hidden"
+        // overflow-hidden non impedisce al browser di scorrerla quando un
+        // elemento riceve il focus: i pannelli si spostavano a metà.
+        onScroll={(e) => {
+          if (e.currentTarget.scrollLeft) e.currentTarget.scrollLeft = 0;
+        }}
+      >
         <div
           className={`flex h-full transition-transform duration-300 ${EASE}`}
           style={{ width: "200%", transform: showQuotes || showSites ? "translateX(-50%)" : "translateX(0)" }}
@@ -477,20 +486,22 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
                       <ChevronRight className="h-4 w-4" />
                     </button>
                   </div>
-                ) : href === "/cantieri" && expanded ? (
-                  // Da aperta la voce apre il pannello (dashboard + elenco cantieri)
-                  <button
-                    key={href}
-                    onClick={openSitesPanel}
-                    aria-label={label}
-                    className={itemClass(pathname === href || pathname.startsWith(href + "/"))}
-                  >
-                    {(pathname === href || pathname.startsWith(href + "/")) && activeIndicator}
-                    <Icon className="h-4 w-4 shrink-0" />
-                    <span className={cn("flex-1 truncate text-left", reveal)}>{label}</span>
-                    {isNewPage(href) && <span className={cn(NEW_BADGE_CLASS, "-ml-2", reveal)}>Novità</span>}
-                    <ChevronRight className={cn("mr-1 h-4 w-4 shrink-0 text-muted-foreground", reveal)} />
-                  </button>
+                ) : href === "/cantieri" ? (
+                  // Come "Preventivi": la voce apre la dashboard, la freccia il pannello
+                  <div key={href} className="relative">
+                    {renderLink(href, label, Icon, pathname === href || pathname.startsWith(href + "/"), undefined, true)}
+                    <button
+                      onClick={openSitesPanel}
+                      aria-label="Mostra elenco cantieri"
+                      title="Elenco cantieri"
+                      className={cn(
+                        "absolute right-1 top-1/2 flex h-[var(--sb-sub)] w-[var(--sb-sub)] -translate-y-1/2 items-center justify-center rounded-[var(--sb-inner-radius)] text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground",
+                        reveal
+                      )}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
                 ) : (
                   renderLink(href, label, Icon, pathname === href || pathname.startsWith(href + "/"))
                 )

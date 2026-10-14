@@ -28,10 +28,10 @@ export function navigate(win: BrowserWindow | null, path: string) {
 
 const GO_TO: { label: string; path: string; key: string }[] = [
   { label: 'Dashboard', path: '/dashboard', key: '1' },
-  { label: 'Preventivi', path: '/preventivi', key: '2' },
-  { label: 'Lavori extra', path: '/lavori-extra', key: '3' },
+  { label: 'Clienti', path: '/clienti', key: '2' },
+  { label: 'Preventivi', path: '/preventivi', key: '3' },
+  { label: 'Lavori extra', path: '/lavori-extra', key: '4' },
   { label: 'Gestione Cantieri', path: '/cantieri', key: 'Shift+CmdOrCtrl+G' },
-  { label: 'Clienti', path: '/clienti', key: '4' },
   { label: 'Crea comunicazione', path: '/comunicazioni', key: '5' },
   { label: 'Listino', path: '/listino', key: '6' },
   { label: 'Statistiche', path: '/statistiche', key: '7' },
@@ -275,9 +275,9 @@ export function buildAppMenu(getWindow: GetWindow) {
         { label: 'Nuova comunicazione', click: goWith('/comunicazioni', 'nuova') },
         { type: 'separator' },
         { label: 'Dashboard', click: go('/dashboard') },
+        { label: 'Clienti', click: go('/clienti') },
         { label: 'Lavori extra', click: go('/lavori-extra') },
         { label: 'Gestione Cantieri', click: go('/cantieri') },
-        { label: 'Clienti', click: go('/clienti') },
         { label: 'Listino', click: go('/listino') },
       ])
     );

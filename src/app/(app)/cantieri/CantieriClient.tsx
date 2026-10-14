@@ -225,7 +225,6 @@ export function CantieriClient({ initial }: { initial: SitesOverview }) {
     <Page>
       <PageHeader
         title="Gestione Cantieri"
-        icon={<HardHat className="h-6 w-6 text-primary" />}
         subtitle={`${t.active} attivi · ${t.pending} in attesa di accettazione`}
         actions={
           working ? (
