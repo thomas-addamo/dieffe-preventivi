@@ -37,6 +37,8 @@ export interface ChangelogEntry {
   highlights: ChangelogHighlight[];
   /** Aggiornamento importante: mostra la schermata "Novità" su tutte le piattaforme. */
   important?: boolean;
+  /** Pulsante principale della schermata Novità (es. apri la nuova sezione). */
+  cta?: { label: string; href: string };
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
@@ -45,6 +47,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-10-14",
     headline: "Arriva la Gestione Cantieri.",
     important: true,
+    cta: { label: "Apri Gestione Cantieri", href: "/cantieri" },
     highlights: [
       {
         icon: "site",

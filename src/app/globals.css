@@ -703,3 +703,19 @@ aside {
 .dark .leaflet-control-attribution { background: rgb(0 0 0 / 0.5) !important; color: #aaa; }
 .dark .leaflet-control-attribution a { color: #ccc; }
 .dark .leaflet-bar a { background: var(--card); color: var(--foreground); border-color: var(--border); }
+
+/* ─── Banner "Novità" ────────────────────────────────────────────────────────
+   Entrata a cascata dei contenuti e un unico riflesso di luce sulla card.
+   Niente animazioni con "riduci movimento". */
+@keyframes wn-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes wn-sheen { from { transform: translateX(0) skewX(-18deg); } to { transform: translateX(450%) skewX(-18deg); } }
+.wn-card { animation: wn-rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.wn-rise { animation: wn-rise 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.wn-sheen {
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.07), transparent);
+  animation: wn-sheen 1.6s 0.35s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .wn-card, .wn-rise, .wn-sheen { animation: none; }
+  .wn-sheen { display: none; }
+}
