@@ -235,19 +235,6 @@ export const quoteItemImages = pgTable("quote_item_images", {
   orderIndex: integer("order_index").notNull().default(0),
 });
 
-// ─── Quote Templates ──────────────────────────────────────────────────────────
-
-export const quoteTemplates = pgTable("quote_templates", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  description: text("description"),
-  data: jsonb("data").notNull(),
-  userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
-  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
-    .notNull()
-    .defaultNow(),
-});
-
 // ─── Communications (lettere / comunicazioni su carta intestata) ───────────────
 
 export type CommunicationRecipient = {
@@ -446,7 +433,6 @@ export type NewQuoteSection = typeof quoteSections.$inferInsert;
 export type QuoteItem = typeof quoteItems.$inferSelect;
 export type NewQuoteItem = typeof quoteItems.$inferInsert;
 export type QuoteItemImage = typeof quoteItemImages.$inferSelect;
-export type QuoteTemplate = typeof quoteTemplates.$inferSelect;
 export type Communication = typeof communications.$inferSelect;
 export type QuoteSignature = typeof quoteSignatures.$inferSelect;
 export type NewQuoteSignature = typeof quoteSignatures.$inferInsert;

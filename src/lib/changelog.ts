@@ -54,6 +54,11 @@ export const CHANGELOG: ChangelogEntry[] = [
         title: "Pulizia automatica notturna",
         description: "Ogni notte vengono rimosse le sessioni scadute, gli accessi più vecchi di 12 mesi e le notifiche lette da oltre 90 giorni.",
       },
+      {
+        icon: "settings",
+        title: "Rimossa la vecchia tabella dei template",
+        description: "Non era più usata dall'app: il database resta più ordinato.",
+      },
     ],
   },
   {
