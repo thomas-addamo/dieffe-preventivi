@@ -36,6 +36,15 @@
     },
     "src/app/api/cron/price-list/route.ts": {
       "maxDuration": 60
+    },
+    "src/app/api/cron/cleanup-trash/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/sites/process/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/sites/[id]/insights/route.ts": {
+      "maxDuration": 45
     }
   },
   "crons": [

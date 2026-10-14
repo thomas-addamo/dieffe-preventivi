@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { updateQuoteField, checkQuoteEditable } from "@/lib/db/quotes";
 import { notifyQuoteStatusChanged } from "@/lib/notifications";
 import { QUOTE_STATUS_LABELS } from "@/lib/utils";
+import { queueSiteSync } from "@/lib/sites/sync";
 
 const schema = z.object({
   status: z.enum(["draft", "sent", "accepted", "rejected", "archived"]),
@@ -29,6 +30,8 @@ export async function PATCH(
   if (parsed.data.status === "sent") extra.sentAt = new Date().toISOString();
 
   await updateQuoteField(id, { status: parsed.data.status, ...extra } as never);
+  // Inviato/accettato → cantiere; altri stati → il cantiere sparisce.
+  queueSiteSync();
 
   await notifyQuoteStatusChanged({
     quoteId: id,

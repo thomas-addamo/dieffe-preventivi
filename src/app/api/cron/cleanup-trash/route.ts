@@ -4,6 +4,9 @@ import { quotes, sessions, userAccessLog, notifications } from "@/lib/db/schema"
 import { lt, isNotNull, and, eq, sql } from "drizzle-orm";
 import { deleteCloudinaryFolder } from "@/lib/cloudinary";
 import { moveLegacySignatures } from "@/lib/signatures";
+import { runSitesMaintenance } from "@/lib/sites/maintenance";
+
+export const maxDuration = 60;
 
 export async function GET(req: Request) {
   const authHeader = req.headers.get("authorization");
@@ -51,7 +54,14 @@ export async function GET(req: Request) {
   // Firme vecchie ancora in base64 nel DB → Cloudinary.
   const movedSignatures = await moveLegacySignatures().catch(() => 0);
 
+  // Gestione cantieri: allineamento, SAL che scattano, promemoria del giorno
+  // dopo, chiusura (= eliminazione) dei cantieri finiti e fatturati.
+  const sitesReport = await runSitesMaintenance(Date.now() + 40_000).catch((err) => ({
+    error: err instanceof Error ? err.message : String(err),
+  }));
+
   return NextResponse.json({
+    sites: sitesReport,
     deleted: expiredQuotes.length,
     expiredSessions: expiredSessions.length,
     accessLogs: oldAccessLogs.length,

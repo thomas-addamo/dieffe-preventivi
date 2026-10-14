@@ -7,6 +7,7 @@ import { isTokenValid } from "@/lib/public-token";
 import { sendSignatureNotification, sendClientSignatureConfirmation } from "@/lib/email/send";
 import { notifyQuoteSigned } from "@/lib/notifications";
 import { storeSignatureImage } from "@/lib/cloudinary";
+import { queueSiteSync } from "@/lib/sites/sync";
 
 const bodySchema = z.object({
   signerName: z.string().min(2).max(100),
@@ -119,6 +120,8 @@ export async function POST(
       publicTokenExpiresAt: new Date(), // expire immediately after signing
     })
     .where(eq(quotes.id, quote.id));
+  // Accettato dal cliente → il cantiere diventa attivo (rifiutato → sparisce).
+  queueSiteSync();
 
   // Notifica in-app per titolare del preventivo e admin.
   await notifyQuoteSigned({

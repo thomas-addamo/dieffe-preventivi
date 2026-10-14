@@ -10,6 +10,7 @@ import {
   index,
   uniqueIndex,
   timestamp,
+  date,
   uuid,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
@@ -161,12 +162,20 @@ export const quotes = pgTable(
     parentQuoteId: text("parent_quote_id").references((): AnyPgColumn => quotes.id, {
       onDelete: "set null",
     }),
+    /** Cantiere a cui appartiene il preventivo (principale o lavoro extra). */
+    siteId: text("site_id").references((): AnyPgColumn => sites.id, { onDelete: "set null" }),
+    /** Fasi e SAL di questo preventivo già generati nel cantiere. */
+    siteSetupAt: timestamp("site_setup_at", { withTimezone: true }),
+    /** Lavori conclusi: il cantiere è stato chiuso ed eliminato, il
+     *  preventivo resta e non genera più un cantiere. */
+    worksCompletedAt: timestamp("works_completed_at", { withTimezone: true }),
   },
   (t) => [
     uniqueIndex("quotes_code_idx").on(t.code),
     index("quotes_user_id_idx").on(t.userId),
     index("quotes_client_id_idx").on(t.clientId),
     index("quotes_parent_id_idx").on(t.parentQuoteId),
+    index("quotes_site_id_idx").on(t.siteId),
   ]
 );
 
@@ -376,6 +385,8 @@ export const notifications = pgTable(
         "alert",
         // Richiesta d'aiuto inviata da un utente agli amministratori
         "support",
+        // Gestione cantieri: SAL da fatturare, eventi in calendario
+        "site",
       ],
     })
       .notNull()
@@ -418,6 +429,144 @@ export const pushSubscriptions = pgTable(
   ]
 );
 
+// ─── Cantieri (v4) ────────────────────────────────────────────────────────────
+//
+// Un cantiere nasce da solo dal preventivo principale inviato (in attesa) o
+// accettato (attivo) e raccoglie anche i suoi lavori extra. Quando i lavori
+// sono conclusi il cantiere viene ELIMINATO con tutto ciò che contiene (fasi,
+// SAL, eventi, note: ON DELETE CASCADE); i preventivi restano.
+// Struttura pensata per un DB leggero: importi e avanzamento si calcolano dai
+// preventivi (niente copie), i consigli IA stanno in una colonna del cantiere.
+
+export const sites = pgTable(
+  "sites",
+  {
+    id: text("id").primaryKey(),
+    /** pending = preventivo inviato · active = preventivo accettato */
+    status: text("status", { enum: ["pending", "active"] }).notNull().default("pending"),
+    mainQuoteId: text("main_quote_id")
+      .notNull()
+      .references((): AnyPgColumn => quotes.id, { onDelete: "cascade" }),
+    clientId: text("client_id").references(() => clients.id, { onDelete: "set null" }),
+    name: text("name").notNull(),
+    address: text("address"),
+    lat: doublePrecision("lat"),
+    lng: doublePrecision("lng"),
+    /** pending → da cercare · ok · failed (indirizzo non trovato) · manual */
+    geoStatus: text("geo_status", { enum: ["pending", "ok", "failed", "manual"] })
+      .notNull()
+      .default("pending"),
+    startDate: date("start_date"),
+    plannedEndDate: date("planned_end_date"),
+    /** Costo di un giorno di cantiere (squadra, noli, suolo pubblico) in €. */
+    dailyCost: doublePrecision("daily_cost"),
+    /** Penale contrattuale per giorno di ritardo in €. */
+    penaltyPerDay: doublePrecision("penalty_per_day"),
+    /** Margine atteso sull'imponibile, in %. */
+    marginPct: doublePrecision("margin_pct").notNull().default(20),
+    /** Avanzamento 0–100, ricalcolato a ogni modifica delle fasi. */
+    progress: doublePrecision("progress").notNull().default(0),
+    /** Consigli IA in cache: rigenerati solo se i dati cambiano. */
+    aiInsights: jsonb("ai_insights"),
+    aiInsightsHash: text("ai_insights_hash"),
+    aiInsightsAt: timestamp("ai_insights_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("sites_main_quote_idx").on(t.mainQuoteId)]
+);
+
+export const sitePhases = pgTable(
+  "site_phases",
+  {
+    id: text("id").primaryKey(),
+    siteId: text("site_id")
+      .notNull()
+      .references(() => sites.id, { onDelete: "cascade" }),
+    /** Preventivo da cui deriva la fase (null = aggiunta a mano). */
+    quoteId: text("quote_id").references(() => quotes.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    /** Peso nell'avanzamento: l'importo delle lavorazioni (€). */
+    weight: doublePrecision("weight").notNull().default(0),
+    orderIndex: integer("order_index").notNull().default(0),
+    durationDays: integer("duration_days"),
+    plannedStart: date("planned_start"),
+    plannedEnd: date("planned_end"),
+    doneAt: timestamp("done_at", { withTimezone: true }),
+    note: text("note"),
+    source: text("source", { enum: ["ai", "manual"] }).notNull().default("manual"),
+  },
+  (t) => [index("site_phases_site_idx").on(t.siteId)]
+);
+
+export const siteMilestones = pgTable(
+  "site_milestones",
+  {
+    id: text("id").primaryKey(),
+    siteId: text("site_id")
+      .notNull()
+      .references(() => sites.id, { onDelete: "cascade" }),
+    quoteId: text("quote_id").references(() => quotes.id, { onDelete: "cascade" }),
+    label: text("label").notNull(),
+    /** Percentuale dell'imponibile del preventivo… */
+    percent: doublePrecision("percent"),
+    /** …oppure importo fisso (es. "acconto 500 €"). */
+    amount: doublePrecision("amount"),
+    /** accept = all'accettazione · start = a inizio lavori · phase = a fine
+     *  fase · end = a fine lavori · manual = lo segna l'utente */
+    trigger: text("trigger", { enum: ["accept", "start", "phase", "end", "manual"] })
+      .notNull()
+      .default("manual"),
+    phaseId: text("phase_id").references(() => sitePhases.id, { onDelete: "set null" }),
+    orderIndex: integer("order_index").notNull().default(0),
+    reachedAt: timestamp("reached_at", { withTimezone: true }),
+    invoicedAt: timestamp("invoiced_at", { withTimezone: true }),
+    invoiceNumber: text("invoice_number"),
+    paidAt: timestamp("paid_at", { withTimezone: true }),
+  },
+  (t) => [index("site_milestones_site_idx").on(t.siteId)]
+);
+
+export const SITE_EVENT_TYPES = [
+  "suolo_pubblico",
+  "intervento",
+  "consegna",
+  "sopralluogo",
+  "scadenza",
+  "altro",
+] as const;
+
+export const siteEvents = pgTable(
+  "site_events",
+  {
+    id: text("id").primaryKey(),
+    siteId: text("site_id")
+      .notNull()
+      .references(() => sites.id, { onDelete: "cascade" }),
+    date: date("date").notNull(),
+    endDate: date("end_date"),
+    type: text("type", { enum: SITE_EVENT_TYPES }).notNull().default("altro"),
+    title: text("title").notNull(),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("site_events_site_date_idx").on(t.siteId, t.date)]
+);
+
+export const siteNotes = pgTable(
+  "site_notes",
+  {
+    id: text("id").primaryKey(),
+    siteId: text("site_id")
+      .notNull()
+      .references(() => sites.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("site_notes_site_idx").on(t.siteId)]
+);
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type User = typeof users.$inferSelect;
@@ -443,3 +592,8 @@ export type Notification = typeof notifications.$inferSelect;
 export type NewNotification = typeof notifications.$inferInsert;
 export type PushSubscription = typeof pushSubscriptions.$inferSelect;
 export type NewPushSubscription = typeof pushSubscriptions.$inferInsert;
+export type Site = typeof sites.$inferSelect;
+export type SitePhase = typeof sitePhases.$inferSelect;
+export type SiteMilestone = typeof siteMilestones.$inferSelect;
+export type SiteEvent = typeof siteEvents.$inferSelect;
+export type SiteNote = typeof siteNotes.$inferSelect;

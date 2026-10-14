@@ -113,6 +113,13 @@
       "when": 1791963459285,
       "tag": "0015_drop_quote_templates",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1791981947692,
+      "tag": "0016_sites",
+      "breakpoints": true
     }
   ]
 }
