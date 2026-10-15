@@ -16,10 +16,12 @@ import {
   Unlock,
   UserCog,
   FilePlus2,
+  Copy,
   Plus,
   Loader2,
 } from "lucide-react";
 import { SharePopover } from "./SharePopover";
+import { DuplicateQuoteDialog } from "./DuplicateQuoteDialog";
 import { AiChatAssistant } from "./AiChatAssistant";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -707,10 +709,12 @@ export function QuoteEditor({ initialQuote, clients, users = [], related }: Quot
 
   const [pdfSheetOpen, setPdfSheetOpen] = useState(false);
   const [creatingExtra, setCreatingExtra] = useState(false);
+  const [duplicateOpen, setDuplicateOpen] = useState(false);
 
   // Comandi dalla barra dei menu dell'app desktop (File).
   useMenuParam("pdf", (v) => void exportQuote(v === "scarica" ? "pdf-download" : "pdf"));
   useMenuParam("extra", () => perms.createQuote && quote.kind !== "extra" && void createExtra());
+  useMenuParam("duplica", () => perms.createQuote && setDuplicateOpen(true));
 
   /** Nuovo lavoro extra collegato a questo preventivo (stesse intestazioni). */
   async function createExtra() {
@@ -1021,6 +1025,19 @@ export function QuoteEditor({ initialQuote, clients, users = [], related }: Quot
             </Button>
           )}
 
+          {perms.createQuote && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 h-8"
+              onClick={() => setDuplicateOpen(true)}
+              title="Crea una copia di questo preventivo, per lo stesso cliente o per un altro"
+            >
+              <Copy className="w-3.5 h-3.5" />
+              <span className="hidden lg:inline">Duplica</span>
+            </Button>
+          )}
+
           {perms.deleteQuote && (
             <Button
               variant="ghost"
@@ -1091,6 +1108,11 @@ export function QuoteEditor({ initialQuote, clients, users = [], related }: Quot
             {perms.createQuote && quote.kind !== "extra" && (
               <DropdownMenuItem onClick={createExtra} disabled={creatingExtra}>
                 <FilePlus2 className="w-4 h-4 mr-2" /> Nuovo lavoro extra
+              </DropdownMenuItem>
+            )}
+            {perms.createQuote && (
+              <DropdownMenuItem onClick={() => setDuplicateOpen(true)}>
+                <Copy className="w-4 h-4 mr-2" /> Duplica preventivo
               </DropdownMenuItem>
             )}
             {perms.exportQuoteAdvanced && (
@@ -1304,6 +1326,18 @@ export function QuoteEditor({ initialQuote, clients, users = [], related }: Quot
           url={`/api/export/pdf/${quote.id}`}
           title={`${quote.code}${quote.title ? ` — ${quote.title}` : ""}`}
           onClose={() => setPdfSheetOpen(false)}
+        />
+      )}
+
+      {duplicateOpen && (
+        <DuplicateQuoteDialog
+          source={{
+            id: quote.id,
+            code: quote.code,
+            title: quote.title,
+            clientName: clients.find((c) => c.id === quote.clientId)?.name ?? null,
+          }}
+          onClose={() => setDuplicateOpen(false)}
         />
       )}
     </div>

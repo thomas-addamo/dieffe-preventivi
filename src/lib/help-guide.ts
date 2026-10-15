@@ -27,6 +27,11 @@ EDITOR PREVENTIVO
 - Salvataggio automatico. L'amministratore può bloccare un preventivo o riassegnarlo a un altro utente.
 - Assistente edilizia (pulsante viola in basso a destra nell'editor): domande tecniche e sui prezzi dei tuoi preventivi.
 
+DUPLICARE UN PREVENTIVO
+- Dall'editor il pulsante "Duplica" (da telefono: menu ⋮ → "Duplica preventivo"; app desktop: File → Duplica preventivo, ⌘D/Ctrl+D), oppure dall'elenco in dashboard l'icona "Duplica" sulla riga.
+- Si sceglie "Stesso cliente" oppure "Un altro cliente" dall'anagrafica (l'indirizzo del cantiere si propone da quello del nuovo cliente ed è modificabile) e il titolo della copia.
+- La copia è una bozza con un nuovo codice: sezioni, voci, prezzi, sconti, IVA, condizioni, note e foto. Non si copiano stato, firma, link per il cliente, blocco e cantiere. Un lavoro extra duplicato diventa un preventivo a sé.
+
 LAVORI EXTRA
 - Per lavorazioni chieste in più rispetto a un preventivo: pagina "Lavori extra" → "Nuovo lavoro extra" → scegli il preventivo; oppure dall'editor il pulsante "Lavoro extra".
 - Il lavoro extra è un preventivo separato (codice es. PREV-2026-014-E1) con le stesse intestazioni e un importo proprio; nel PDF è marcato "EXTRA PREVENTIVO".

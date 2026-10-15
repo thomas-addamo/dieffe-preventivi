@@ -43,6 +43,29 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "4.2.0",
+    date: "2026-10-15",
+    headline: "Duplica un preventivo in un clic.",
+    important: true,
+    highlights: [
+      {
+        icon: "layout",
+        title: "Duplica preventivo",
+        description: "Dall'editor o dall'elenco in dashboard: una copia completa di sezioni, voci, prezzi, condizioni e foto, come bozza con un nuovo codice.",
+      },
+      {
+        icon: "settings",
+        title: "Stesso cliente o un altro",
+        description: "Scegli se tenere il cliente o assegnarne uno dall'anagrafica: l'indirizzo del cantiere si aggiorna da solo ed è modificabile.",
+      },
+      {
+        icon: "keyboard",
+        title: "⌘D nell'app desktop",
+        description: "Su Mac e Windows: File › Duplica preventivo, anche con ⌘D / Ctrl+D.",
+      },
+    ],
+  },
+  {
     version: "4.1.0",
     date: "2026-10-14",
     headline: "Gestione Cantieri anche su iPhone.",

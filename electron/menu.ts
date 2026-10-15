@@ -106,6 +106,12 @@ export function buildAppMenu(getWindow: GetWindow) {
         // Dentro un preventivo: extra di quel preventivo; altrove: scegli il preventivo.
         click: onQuote('extra', '1', goWith('/lavori-extra', 'nuovo')),
       },
+      {
+        label: 'Duplica preventivo…',
+        accelerator: 'CmdOrCtrl+D',
+        // Solo dentro un preventivo: chiede stesso cliente o un altro.
+        click: onQuote('duplica'),
+      },
       { label: 'Nuova comunicazione', accelerator: 'Alt+CmdOrCtrl+N', click: goWith('/comunicazioni', 'nuova') },
       { label: 'Nuovo cliente', click: goWith('/clienti', 'nuovo') },
       { label: 'Nuova voce di listino', click: goWith('/listino', 'nuovo') },
