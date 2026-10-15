@@ -31,7 +31,8 @@ const GO_TO: { label: string; path: string; key: string }[] = [
   { label: 'Clienti', path: '/clienti', key: '2' },
   { label: 'Preventivi', path: '/preventivi', key: '3' },
   { label: 'Lavori extra', path: '/lavori-extra', key: '4' },
-  { label: 'Gestione Cantieri', path: '/cantieri', key: 'Shift+CmdOrCtrl+G' },
+  // Gestione Cantieri sospesa per manutenzione: si riaggiunge alla riattivazione.
+  // { label: 'Gestione Cantieri', path: '/cantieri', key: 'Shift+CmdOrCtrl+G' },
   { label: 'Crea comunicazione', path: '/comunicazioni', key: '5' },
   { label: 'Listino', path: '/listino', key: '6' },
   { label: 'Statistiche', path: '/statistiche', key: '7' },
@@ -283,7 +284,6 @@ export function buildAppMenu(getWindow: GetWindow) {
         { label: 'Dashboard', click: go('/dashboard') },
         { label: 'Clienti', click: go('/clienti') },
         { label: 'Lavori extra', click: go('/lavori-extra') },
-        { label: 'Gestione Cantieri', click: go('/cantieri') },
         { label: 'Listino', click: go('/listino') },
       ])
     );

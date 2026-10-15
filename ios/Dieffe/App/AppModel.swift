@@ -35,6 +35,8 @@ final class AppModel {
     /// "Novità" da mostrare dopo un aggiornamento importante (WhatsNew).
     var whatsNew: WhatsNewEntry?
     var unreadNotifications: Int { home.data?.unreadNotifications ?? 0 }
+    /// Gestione Cantieri attiva (spenta = in manutenzione).
+    var sitesEnabled: Bool { home.data?.features?.sites ?? false }
     var clientsPath = NavigationPath()
     var priceListPath = NavigationPath()
     var altroPath = NavigationPath()

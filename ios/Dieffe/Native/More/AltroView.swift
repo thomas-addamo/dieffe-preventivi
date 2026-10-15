@@ -53,7 +53,9 @@ struct AltroView: View {
                 }
 
                 Section("Operatività") {
-                    link(.sites, "Gestione Cantieri", "Mappa, avanzamento lavori, SAL e scadenze", "hammer.fill", .orange)
+                    if model.sitesEnabled {
+                        link(.sites, "Gestione Cantieri", "Mappa, avanzamento lavori, SAL e scadenze", "hammer.fill", .orange)
+                    }
                     link(.extras, "Lavori extra", "Lavorazioni aggiuntive di un preventivo", "doc.badge.plus", .orange)
                     Button {
                         model.select(.listino)
@@ -94,8 +96,10 @@ struct AltroView: View {
             }
             .navigationDestination(for: AltroRoute.self) { route in
                 switch route {
-                case .sites: SitesView()
-                case .site(let id, let tab): SiteDetailView(siteID: id, initialTab: tab)
+                case .sites:
+                    if model.sitesEnabled { SitesView() } else { SitesMaintenanceView() }
+                case .site(let id, let tab):
+                    if model.sitesEnabled { SiteDetailView(siteID: id, initialTab: tab) } else { SitesMaintenanceView() }
                 case .extras: ExtrasView()
                 case .stats: StatsView()
                 case .communications: CommunicationsView()

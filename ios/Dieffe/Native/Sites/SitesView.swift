@@ -425,3 +425,16 @@ enum SiteLinks {
         return c?.url
     }
 }
+
+/// Al posto della Gestione Cantieri mentre è sospesa (anche dai link delle
+/// notifiche arrivate prima della sospensione).
+struct SitesMaintenanceView: View {
+    var body: some View {
+        ContentUnavailableView {
+            Label("In manutenzione", systemImage: "wrench.and.screwdriver")
+        } description: {
+            Text("Gestione Cantieri è momentaneamente disabilitata per manutenzione: tornerà disponibile a breve su tutti i dispositivi.")
+        }
+        .navigationTitle("Cantieri")
+    }
+}

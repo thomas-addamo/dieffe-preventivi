@@ -6,6 +6,7 @@ import { db } from "@/lib/db/client";
 import { sites } from "@/lib/db/schema";
 import { can } from "@/lib/permissions/check";
 import type { UserRole } from "@/lib/permissions/types";
+import { FEATURES, SITES_MAINTENANCE_MESSAGE } from "@/lib/features";
 
 type Session = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;
 
@@ -13,6 +14,9 @@ type Session = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;
 export async function requireSitesUser(manage = false): Promise<{ session: Session } | { error: NextResponse }> {
   const session = await getCurrentUser();
   if (!session) return { error: NextResponse.json({ error: "Non autorizzato" }, { status: 401 }) };
+  if (!FEATURES.sites) {
+    return { error: NextResponse.json({ error: SITES_MAINTENANCE_MESSAGE, maintenance: true }, { status: 503 }) };
+  }
   if (manage && !can.manageSites(session.user.role as UserRole)) {
     return { error: NextResponse.json({ error: "Permessi insufficienti" }, { status: 403 }) };
   }

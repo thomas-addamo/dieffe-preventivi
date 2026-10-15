@@ -5,6 +5,7 @@ import { lt, isNotNull, and, eq, sql } from "drizzle-orm";
 import { deleteCloudinaryFolder } from "@/lib/cloudinary";
 import { moveLegacySignatures } from "@/lib/signatures";
 import { runSitesMaintenance } from "@/lib/sites/maintenance";
+import { FEATURES } from "@/lib/features";
 
 export const maxDuration = 60;
 
@@ -56,9 +57,11 @@ export async function GET(req: Request) {
 
   // Gestione cantieri: allineamento, SAL che scattano, promemoria del giorno
   // dopo, chiusura (= eliminazione) dei cantieri finiti e fatturati.
-  const sitesReport = await runSitesMaintenance(Date.now() + 40_000).catch((err) => ({
-    error: err instanceof Error ? err.message : String(err),
-  }));
+  const sitesReport = FEATURES.sites
+    ? await runSitesMaintenance(Date.now() + 40_000).catch((err) => ({
+        error: err instanceof Error ? err.message : String(err),
+      }))
+    : { paused: true };
 
   return NextResponse.json({
     sites: sitesReport,

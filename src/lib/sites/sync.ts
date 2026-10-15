@@ -2,6 +2,7 @@ import "server-only";
 import { after } from "next/server";
 import { sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
+import { FEATURES } from "@/lib/features";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Allineamento automatico preventivi → cantieri.
@@ -22,6 +23,7 @@ import { db } from "@/lib/db/client";
 const LIVE = sql`('sent','accepted')`;
 
 export async function syncSites(): Promise<void> {
+  if (!FEATURES.sites) return;
   await db.batch([
     // 1. Cantieri il cui preventivo principale non è più inviato/accettato.
     db.execute(sql`
@@ -94,6 +96,7 @@ export async function syncSites(): Promise<void> {
  * cantieri e prepara quelli nuovi DOPO aver risposto (l'utente non aspetta).
  */
 export function queueSiteSync() {
+  if (!FEATURES.sites) return;
   after(async () => {
     try {
       await syncSites();

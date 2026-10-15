@@ -43,6 +43,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "4.2.2",
+    date: "2026-10-15",
+    headline: "Gestione Cantieri in manutenzione.",
+    highlights: [
+      {
+        icon: "settings",
+        title: "Gestione Cantieri sospesa",
+        description: "La funzione è momentaneamente disabilitata per manutenzione su sito, Mac, Windows e iPhone: tornerà disponibile a breve. I dati restano conservati.",
+      },
+    ],
+  },
+  {
     version: "4.2.1",
     date: "2026-10-15",
     headline: "PDF più ordinati, riepilogo sempre a vista.",

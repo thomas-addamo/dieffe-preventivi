@@ -6,6 +6,8 @@ import { can } from "@/lib/permissions/check";
 import type { UserRole } from "@/lib/permissions/types";
 import { CantiereClient } from "./CantiereClient";
 import type { SiteData } from "./site-api";
+import { FEATURES } from "@/lib/features";
+import { SitesMaintenance } from "@/components/sites/SitesMaintenance";
 
 export default async function CantierePage({
   params,
@@ -16,6 +18,7 @@ export default async function CantierePage({
 }) {
   const session = await getCurrentUser();
   if (!session) redirect("/login");
+  if (!FEATURES.sites) return <SitesMaintenance />;
 
   const [{ id }, { tab }] = await Promise.all([params, searchParams]);
   const detail = await getSiteDetail(id);

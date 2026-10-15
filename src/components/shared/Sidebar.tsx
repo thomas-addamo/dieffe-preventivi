@@ -35,6 +35,7 @@ import { NEW_BADGE_CLASS, isNewPage } from "@/lib/new-pages";
 import { HelpDialog } from "./HelpDialog";
 import { MENU_EVENTS } from "@/hooks/use-menu-param";
 import { HEALTH_COLORS, type SiteHealth } from "@/lib/sites/metrics";
+import { FEATURES } from "@/lib/features";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Barra laterale (desktop web + app desktop).
@@ -55,7 +56,8 @@ const navItems = [
   { href: "/clienti", label: "Clienti", icon: Users },
   { href: "/preventivi", label: "Preventivi", icon: FileText },
   { href: "/lavori-extra", label: "Lavori extra", icon: FilePlus2 },
-  { href: "/cantieri", label: "Gestione Cantieri", icon: HardHat },
+  // Gestione Cantieri: nascosta finché la funzione è sospesa (lib/features).
+  ...(FEATURES.sites ? [{ href: "/cantieri", label: "Gestione Cantieri", icon: HardHat }] : []),
   { href: "/comunicazioni", label: "Crea comunicazione", icon: Mail },
   { href: "/listino", label: "Listino", icon: List },
   { href: "/statistiche", label: "Statistiche", icon: BarChart2 },
