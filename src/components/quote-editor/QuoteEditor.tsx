@@ -711,6 +711,25 @@ export function QuoteEditor({ initialQuote, clients, users = [], related }: Quot
   const [creatingExtra, setCreatingExtra] = useState(false);
   const [duplicateOpen, setDuplicateOpen] = useState(false);
 
+  // Riepilogo laterale fisso durante lo scorrimento, subito sotto la barra
+  // degli strumenti (anch'essa fissa): ne misuriamo posizione e altezza dal
+  // vivo, perché cambiano tra sito, app Mac (barra del titolo) e Windows.
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const [summaryTop, setSummaryTop] = useState(0);
+  useEffect(() => {
+    const el = toolbarRef.current;
+    if (!el) return;
+    const measure = () => setSummaryTop((parseFloat(getComputedStyle(el).top) || 0) + el.offsetHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
+
   // Comandi dalla barra dei menu dell'app desktop (File).
   useMenuParam("pdf", (v) => void exportQuote(v === "scarica" ? "pdf-download" : "pdf"));
   useMenuParam("extra", () => perms.createQuote && quote.kind !== "extra" && void createExtra());
@@ -877,7 +896,7 @@ export function QuoteEditor({ initialQuote, clients, users = [], related }: Quot
       )}
 
       {/* Toolbar */}
-      <div className="sticky top-0 lg:top-[2.375rem] z-10 bg-background/85 backdrop-blur-xl lg:bg-background lg:backdrop-blur-none border-b px-2 md:px-6 pb-2.5 pt-[calc(env(safe-area-inset-top)+0.625rem)] lg:py-2.5 flex items-center gap-1.5 md:gap-3">
+      <div ref={toolbarRef} className="sticky top-0 lg:top-[2.375rem] z-10 bg-background/85 backdrop-blur-xl lg:bg-background lg:backdrop-blur-none border-b px-2 md:px-6 pb-2.5 pt-[calc(env(safe-area-inset-top)+0.625rem)] lg:py-2.5 flex items-center gap-1.5 md:gap-3">
         <Button
           variant="ghost"
           size="sm"
@@ -1203,8 +1222,11 @@ export function QuoteEditor({ initialQuote, clients, users = [], related }: Quot
         </div>
 
         {/* Desktop totals panel */}
-        <div className="hidden md:block w-72 shrink-0 border-l overflow-y-auto">
-          <div className="sticky top-0 p-4">
+        <div className="hidden md:block w-72 shrink-0 border-l">
+          <div
+            className="sticky overflow-y-auto overscroll-contain p-4"
+            style={{ top: summaryTop, maxHeight: `calc(100dvh - ${summaryTop}px)` }}
+          >
             <TotalsPanel
               sections={quote.sections}
               vatRate={quote.vatRate}

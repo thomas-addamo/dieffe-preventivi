@@ -11,6 +11,7 @@ import type { CompanySettings } from "@/lib/db/schema";
 import { calcQuoteTotals, calcSectionTotal } from "@/lib/calculations";
 import { formatDate } from "@/lib/utils";
 import { PdfRichText } from "./PdfRichText";
+import { toPlainText } from "@/lib/rich-text";
 import { Letterhead, LetterheadFooter } from "./Letterhead";
 
 function fmtCurrency(n: number): string {
@@ -437,7 +438,10 @@ function SectionRows({
         const hasImages = item.images.length > 0;
         return (
           <View key={item.id}>
-            <View style={[s.itemRow, iIdx % 2 === 1 ? s.itemRowAlt : {}]}>
+            <View
+              wrap={!fitsOnOnePage(item.description)}
+              style={[s.itemRow, iIdx % 2 === 1 ? s.itemRowAlt : {}]}
+            >
               <Text style={s.colNum}>
                 {section.code}.{iIdx + 1}
               </Text>
@@ -478,6 +482,20 @@ function SectionRows({
       })}
     </View>
   );
+}
+
+/**
+ * Una voce si sposta intera alla pagina successiva invece di spezzarsi: la
+ * riga a colonne di react-pdf non divide bene il testo e la descrizione
+ * finiva oltre il margine, sopra il piè di pagina, perdendo le ultime righe.
+ * Solo una voce più lunga di una pagina intera (~60 righe nella colonna
+ * descrizione, ~85 caratteri l'una) deve per forza spezzarsi.
+ */
+function fitsOnOnePage(description: string): boolean {
+  const lines = toPlainText(description)
+    .split("\n")
+    .reduce((n, line) => n + Math.max(1, Math.ceil(line.length / 85)), 0);
+  return lines <= 60;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────

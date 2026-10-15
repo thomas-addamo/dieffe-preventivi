@@ -43,6 +43,23 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "4.2.1",
+    date: "2026-10-15",
+    headline: "PDF più ordinati, riepilogo sempre a vista.",
+    highlights: [
+      {
+        icon: "pdf",
+        title: "Voci lunghe nel PDF",
+        description: "Una voce che non sta a fine pagina passa intera alla pagina successiva: niente più testo tagliato oltre il margine.",
+      },
+      {
+        icon: "layout",
+        title: "Riepilogo fisso nell'editor",
+        description: "Il riepilogo a destra resta in alto mentre scorri le sezioni del preventivo.",
+      },
+    ],
+  },
+  {
     version: "4.2.0",
     date: "2026-10-15",
     headline: "Duplica un preventivo in un clic.",
