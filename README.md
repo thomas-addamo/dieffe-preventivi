@@ -6,10 +6,10 @@
 
 **Preventivi edili professionali, dal sopralluogo alla firma del cliente.**
 
-Il gestionale con cui Dieffe Ristrutturazioni prepara, invia e archivia i preventivi dei propri cantieri:<br/>
+Il gestionale con cui Dieffe Ristrutturazioni prepara, invia e archivia i preventivi dei propri cantieri,
 sul web, su iPhone e nelle app desktop per macOS e Windows.
 
-[![Versione](https://img.shields.io/github/v/release/thomas-addamo/dieffe-preventivi?label=versione&color=1e40af)](https://github.com/thomas-addamo/dieffe-preventivi/releases/latest)
+[![Versione](https://badgen.net/github/release/thomas-addamo/dieffe-preventivi?label=versione&color=1e40af)](https://github.com/thomas-addamo/dieffe-preventivi/releases/latest)
 [![Piattaforme](https://img.shields.io/badge/web%20·%20iPhone%20·%20macOS%20·%20Windows-0f172a)](#piattaforme)
 [![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org)
 [![SwiftUI](https://img.shields.io/badge/SwiftUI-iOS%2026-F05138?logo=swift&logoColor=white)](ios/README.md)
@@ -29,16 +29,15 @@ Un unico strumento al posto di fogli Excel, documenti sparsi e mail scritte a ma
 Il preventivo nasce in cantiere dal telefono, si rifinisce in ufficio, parte per email
 con il PDF allegato e torna firmato dal cliente, tutto nello stesso posto.
 
-```
- Sopralluogo  ──►  Preventivo  ──►  Invio per email  ──►  Firma online  ──►  Archivio
-  (iPhone)        (listino + AI)    (PDF + link + PIN)     (dal cliente)     (statistiche)
-```
+<p align="center">
+<b>Sopralluogo</b> → <b>Preventivo</b> → <b>Invio per email</b> → <b>Firma online</b> → <b>Archivio</b>
+</p>
 
 ## Funzionalità
 
 ### Preventivi
 
-| | |
+| Funzione | Cosa fa |
 |---|---|
 | **Editor** | Sezioni e voci trascinabili, quantità, sconti, prezzi a corpo, sezioni opzionali; più preventivi aperti in schede, riepilogo sempre a vista. |
 | **Descrizioni formattate** | Grassetto, corsivo, sottolineato ed elenchi nelle voci, riportati fedelmente nel PDF. |
@@ -48,7 +47,7 @@ con il PDF allegato e torna firmato dal cliente, tutto nello stesso posto.
 
 ### Cliente
 
-| | |
+| Funzione | Cosa fa |
 |---|---|
 | **Invio per email** | Mail già pronta dalla casella ufficiale dell'impresa, con PDF allegato, riferimenti del preventivo e pulsante per aprirlo online. Più destinatari in CC o CCN, note controllate dall'AI, anteprima prima dell'invio. |
 | **Link e firma online** | Pagina pubblica protetta da codice di accesso, da cui il cliente consulta, accetta e firma. |
@@ -57,7 +56,7 @@ con il PDF allegato e torna firmato dal cliente, tutto nello stesso posto.
 
 ### Intelligenza artificiale
 
-| | |
+| Funzione | Cosa fa |
 |---|---|
 | **Prezzi spiegati** | Suggerimenti di prezzo motivati da listino, storico dei preventivi e mercato. |
 | **Listino che impara** | Catalogo a categorie con codici gerarchici (es. `PAV.02.05`), alimentato dai preventivi e riordinato ogni notte: doppioni uniti, voci inutilizzate rimosse. |
@@ -66,7 +65,7 @@ con il PDF allegato e torna firmato dal cliente, tutto nello stesso posto.
 
 ### Gestione
 
-| | |
+| Funzione | Cosa fa |
 |---|---|
 | **Clienti** | Anagrafica con contatti e storico dei preventivi. |
 | **Statistiche** | Andamento di valore, conversione e stati dei preventivi. |
@@ -79,7 +78,7 @@ con il PDF allegato e torna firmato dal cliente, tutto nello stesso posto.
 Ogni funzione importante esce nello stesso momento su tutte le piattaforme, con la
 stessa versione e un'interfaccia pensata per ciascuna.
 
-| | |
+| Piattaforma | Com'è |
 |---|---|
 | 🌐 **Web** | Funziona in qualsiasi browser, anche come app installata da Safari. |
 | 📱 **iPhone** | App nativa in SwiftUI con Liquid Glass, Face ID, Dynamic Island per i sopralluoghi e aggiornamento automatico sui dispositivi dell'impresa. [Dettagli →](ios/README.md) |
@@ -135,7 +134,7 @@ viene proposto il pacchetto giusto.
 
 ## Tecnologie
 
-| | |
+| Area | Strumenti |
 |---|---|
 | **Web app** | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, Radix |
 | **Dati** | PostgreSQL (Neon) con Drizzle ORM, immagini su Cloudinary |
