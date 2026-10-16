@@ -11,6 +11,7 @@ struct QuoteEditorView: View {
     @State private var addingFromList: String?
     @State private var showHeader = false
     @State private var showLink = false
+    @State private var showEmail = false
     @State private var confirmTrash = false
     @State private var pendingDeleteSection: QuoteSection?
     @State private var working = false
@@ -102,6 +103,9 @@ struct QuoteEditorView: View {
         }
         .sheet(isPresented: $showHeader) {
             HeaderEditView(editor: editor)
+        }
+        .sheet(isPresented: $showEmail) {
+            SendEmailView(editor: editor)
         }
         .sheet(isPresented: $showLink) {
             PublicLinkView(editor: editor)
@@ -354,6 +358,9 @@ struct QuoteEditorView: View {
             ToolbarItem(placement: .primaryAction) {
                 Menu {
                     Section("Condividi") {
+                        if editor.canEdit {
+                            Button("Invia per email", systemImage: "envelope") { showEmail = true }
+                        }
                         Button("PDF", systemImage: "doc.richtext") { export("pdf") }
                         Button("Link per il cliente", systemImage: "link") { showLink = true }
                             .disabled(!editor.canEdit && !quote.publicLinkActive)

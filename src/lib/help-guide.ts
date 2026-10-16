@@ -32,6 +32,14 @@ DUPLICARE UN PREVENTIVO
 - Si sceglie "Stesso cliente" oppure "Un altro cliente" dall'anagrafica (l'indirizzo del cantiere si propone da quello del nuovo cliente ed è modificabile) e il titolo della copia.
 - La copia è una bozza con un nuovo codice: sezioni, voci, prezzi, sconti, IVA, condizioni, note e foto. Non si copiano stato, firma, link per il cliente, blocco e cantiere. Un lavoro extra duplicato diventa un preventivo a sé.
 
+INVIARE UN PREVENTIVO PER EMAIL
+- Dall'editor: Condividi → "Invia per email" (da telefono: menu ⋮ → "Invia per email"; iPhone: menu ••• → Condividi → Invia per email; app desktop: File → Invia per email…, ⌥⌘E/Ctrl+Alt+E).
+- La mail parte dalla casella ufficiale impresa.dieffe@gmail.com con il PDF allegato, i riferimenti (codice, lavori, totale) e il pulsante per aprire e firmare il preventivo online; resta in "Inviati" su Gmail e le risposte arrivano lì.
+- Destinatari: l'email del cliente è già inserita; se ne aggiungono altri (dall'anagrafica o scritti a mano) in copia (CC, tutti vedono i destinatari) o copia nascosta (CCN). Massimo 10 per invio.
+- Oggetto e messaggio sono già pronti e modificabili. Note aggiuntive facoltative: "Controlla con IA" corregge ortografia e grammatica e mostra le correzioni prima di applicarle.
+- Codice di accesso: "Lo comunico io" (nella mail c'è scritto che verrà comunicato personalmente) oppure "Allegalo alla mail". Se il link esiste già, allegare il codice ne genera uno nuovo e quello vecchio smette di funzionare. Se il link non c'è, viene creato e il codice da comunicare compare a fine invio, una sola volta.
+- Un preventivo in bozza passa a "Inviato". Un preventivo già accettato o rifiutato si invia con il solo PDF, senza link.
+
 LAVORI EXTRA
 - Per lavorazioni chieste in più rispetto a un preventivo: pagina "Lavori extra" → "Nuovo lavoro extra" → scegli il preventivo; oppure dall'editor il pulsante "Lavoro extra".
 - Il lavoro extra è un preventivo separato (codice es. PREV-2026-014-E1) con le stesse intestazioni e un importo proprio; nel PDF è marcato "EXTRA PREVENTIVO".

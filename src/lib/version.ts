@@ -11,4 +11,4 @@
 // e aggiungere le novità in src/lib/changelog.ts (banner "Novità").
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const APP_VERSION = "4.2.2";
+export const APP_VERSION = "4.3.0";

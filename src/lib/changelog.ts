@@ -43,6 +43,34 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "4.3.0",
+    date: "2026-10-16",
+    headline: "Invia il preventivo per email, già pronto.",
+    important: true,
+    highlights: [
+      {
+        icon: "pdf",
+        title: "Mail pronta con PDF e link",
+        description: "Da Condividi → \"Invia per email\": parte da impresa.dieffe@gmail.com con il PDF allegato e il link per aprire e firmare il preventivo. La trovi anche in \"Inviati\" su Gmail.",
+      },
+      {
+        icon: "shield",
+        title: "Codice di accesso e più destinatari",
+        description: "Il codice lo comunichi tu di persona oppure lo alleghi alla mail. Aggiungi altri destinatari in copia (CC) o copia nascosta (CCN).",
+      },
+      {
+        icon: "sparkles",
+        title: "Note controllate dall'IA",
+        description: "Aggiungi note per il cliente: l'IA corregge ortografia e grammatica e ti mostra le correzioni prima di applicarle. Anteprima della mail prima dell'invio.",
+      },
+      {
+        icon: "keyboard",
+        title: "Su tutti i dispositivi",
+        description: "Sito, iPhone e app Mac/Windows (File → Invia per email…, ⌥⌘E / Ctrl+Alt+E).",
+      },
+    ],
+  },
+  {
     version: "4.2.2",
     date: "2026-10-15",
     headline: "Gestione Cantieri in manutenzione.",

@@ -63,9 +63,12 @@ function RecipientField({
   contacts,
   autoFocus,
   trailing,
+  exclude = [],
 }: {
   label: string;
   values: string[];
+  /** Indirizzi già presenti nell'altro campo: non vanno suggeriti. */
+  exclude?: string[];
   onChange: (v: string[]) => void;
   contacts: Contact[];
   autoFocus?: boolean;
@@ -79,10 +82,10 @@ function RecipientField({
     const q = text.trim().toLowerCase();
     if (!q) return [];
     return contacts
-      .filter((c) => c.email && !values.includes(c.email.toLowerCase()))
+      .filter((c) => c.email && !values.includes(c.email.toLowerCase()) && !exclude.includes(c.email.toLowerCase()))
       .filter((c) => c.name.toLowerCase().includes(q) || c.email!.toLowerCase().includes(q))
       .slice(0, 6);
-  }, [contacts, text, values]);
+  }, [contacts, text, values, exclude]);
 
   function add(raw: string) {
     const parts = raw.split(/[\s,;]+/).map((p) => p.trim().toLowerCase()).filter(Boolean);
@@ -408,6 +411,7 @@ export function SendQuoteEmailDialog({
                 label="A"
                 values={to}
                 onChange={setTo}
+                exclude={copies}
                 contacts={draft.contacts}
                 autoFocus={!to.length}
                 trailing={
@@ -430,6 +434,7 @@ export function SendQuoteEmailDialog({
                   label={copyMode === "cc" ? "Cc" : "Ccn"}
                   values={copies}
                   onChange={setCopies}
+                  exclude={to}
                   contacts={draft.contacts}
                   autoFocus
                   trailing={
