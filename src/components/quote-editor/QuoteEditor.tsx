@@ -19,9 +19,11 @@ import {
   Copy,
   Plus,
   Loader2,
+  Mail,
 } from "lucide-react";
 import { SharePopover } from "./SharePopover";
 import { DuplicateQuoteDialog } from "./DuplicateQuoteDialog";
+import { SendQuoteEmailDialog, type EmailSentResult } from "./SendQuoteEmailDialog";
 import { AiChatAssistant } from "./AiChatAssistant";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -710,6 +712,17 @@ export function QuoteEditor({ initialQuote, clients, users = [], related }: Quot
   const [pdfSheetOpen, setPdfSheetOpen] = useState(false);
   const [creatingExtra, setCreatingExtra] = useState(false);
   const [duplicateOpen, setDuplicateOpen] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
+
+  /** Dopo l'invio per email: stato "Inviato" e nuovo link, se creati. */
+  function handleEmailSent(r: EmailSentResult) {
+    setQuote((prev) => ({
+      ...prev,
+      status: r.status as never,
+      ...(r.link ? { publicToken: r.link.token, publicTokenExpiresAt: r.link.expiresAt as never } : {}),
+    }));
+    router.refresh();
+  }
 
   // Riepilogo laterale fisso durante lo scorrimento, subito sotto la barra
   // degli strumenti (anch'essa fissa): ne misuriamo posizione e altezza dal
@@ -734,6 +747,7 @@ export function QuoteEditor({ initialQuote, clients, users = [], related }: Quot
   useMenuParam("pdf", (v) => void exportQuote(v === "scarica" ? "pdf-download" : "pdf"));
   useMenuParam("extra", () => perms.createQuote && quote.kind !== "extra" && void createExtra());
   useMenuParam("duplica", () => perms.createQuote && setDuplicateOpen(true));
+  useMenuParam("email", () => perms.editQuote && setEmailOpen(true));
 
   /** Nuovo lavoro extra collegato a questo preventivo (stesse intestazioni). */
   async function createExtra() {
@@ -1007,6 +1021,7 @@ export function QuoteEditor({ initialQuote, clients, users = [], related }: Quot
                   publicTokenExpiresAt: expiresAt as never,
                 }))
               }
+              onSendEmail={() => setEmailOpen(true)}
             />
           )}
 
@@ -1110,6 +1125,7 @@ export function QuoteEditor({ initialQuote, clients, users = [], related }: Quot
                   publicTokenExpiresAt: expiresAt as never,
                 }))
               }
+              onSendEmail={() => setEmailOpen(true)}
             />
           </div>
         )}
@@ -1127,6 +1143,11 @@ export function QuoteEditor({ initialQuote, clients, users = [], related }: Quot
             {perms.createQuote && quote.kind !== "extra" && (
               <DropdownMenuItem onClick={createExtra} disabled={creatingExtra}>
                 <FilePlus2 className="w-4 h-4 mr-2" /> Nuovo lavoro extra
+              </DropdownMenuItem>
+            )}
+            {perms.editQuote && (
+              <DropdownMenuItem onClick={() => setEmailOpen(true)}>
+                <Mail className="w-4 h-4 mr-2" /> Invia per email
               </DropdownMenuItem>
             )}
             {perms.createQuote && (
@@ -1360,6 +1381,15 @@ export function QuoteEditor({ initialQuote, clients, users = [], related }: Quot
             clientName: clients.find((c) => c.id === quote.clientId)?.name ?? null,
           }}
           onClose={() => setDuplicateOpen(false)}
+        />
+      )}
+
+      {emailOpen && (
+        <SendQuoteEmailDialog
+          quoteId={quote.id}
+          quoteCode={quote.code}
+          onClose={() => setEmailOpen(false)}
+          onSent={handleEmailSent}
         />
       )}
     </div>

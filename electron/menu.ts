@@ -113,6 +113,12 @@ export function buildAppMenu(getWindow: GetWindow) {
         // Solo dentro un preventivo: chiede stesso cliente o un altro.
         click: onQuote('duplica'),
       },
+      {
+        label: 'Invia per email…',
+        accelerator: 'Alt+CmdOrCtrl+E',
+        // Solo dentro un preventivo: mail pronta con PDF e link di accesso.
+        click: onQuote('email'),
+      },
       { label: 'Nuova comunicazione', accelerator: 'Alt+CmdOrCtrl+N', click: goWith('/comunicazioni', 'nuova') },
       { label: 'Nuovo cliente', click: goWith('/clienti', 'nuovo') },
       { label: 'Nuova voce di listino', click: goWith('/listino', 'nuovo') },

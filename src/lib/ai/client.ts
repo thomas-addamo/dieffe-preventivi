@@ -147,6 +147,25 @@ export async function generateAI(prompt: string, timeoutMs = 10000): Promise<str
 }
 
 /**
+ * Testo semplice con istruzioni di sistema e temperatura bassa, sul modello
+ * più accurato (es. correzione di bozze: serve precisione, non creatività).
+ */
+export async function generateAIText(
+  systemPrompt: string,
+  userPrompt: string,
+  { timeoutMs = 20000, maxTokens = 2048 }: { timeoutMs?: number; maxTokens?: number } = {}
+): Promise<string> {
+  return complete(
+    MODELS_CHAT,
+    [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt },
+    ],
+    { temperature: 0.1, maxTokens, timeoutMs }
+  );
+}
+
+/**
  * Genera output JSON in modo robusto: forza response_format json, temperatura
  * bassa e ruota sui modelli di riserva in caso di errore temporaneo o quota.
  * Lancia se nessun modello riesce a produrre JSON valido.
