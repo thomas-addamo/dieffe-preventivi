@@ -58,7 +58,7 @@ cat > "$PLIST" <<PLIST
   <key>Label</key><string>$LABEL</string>
   <key>ProgramArguments</key>
   <array><string>/bin/zsh</string><string>$BASE/agent.sh</string></array>
-  <key>StartInterval</key><integer>10800</integer>
+  <key>StartInterval</key><integer>1800</integer>
   <key>RunAtLoad</key><true/>
   <key>ProcessType</key><string>Background</string>
   <key>LowPriorityIO</key><true/>
@@ -71,4 +71,4 @@ PLIST
 launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
 launchctl bootstrap "gui/$(id -u)" "$PLIST"
 echo "Servizio installato per: $DEVICE"
-echo "Controlla ogni 3 ore; registro: $BASE/agent.log"
+echo "Controlla ogni 30 minuti; registro: $BASE/agent.log"

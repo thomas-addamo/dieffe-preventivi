@@ -151,7 +151,7 @@ Mac la rinnova e installa da solo le nuove versioni:
 cd ios && Tools/auto-update/install.sh      # una volta sola
 ```
 
-- Ogni 3 ore controlla se mancano meno di 2 giorni alla scadenza o se su
+- Ogni 30 minuti controlla se mancano meno di 2 giorni alla scadenza o se su
   `main` è cambiata la cartella `ios/`. Se sì, compila (Release), chiede ad
   Apple una firma nuova di 7 giorni e installa sull'iPhone.
 - L'iPhone deve essere raggiungibile dal Mac: **stessa rete Wi‑Fi** (dopo il

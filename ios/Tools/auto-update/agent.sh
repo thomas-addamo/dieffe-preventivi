@@ -4,7 +4,7 @@
 # Gestisce uno o più dispositivi (un UDID per riga in DieffeiOS/devices).
 #
 # Con l'Apple ID gratuito la firma dell'app dura 7 giorni. Questo script, avviato
-# da launchd ogni 3 ore (vedi install.sh), quando l'iPhone è raggiungibile dal
+# da launchd ogni 30 minuti (vedi install.sh), quando l'iPhone è raggiungibile dal
 # Mac (cavo oppure stessa rete Wi‑Fi):
 #   • rinnova la firma se mancano meno di 2 giorni alla scadenza;
 #   • installa la nuova versione se su main è cambiata la cartella ios/.
