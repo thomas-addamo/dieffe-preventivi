@@ -40,6 +40,28 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.20.0",
+    date: "2026-11-06",
+    headline: "Una Home tutta nuova sull'iPhone.",
+    highlights: [
+      {
+        icon: "layout",
+        title: "Il mese a colpo d'occhio",
+        description: "Valore accettato nel mese, percentuale di accettazione e andamento degli ultimi 6 mesi, su sfondo a colori.",
+      },
+      {
+        icon: "zap",
+        title: "Da seguire",
+        description: "Preventivi inviati senza risposta da più di 7 giorni e bozze ferme, con i giorni di attesa.",
+      },
+      {
+        icon: "sparkles",
+        title: "Archivio con filtri rapidi",
+        description: "Bozze, Inviati, Accettati con un tocco; i riquadri In attesa e Bozze portano dritti all'elenco filtrato.",
+      },
+    ],
+  },
+  {
     version: "3.19.0",
     date: "2026-10-13",
     headline: "Dieffe nella Dynamic Island.",

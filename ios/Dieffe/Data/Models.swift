@@ -75,6 +75,16 @@ enum QuoteStatus: String, Decodable, CaseIterable, Identifiable {
         }
     }
 
+    var pluralLabel: String {
+        switch self {
+        case .draft: "Bozze"
+        case .sent: "Inviati"
+        case .accepted: "Accettati"
+        case .rejected: "Rifiutati"
+        case .archived: "Archiviati"
+        }
+    }
+
     var color: Color {
         switch self {
         case .draft: .gray

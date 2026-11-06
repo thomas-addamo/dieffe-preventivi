@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// Home nativa: saluto, statistiche, aperti di recente e archivio preventivi
-/// (come la dashboard del sito, src/app/(app)/dashboard/DashboardClient.tsx).
+/// Home nativa: il mese in corso, riquadri rapidi, "Da seguire", aperti di
+/// recente e archivio preventivi con filtri per stato (dati come la dashboard
+/// del sito, src/app/(app)/dashboard/DashboardClient.tsx; grafica in HomeDashboard).
 struct HomeView: View {
     @Environment(AppModel.self) private var model
 
@@ -52,79 +53,149 @@ struct HomeView: View {
     private func list(_ data: HomeData) -> some View {
         let groups = QuoteGroup.make(data.quotes, search: search, status: statusFilter,
                                      client: clientFilter, sort: sort)
-        let filtering = !search.isEmpty || statusFilter != nil || clientFilter != nil
+        // Ricerca e cliente nascondono la panoramica; lo stato (filtri rapidi) no.
+        let searching = !search.isEmpty || clientFilter != nil
+        let insights = HomeInsights(data.quotes)
+        let counts = Dictionary(grouping: data.quotes, by: \.status).mapValues(\.count)
 
-        return List {
-            if let expiry = AppConfig.signatureExpiry, expiry.timeIntervalSinceNow < 2 * 86400 {
-                Section {
-                    Label("La firma dell'app scade \(expiry.formatted(.relative(presentation: .named))). Tieni l'iPhone sulla stessa Wi‑Fi del Mac o collegalo: il Mac la rinnova da solo.",
-                          systemImage: "clock.badge.exclamationmark")
-                        .font(.subheadline)
-                        .foregroundStyle(.orange)
+        return ScrollViewReader { proxy in
+            List {
+                if let expiry = AppConfig.signatureExpiry, expiry.timeIntervalSinceNow < 2 * 86400 {
+                    Section {
+                        Label("La firma dell'app scade \(expiry.formatted(.relative(presentation: .named))). Tieni l'iPhone sulla stessa Wi‑Fi del Mac o collegalo: il Mac la rinnova da solo.",
+                              systemImage: "clock.badge.exclamationmark")
+                            .font(.subheadline)
+                            .foregroundStyle(.orange)
+                    }
                 }
-            }
-            if !filtering {
+                if !searching {
+                    Section {
+                        MonthHeroCard(insights: insights)
+                    }
+                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                    .listRowBackground(Color.clear)
+
+                    Section {
+                        HStack(spacing: 10) {
+                            KPITile(symbol: "paperplane.fill", colors: [.init(hex: 0x38BDF8), .init(hex: 0x2563EB)],
+                                    value: "\(insights.pending)", label: "In attesa",
+                                    detail: insights.pendingValue > 0 ? CompactMoney.format(insights.pendingValue) : nil) {
+                                showArchive(.sent, proxy)
+                            }
+                            KPITile(symbol: "pencil", colors: [.init(hex: 0xA3A3A3), .init(hex: 0x52525B)],
+                                    value: "\(insights.drafts)", label: "Bozze",
+                                    detail: insights.staleDrafts.isEmpty ? nil : "\(insights.staleDrafts.count) ferme") {
+                                showArchive(.draft, proxy)
+                            }
+                            KPITile(symbol: "person.2.fill", colors: [.init(hex: 0xC084FC), .init(hex: 0x7C3AED)],
+                                    value: "\(data.stats.clients)", label: "Clienti", detail: nil) {
+                                model.select(.clienti)
+                            }
+                        }
+                    }
+                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                    .listRowBackground(Color.clear)
+
+                    let followUps = Array((insights.waiting + insights.staleDrafts).prefix(4))
+                    if !followUps.isEmpty {
+                        Section {
+                            ForEach(followUps) { item in
+                                FollowUpRow(item: item) { model.openQuote(item.quote.id) }
+                            }
+                        } header: {
+                            Label("Da seguire", systemImage: "bell.and.waves.left.and.right")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.primary)
+                                .textCase(nil)
+                        } footer: {
+                            Text("Inviati senza risposta da più di \(HomeInsights.followUpDays) giorni e bozze ferme da più di \(HomeInsights.staleDraftDays).")
+                        }
+                    }
+
+                    let recent = model.recents.ids.compactMap { id in data.quotes.first { $0.id == id } }.prefix(6)
+                    if !recent.isEmpty {
+                        Section {
+                            ScrollView(.horizontal) {
+                                HStack(spacing: 10) {
+                                    ForEach(Array(recent)) { quote in
+                                        RecentQuoteCard(quote: quote) { model.openQuote(quote.id) }
+                                    }
+                                }
+                                .padding(.horizontal, 16)
+                            }
+                            .scrollIndicators(.hidden)
+                        } header: {
+                            Text("Aperti di recente")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.primary)
+                                .textCase(nil)
+                                .padding(.horizontal, 16)
+                        }
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                    }
+                }
+
                 Section {
-                    StatsGrid(stats: data.stats)
+                    StatusChips(selection: $statusFilter, counts: counts)
+                } header: {
+                    HStack {
+                        Text("Archivio")
+                            .font(.title3.weight(.bold))
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Text(Format.count(groups.count, "preventivo", "preventivi"))
+                            .font(.footnote)
+                            .monospacedDigit()
+                    }
+                    .textCase(nil)
+                    .padding(.horizontal, 20)
                 }
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
+                .id("archive")
 
-                let recent = model.recents.ids.compactMap { id in data.quotes.first { $0.id == id } }.prefix(6)
-                if !recent.isEmpty {
-                    Section("Aperti di recente") {
-                        ScrollView(.horizontal) {
-                            HStack(spacing: 10) {
-                                ForEach(Array(recent)) { quote in
-                                    RecentCard(quote: quote) { model.openQuote(quote.id) }
-                                }
+                Section {
+                    ForEach(groups) { group in
+                        row(group.quote, extras: group.extras.isEmpty ? nil : group.extras)
+                        if expanded.contains(group.id) {
+                            ForEach(group.extras) { extra in
+                                row(extra, extras: nil)
+                                    .padding(.leading, 18)
+                                    .overlay(alignment: .leading) {
+                                        Capsule().fill(Color.orange.opacity(0.5)).frame(width: 3).padding(.vertical, 4)
+                                    }
                             }
                         }
-                        .scrollIndicators(.hidden)
                     }
-                    .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
                 }
             }
-
-            Section {
-                ForEach(groups) { group in
-                    row(group.quote, extras: group.extras.isEmpty ? nil : group.extras)
-                    if expanded.contains(group.id) {
-                        ForEach(group.extras) { extra in
-                            row(extra, extras: nil)
-                                .padding(.leading, 18)
-                                .overlay(alignment: .leading) {
-                                    Capsule().fill(Color.orange.opacity(0.5)).frame(width: 3).padding(.vertical, 4)
-                                }
+            .listStyle(.insetGrouped)
+            .listSectionSpacing(14)
+            .scrollContentBackground(.hidden)
+            .background { HomeBackground() }
+            .overlay {
+                if groups.isEmpty, searching || statusFilter == nil {
+                    if searching {
+                        ContentUnavailableView.search(text: search)
+                    } else if data.quotes.isEmpty {
+                        ContentUnavailableView {
+                            Label("Nessun preventivo", systemImage: "doc.text")
+                        } description: {
+                            Text("Crea il tuo primo preventivo con il tasto ＋.")
                         }
                     }
                 }
-            } header: {
-                HStack {
-                    Text("Archivio preventivi")
-                    Spacer()
-                    Text(Format.count(groups.count, "preventivo", "preventivi"))
-                        .textCase(nil)
-                        .monospacedDigit()
-                }
             }
+            .animation(.default, value: expanded)
+            .animation(.snappy, value: statusFilter)
         }
-        .listStyle(.insetGrouped)
-        .overlay {
-            if groups.isEmpty {
-                if filtering {
-                    ContentUnavailableView.search(text: search)
-                } else {
-                    ContentUnavailableView {
-                        Label("Nessun preventivo", systemImage: "doc.text")
-                    } description: {
-                        Text("Crea il tuo primo preventivo con il tasto ＋.")
-                    }
-                }
-            }
-        }
-        .animation(.default, value: expanded)
+    }
+
+    /// Dai riquadri rapidi: filtra l'archivio per stato e ci scorre.
+    private func showArchive(_ status: QuoteStatus, _ proxy: ScrollViewProxy) {
+        withAnimation(.snappy) { statusFilter = status }
+        withAnimation(.smooth) { proxy.scrollTo("archive", anchor: .top) }
     }
 
     private func row(_ quote: QuoteSummary, extras: [QuoteSummary]?) -> some View {
@@ -277,90 +348,6 @@ private struct ProfileMenu: View {
         guard let letter = name.trimmingCharacters(in: .whitespaces).first?.lowercased(),
               letter.count == 1, ("a"..."z").contains(letter) else { return "person.crop.circle" }
         return "\(letter).circle"
-    }
-}
-
-// MARK: - Statistiche
-
-private struct StatsGrid: View {
-    let stats: HomeData.Stats
-
-    var body: some View {
-        Grid(horizontalSpacing: 12, verticalSpacing: 12) {
-            GridRow {
-                StatTile(symbol: "doc.text", label: "Preventivi totali", value: stats.total, color: .blue)
-                StatTile(symbol: "chart.line.uptrend.xyaxis", label: "Accettati questo mese",
-                         value: stats.acceptedThisMonth, color: .green)
-            }
-            GridRow {
-                StatTile(symbol: "clock", label: "In attesa di risposta", value: stats.pending, color: .orange)
-                StatTile(symbol: "person.2", label: "Clienti", value: stats.clients, color: .purple)
-            }
-        }
-    }
-}
-
-private struct StatTile: View {
-    let symbol: String
-    let label: String
-    let value: Int
-    let color: Color
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Image(systemName: symbol)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(color)
-                .frame(width: 32, height: 32)
-                .background(color.opacity(0.14), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-            VStack(alignment: .leading, spacing: 1) {
-                Text(value, format: .number)
-                    .font(.title2.weight(.bold))
-                    .monospacedDigit()
-                    .contentTransition(.numericText())
-                Text(label)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .accessibilityElement(children: .combine)
-    }
-}
-
-private struct RecentCard: View {
-    let quote: QuoteSummary
-    let open: () -> Void
-
-    var body: some View {
-        Button(action: open) {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text(quote.code)
-                        .font(.caption2.monospaced().weight(.semibold))
-                        .foregroundStyle(.secondary)
-                    Spacer(minLength: 4)
-                    StatusBadge(status: quote.status)
-                }
-                Text(quote.title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .lineLimit(2, reservesSpace: true)
-                    .multilineTextAlignment(.leading)
-                Text(quote.clientName ?? "Nessun cliente")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-            .frame(width: 190, alignment: .leading)
-            .padding(14)
-            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        }
-        .buttonStyle(.plain)
     }
 }
 
