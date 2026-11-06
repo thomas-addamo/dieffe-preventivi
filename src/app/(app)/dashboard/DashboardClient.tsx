@@ -16,6 +16,7 @@ import {
   ChevronDown,
   FilePlus2,
   Trash2,
+  Copy,
   Filter,
   X,
   Link as LinkIcon,
@@ -43,6 +44,7 @@ import {
 } from "@/lib/utils";
 import { useQuoteTabs } from "@/lib/stores/quote-tabs";
 import { NewQuoteModal } from "@/components/quote-editor/NewQuoteModal";
+import { DuplicateQuoteDialog, type DuplicateSource } from "@/components/quote-editor/DuplicateQuoteDialog";
 import { ImportQuoteModal } from "@/components/quote-editor/ImportQuoteModal";
 import { usePermissions } from "@/hooks/use-permissions";
 
@@ -233,6 +235,8 @@ export function DashboardClient({
     rows.sort(SORTERS[sort]);
     return rows;
   }, [quotes, search, statusFilter, clientFilter, sort]);
+
+  const [duplicating, setDuplicating] = useState<DuplicateSource | null>(null);
 
   async function deleteQuote(id: string) {
     if (!confirm("Spostare questo preventivo nel cestino?")) return;
@@ -480,6 +484,7 @@ export function DashboardClient({
               key={q.id}
               group={q}
               onDelete={perms.deleteQuote ? (id) => deleteQuote(id) : undefined}
+              onDuplicate={perms.createQuote ? setDuplicating : undefined}
             />
           ))}
         </div>
@@ -498,6 +503,7 @@ export function DashboardClient({
             onClose={() => setShowImportModal(false)}
             onCreated={(id) => router.push(`/preventivi/${id}`)}
           />
+          {duplicating && <DuplicateQuoteDialog source={duplicating} onClose={() => setDuplicating(null)} />}
         </>
       )}
     </Page>
@@ -508,7 +514,15 @@ export function DashboardClient({
 
 /** Tessera colorata a sinistra: 40px a 16px dal bordo → raggio 12, concentrico alla card. */
 /** Preventivo con i suoi lavori extra in una tendina che si apre sotto. */
-function QuoteGroupCard({ group, onDelete }: { group: QuoteGroup; onDelete?: (id: string) => void }) {
+function QuoteGroupCard({
+  group,
+  onDelete,
+  onDuplicate,
+}: {
+  group: QuoteGroup;
+  onDelete?: (id: string) => void;
+  onDuplicate?: (source: DuplicateSource) => void;
+}) {
   const [open, setOpen] = useState(false);
   const extras = group.extras;
   return (
@@ -516,6 +530,7 @@ function QuoteGroupCard({ group, onDelete }: { group: QuoteGroup; onDelete?: (id
       <QuoteCard
         quote={group}
         onDelete={onDelete ? () => onDelete(group.id) : undefined}
+        onDuplicate={onDuplicate}
         extrasToggle={
           extras.length > 0 ? { count: extras.length, open, onToggle: () => setOpen((o) => !o) } : undefined
         }
@@ -523,7 +538,7 @@ function QuoteGroupCard({ group, onDelete }: { group: QuoteGroup; onDelete?: (id
       {open && extras.length > 0 && (
         <div className="animate-slide-up mt-2 space-y-2 border-l-2 border-amber-300/70 pl-3 ml-5 sm:ml-[34px] dark:border-amber-500/40">
           {extras.map((x) => (
-            <QuoteCard key={x.id} quote={x} onDelete={onDelete ? () => onDelete(x.id) : undefined} />
+            <QuoteCard key={x.id} quote={x} onDelete={onDelete ? () => onDelete(x.id) : undefined} onDuplicate={onDuplicate} />
           ))}
         </div>
       )}
@@ -534,10 +549,12 @@ function QuoteGroupCard({ group, onDelete }: { group: QuoteGroup; onDelete?: (id
 function QuoteCard({
   quote: q,
   onDelete,
+  onDuplicate,
   extrasToggle,
 }: {
   quote: QuoteRow;
   onDelete?: () => void;
+  onDuplicate?: (source: DuplicateSource) => void;
   extrasToggle?: { count: number; open: boolean; onToggle: () => void };
 }) {
   const isExtra = q.kind === "extra";
@@ -609,6 +626,18 @@ function QuoteCard({
         <p className="text-[11px] tabular-nums text-muted-foreground lg:hidden">{formatDate(q.createdAt)}</p>
       </div>
 
+      {onDuplicate && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative z-10 hidden h-8 w-8 shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100 lg:flex"
+          aria-label={`Duplica ${q.code}`}
+          title="Duplica"
+          onClick={() => onDuplicate({ id: q.id, code: q.code, title: q.title, clientName: q.clientName ?? null })}
+        >
+          <Copy className="h-4 w-4" />
+        </Button>
+      )}
       {onDelete && (
         <Button
           variant="ghost"

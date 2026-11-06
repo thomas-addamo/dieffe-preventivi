@@ -7,7 +7,6 @@ import {
   quoteSections,
   quoteItems,
   quoteYearCounters,
-  quoteTemplates,
   priceListItems,
 } from "../src/lib/db/schema";
 import { hashPassword } from "../src/lib/auth";
@@ -252,105 +251,6 @@ async function seed() {
   }
 
   console.log("✓ Preventivo esempio");
-
-  // Templates
-  await db.insert(quoteTemplates).values([
-    {
-      id: generateId(),
-      name: "Allestimento cantiere standard",
-      description: "Ponteggio, recinzione, baracca e segnaletica",
-      userId: adminId,
-      data: {
-        sections: [
-          {
-            code: "A",
-            title: "ALLESTIMENTO CANTIERE",
-            items: [
-              {
-                description:
-                  "Ponteggio metallico a telai prefabbricati tipo Plettac",
-                unitOfMeasure: "mq",
-                quantity: 1,
-                unitPrice: 6.5,
-                discount: 0,
-              },
-              {
-                description: "Nolo ponteggio mensile",
-                unitOfMeasure: "mq",
-                quantity: 1,
-                unitPrice: 1.2,
-                discount: 0,
-              },
-              {
-                description: "Installazione cantiere completa",
-                unitOfMeasure: "a corpo",
-                quantity: 1,
-                unitPrice: 2800,
-                discount: 0,
-              },
-            ],
-          },
-        ],
-      },
-    },
-    {
-      id: generateId(),
-      name: "Cappotto termico EPS",
-      description: "Sistema a cappotto EPS 100mm con finitura acrilica",
-      userId: adminId,
-      data: {
-        sections: [
-          {
-            code: "F",
-            title: "CAPPOTTO TERMICO",
-            items: [
-              {
-                description:
-                  "Fornitura e posa cappotto EPS 100mm ETICS completo di rasatura e finitura",
-                unitOfMeasure: "mq",
-                quantity: 1,
-                unitPrice: 85,
-                discount: 0,
-              },
-              {
-                description: "Profili e accessori",
-                unitOfMeasure: "ml",
-                quantity: 1,
-                unitPrice: 8.5,
-                discount: 0,
-              },
-            ],
-          },
-        ],
-      },
-    },
-    {
-      id: generateId(),
-      name: "Demolizioni base",
-      description: "Demolizione intonaco esterno e ripristini",
-      userId: adminId,
-      data: {
-        sections: [
-          {
-            code: "B",
-            title: "DEMOLIZIONI",
-            items: [
-              {
-                description:
-                  "Demolizione intonaco esterno a mano e con martello demolitore, carico e trasporto a discarica",
-                unitOfMeasure: "mq",
-                quantity: 1,
-                unitPrice: 12.5,
-                discount: 0,
-              },
-            ],
-          },
-        ],
-      },
-    },
-  ]);
-
-  console.log("✓ Template");
 
   // Price list seed
   const priceListSeed = [

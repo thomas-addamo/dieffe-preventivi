@@ -16,10 +16,14 @@ import {
   Unlock,
   UserCog,
   FilePlus2,
+  Copy,
   Plus,
   Loader2,
+  Mail,
 } from "lucide-react";
 import { SharePopover } from "./SharePopover";
+import { DuplicateQuoteDialog } from "./DuplicateQuoteDialog";
+import { SendQuoteEmailDialog, type EmailSentResult } from "./SendQuoteEmailDialog";
 import { AiChatAssistant } from "./AiChatAssistant";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -707,10 +711,43 @@ export function QuoteEditor({ initialQuote, clients, users = [], related }: Quot
 
   const [pdfSheetOpen, setPdfSheetOpen] = useState(false);
   const [creatingExtra, setCreatingExtra] = useState(false);
+  const [duplicateOpen, setDuplicateOpen] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
+
+  /** Dopo l'invio per email: stato "Inviato" e nuovo link, se creati. */
+  function handleEmailSent(r: EmailSentResult) {
+    setQuote((prev) => ({
+      ...prev,
+      status: r.status as never,
+      ...(r.link ? { publicToken: r.link.token, publicTokenExpiresAt: r.link.expiresAt as never } : {}),
+    }));
+    router.refresh();
+  }
+
+  // Riepilogo laterale fisso durante lo scorrimento, subito sotto la barra
+  // degli strumenti (anch'essa fissa): ne misuriamo posizione e altezza dal
+  // vivo, perché cambiano tra sito, app Mac (barra del titolo) e Windows.
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const [summaryTop, setSummaryTop] = useState(0);
+  useEffect(() => {
+    const el = toolbarRef.current;
+    if (!el) return;
+    const measure = () => setSummaryTop((parseFloat(getComputedStyle(el).top) || 0) + el.offsetHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
 
   // Comandi dalla barra dei menu dell'app desktop (File).
   useMenuParam("pdf", (v) => void exportQuote(v === "scarica" ? "pdf-download" : "pdf"));
   useMenuParam("extra", () => perms.createQuote && quote.kind !== "extra" && void createExtra());
+  useMenuParam("duplica", () => perms.createQuote && setDuplicateOpen(true));
+  useMenuParam("email", () => perms.editQuote && setEmailOpen(true));
 
   /** Nuovo lavoro extra collegato a questo preventivo (stesse intestazioni). */
   async function createExtra() {
@@ -873,7 +910,7 @@ export function QuoteEditor({ initialQuote, clients, users = [], related }: Quot
       )}
 
       {/* Toolbar */}
-      <div className="sticky top-0 lg:top-[2.375rem] z-10 bg-background/85 backdrop-blur-xl lg:bg-background lg:backdrop-blur-none border-b px-2 md:px-6 pb-2.5 pt-[calc(env(safe-area-inset-top)+0.625rem)] lg:py-2.5 flex items-center gap-1.5 md:gap-3">
+      <div ref={toolbarRef} className="sticky top-0 lg:top-[2.375rem] z-10 bg-background/85 backdrop-blur-xl lg:bg-background lg:backdrop-blur-none border-b px-2 md:px-6 pb-2.5 pt-[calc(env(safe-area-inset-top)+0.625rem)] lg:py-2.5 flex items-center gap-1.5 md:gap-3">
         <Button
           variant="ghost"
           size="sm"
@@ -984,6 +1021,7 @@ export function QuoteEditor({ initialQuote, clients, users = [], related }: Quot
                   publicTokenExpiresAt: expiresAt as never,
                 }))
               }
+              onSendEmail={() => setEmailOpen(true)}
             />
           )}
 
@@ -1018,6 +1056,19 @@ export function QuoteEditor({ initialQuote, clients, users = [], related }: Quot
             >
               {creatingExtra ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FilePlus2 className="w-3.5 h-3.5" />}
               <span className="hidden lg:inline">Lavoro extra</span>
+            </Button>
+          )}
+
+          {perms.createQuote && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 h-8"
+              onClick={() => setDuplicateOpen(true)}
+              title="Crea una copia di questo preventivo, per lo stesso cliente o per un altro"
+            >
+              <Copy className="w-3.5 h-3.5" />
+              <span className="hidden lg:inline">Duplica</span>
             </Button>
           )}
 
@@ -1074,6 +1125,7 @@ export function QuoteEditor({ initialQuote, clients, users = [], related }: Quot
                   publicTokenExpiresAt: expiresAt as never,
                 }))
               }
+              onSendEmail={() => setEmailOpen(true)}
             />
           </div>
         )}
@@ -1091,6 +1143,16 @@ export function QuoteEditor({ initialQuote, clients, users = [], related }: Quot
             {perms.createQuote && quote.kind !== "extra" && (
               <DropdownMenuItem onClick={createExtra} disabled={creatingExtra}>
                 <FilePlus2 className="w-4 h-4 mr-2" /> Nuovo lavoro extra
+              </DropdownMenuItem>
+            )}
+            {perms.editQuote && (
+              <DropdownMenuItem onClick={() => setEmailOpen(true)}>
+                <Mail className="w-4 h-4 mr-2" /> Invia per email
+              </DropdownMenuItem>
+            )}
+            {perms.createQuote && (
+              <DropdownMenuItem onClick={() => setDuplicateOpen(true)}>
+                <Copy className="w-4 h-4 mr-2" /> Duplica preventivo
               </DropdownMenuItem>
             )}
             {perms.exportQuoteAdvanced && (
@@ -1181,8 +1243,11 @@ export function QuoteEditor({ initialQuote, clients, users = [], related }: Quot
         </div>
 
         {/* Desktop totals panel */}
-        <div className="hidden md:block w-72 shrink-0 border-l overflow-y-auto">
-          <div className="sticky top-0 p-4">
+        <div className="hidden md:block w-72 shrink-0 border-l">
+          <div
+            className="sticky overflow-y-auto overscroll-contain p-4"
+            style={{ top: summaryTop, maxHeight: `calc(100dvh - ${summaryTop}px)` }}
+          >
             <TotalsPanel
               sections={quote.sections}
               vatRate={quote.vatRate}
@@ -1304,6 +1369,27 @@ export function QuoteEditor({ initialQuote, clients, users = [], related }: Quot
           url={`/api/export/pdf/${quote.id}`}
           title={`${quote.code}${quote.title ? ` — ${quote.title}` : ""}`}
           onClose={() => setPdfSheetOpen(false)}
+        />
+      )}
+
+      {duplicateOpen && (
+        <DuplicateQuoteDialog
+          source={{
+            id: quote.id,
+            code: quote.code,
+            title: quote.title,
+            clientName: clients.find((c) => c.id === quote.clientId)?.name ?? null,
+          }}
+          onClose={() => setDuplicateOpen(false)}
+        />
+      )}
+
+      {emailOpen && (
+        <SendQuoteEmailDialog
+          quoteId={quote.id}
+          quoteCode={quote.code}
+          onClose={() => setEmailOpen(false)}
+          onSent={handleEmailSent}
         />
       )}
     </div>

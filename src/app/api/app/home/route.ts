@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
+import { FEATURES } from "@/lib/features";
 import { quotes, clients, users, notifications } from "@/lib/db/schema";
 import { and, count, eq, desc, isNull, isNotNull } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
@@ -65,6 +66,8 @@ export async function GET() {
     },
     trashCount: session.user.role === "viewer" ? 0 : (trash?.value ?? 0),
     unreadNotifications: unread?.value ?? 0,
+    // Funzioni attive (l'app iPhone mostra/nasconde le sezioni di conseguenza).
+    features: FEATURES,
     stats: {
       total: rows.length,
       acceptedThisMonth: rows.filter(

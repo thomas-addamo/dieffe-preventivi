@@ -43,7 +43,7 @@ const TABS: TabItem[] = [
     label: "Altro",
     icon: LayoutGrid,
     // Puntino "Novità" se una pagina raccolta qui è appena stata lanciata
-    newPages: ["/lavori-extra", "/comunicazioni", "/listino", "/statistiche"],
+    newPages: ["/cantieri", "/lavori-extra", "/comunicazioni", "/listino", "/statistiche"],
     // "Altro" raccoglie tutte le sezioni secondarie
     match: (p) =>
       p.startsWith("/altro") ||
@@ -51,6 +51,7 @@ const TABS: TabItem[] = [
       p.startsWith("/statistiche") ||
       p.startsWith("/comunicazioni") ||
       p.startsWith("/lavori-extra") ||
+      p.startsWith("/cantieri") ||
       p.startsWith("/cestino") ||
       p.startsWith("/impostazioni") ||
       p.startsWith("/utenti") ||

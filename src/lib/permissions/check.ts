@@ -22,6 +22,10 @@ export const can = {
 
   manageQuoteImages: (role: UserRole) => role === 'admin' || role === 'editor',
 
+  // Gestione cantieri: tutti vedono, admin ed editor aggiornano fasi/SAL/calendario
+  viewSites: (_role: UserRole) => true,
+  manageSites: (role: UserRole) => role === 'admin' || role === 'editor',
+
   manageUsers: (role: UserRole) => role === 'admin',
   manageCompanySettings: (role: UserRole) => role === 'admin',
   viewAuditLog: (role: UserRole) => role === 'admin',

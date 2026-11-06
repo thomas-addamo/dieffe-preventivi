@@ -53,6 +53,9 @@ struct AltroView: View {
                 }
 
                 Section("Operatività") {
+                    if model.sitesEnabled {
+                        link(.sites, "Gestione Cantieri", "Mappa, avanzamento lavori, SAL e scadenze", "hammer.fill", .orange)
+                    }
                     link(.extras, "Lavori extra", "Lavorazioni aggiuntive di un preventivo", "doc.badge.plus", .orange)
                     Button {
                         model.select(.listino)
@@ -93,6 +96,10 @@ struct AltroView: View {
             }
             .navigationDestination(for: AltroRoute.self) { route in
                 switch route {
+                case .sites:
+                    if model.sitesEnabled { SitesView() } else { SitesMaintenanceView() }
+                case .site(let id, let tab):
+                    if model.sitesEnabled { SiteDetailView(siteID: id, initialTab: tab) } else { SitesMaintenanceView() }
                 case .extras: ExtrasView()
                 case .stats: StatsView()
                 case .communications: CommunicationsView()
@@ -116,11 +123,19 @@ struct AltroView: View {
 
 /// Schermate native raggiungibili da Altro.
 enum AltroRoute: Hashable {
+    case sites
+    /// Un cantiere, con la scheda da aprire (sal, calendario, note).
+    case site(String, tab: String?)
     case extras, stats, communications, trash, notify, users, company
 
     /// La pagina del sito corrispondente (link dai PDF, notifiche, menu).
     init?(path: String) {
-        switch path.split(separator: "/").map(String.init) {
+        let parts = path.split(separator: "?", maxSplits: 1).map(String.init)
+        let query = parts.count > 1 ? URLComponents(string: "?\(parts[1])")?.queryItems : nil
+        switch (parts.first ?? "").split(separator: "/").map(String.init) {
+        case ["cantieri"]: self = .sites
+        case let segments where segments.count == 2 && segments[0] == "cantieri":
+            self = .site(segments[1], tab: query?.first { $0.name == "tab" }?.value)
         case ["lavori-extra"]: self = .extras
         case ["statistiche"]: self = .stats
         case ["comunicazioni"]: self = .communications

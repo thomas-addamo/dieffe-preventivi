@@ -9,6 +9,13 @@ struct HomeData: Decodable {
     let clients: [ClientRef]
     let trashCount: Int?
     let unreadNotifications: Int?
+    /// Funzioni attive decise dal sito (src/lib/features.ts): si accendono e
+    /// spengono senza reinstallare l'app.
+    let features: Features?
+
+    struct Features: Decodable {
+        let sites: Bool?
+    }
 
     struct Stats: Decodable {
         let total: Int

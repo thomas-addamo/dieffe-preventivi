@@ -19,6 +19,7 @@ export function usePermissions() {
       viewStats: can.viewStats(role),
       manageCommunications: can.manageCommunications(role),
       manageQuoteImages: can.manageQuoteImages(role),
+      manageSites: can.manageSites(role),
       manageUsers: can.manageUsers(role),
       manageCompanySettings: can.manageCompanySettings(role),
       viewAuditLog: can.viewAuditLog(role),

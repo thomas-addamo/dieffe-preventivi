@@ -35,6 +35,8 @@ final class AppModel {
     /// "Novità" da mostrare dopo un aggiornamento importante (WhatsNew).
     var whatsNew: WhatsNewEntry?
     var unreadNotifications: Int { home.data?.unreadNotifications ?? 0 }
+    /// Gestione Cantieri attiva (spenta = in manutenzione).
+    var sitesEnabled: Bool { home.data?.features?.sites ?? false }
     var clientsPath = NavigationPath()
     var priceListPath = NavigationPath()
     var altroPath = NavigationPath()
@@ -47,6 +49,7 @@ final class AppModel {
     let clients = ClientsStore()
     let recents = RecentQuotes()
     let priceList = PriceListStore()
+    let sites = SitesStore()
 
     init() {
         if let tab = PreviewOptions.startTab { selectedTab = tab }
@@ -164,6 +167,7 @@ final class AppModel {
         await APIClient.shared.logout()
         home.reset()
         clients.reset()
+        sites.reset()
         sessionExpired()
         selectedTab = .home
         altroPath = NavigationPath()
@@ -271,7 +275,7 @@ struct WebDestination: Hashable {
     let title: String
 
     static func title(for path: String) -> String {
-        let titles = ["/lavori-extra": "Lavori extra", "/statistiche": "Statistiche", "/comunicazioni": "Comunicazioni",
+        let titles = ["/cantieri": "Cantieri", "/lavori-extra": "Lavori extra", "/statistiche": "Statistiche", "/comunicazioni": "Comunicazioni",
                       "/cestino": "Cestino", "/impostazioni": "Impostazioni", "/utenti": "Utenti",
                       "/admin/notifiche": "Invia notifica", "/admin/audit-log": "Audit Log",
                       "/admin/sessioni": "Sessioni attive"]

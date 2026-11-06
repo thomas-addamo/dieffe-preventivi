@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getQuoteWithRelations, updateQuoteField, checkQuoteEditable } from "@/lib/db/quotes";
 import { generateId } from "@/lib/utils";
 import { notifyQuoteDeleted } from "@/lib/notifications";
+import { queueSiteSync } from "@/lib/sites/sync";
 
 const patchSchema = z.object({
   title: z.string().min(1).optional(),
@@ -53,6 +54,8 @@ export async function PATCH(
   }
 
   await updateQuoteField(id, parsed.data as Parameters<typeof updateQuoteField>[1]);
+  // Indirizzo o cliente cambiati: il cantiere li segue (e si riposiziona).
+  if (parsed.data.projectAddress !== undefined || parsed.data.clientId !== undefined) queueSiteSync();
   return NextResponse.json({ ok: true });
 }
 
@@ -72,6 +75,7 @@ export async function DELETE(
   await db.update(quotes)
     .set({ deletedAt: new Date(), deletedBy: session.user.id })
     .where(eq(quotes.id, id));
+  queueSiteSync();
 
   await db.insert(auditLog).values({
     id: generateId(),

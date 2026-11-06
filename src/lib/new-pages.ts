@@ -11,6 +11,7 @@ export const NEW_BADGE_DAYS = 30;
 const NEW_PAGES: Record<string, string> = {
   "/comunicazioni": "2026-10-06",
   "/lavori-extra": "2026-10-07",
+  "/cantieri": "2026-10-14",
 };
 
 /** True se la pagina è stata lanciata da meno di NEW_BADGE_DAYS giorni. */

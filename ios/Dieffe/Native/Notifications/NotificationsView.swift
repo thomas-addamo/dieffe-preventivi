@@ -138,6 +138,7 @@ struct AppNotification: Decodable, Identifiable {
         case "maintenance": ("wrench.and.screwdriver.fill", .orange)
         case "alert": ("exclamationmark.triangle.fill", .red)
         case "support": ("questionmark.bubble.fill", .cyan)
+        case "site": ("hammer.fill", .orange)
         default: ("info.circle.fill", .gray)
         }
     }

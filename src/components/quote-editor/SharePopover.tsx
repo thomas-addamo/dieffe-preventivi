@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Share2, Copy, ExternalLink, Trash2 } from "lucide-react";
+import { Share2, Copy, ExternalLink, Trash2, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +18,8 @@ interface SharePopoverProps {
   publicToken: string | null;
   publicTokenExpiresAt: string | Date | null;
   onTokenChange: (token: string | null, expiresAt: string | null) => void;
+  /** Apre la finestra "Invia per email". */
+  onSendEmail?: () => void;
 }
 
 export function SharePopover({
@@ -26,6 +28,7 @@ export function SharePopover({
   publicToken,
   publicTokenExpiresAt,
   onTokenChange,
+  onSendEmail,
 }: SharePopoverProps) {
   const [days, setDays] = useState(30);
   const [loading, setLoading] = useState(false);
@@ -107,6 +110,26 @@ export function SharePopover({
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 p-4">
+        {onSendEmail && (
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onSendEmail();
+              }}
+              className="-mx-1 mb-3 flex w-[calc(100%+0.5rem)] items-center gap-3 rounded-xl border bg-primary/5 p-3 text-left transition-colors hover:bg-primary/10"
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                <Mail className="h-4 w-4" />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-medium">Invia per email</span>
+                <span className="block text-xs text-muted-foreground">Mail pronta con PDF e link di accesso</span>
+              </span>
+            </button>
+          </>
+        )}
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
           Link condivisibile
         </p>

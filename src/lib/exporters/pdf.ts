@@ -6,14 +6,16 @@ import { eq, asc } from "drizzle-orm";
 import { ClassicTemplate } from "@/components/pdf-templates/ClassicTemplate";
 import { getQuoteWithRelations } from "@/lib/db/quotes";
 import { cloudinary } from "@/lib/cloudinary";
+import type { QuoteWithRelations } from "@/types";
 
 export async function generateQuotePdfBuffer(
   quoteId: string,
-  options: { includeIp?: boolean } = {}
+  options: { includeIp?: boolean; quote?: QuoteWithRelations } = {}
 ): Promise<Buffer> {
   const { includeIp = true } = options;
 
-  const quote = await getQuoteWithRelations(quoteId);
+  // Il chiamante può passare il preventivo già caricato (evita una lettura).
+  const quote = options.quote ?? (await getQuoteWithRelations(quoteId));
   if (!quote) throw new Error(`Quote ${quoteId} not found`);
 
   const [settings] = await db.select().from(companySettings).limit(1);

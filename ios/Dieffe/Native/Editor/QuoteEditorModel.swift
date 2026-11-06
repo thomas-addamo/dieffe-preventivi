@@ -273,6 +273,15 @@ final class QuoteEditorModel {
         }
     }
 
+    /// Dopo l'invio per email: stato "Inviato" e link nuovo, se creato dal server.
+    func applyEmailSent(status: QuoteStatus, token: String?, expiresAt: String?) {
+        quote?.status = status
+        if let token {
+            quote?.publicToken = token
+            quote?.publicTokenExpiresAt = expiresAt
+        }
+    }
+
     func revokePublicLink() async {
         await run {
             try await self.api.delete("/api/quotes/\(self.quoteID)/public-link")

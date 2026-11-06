@@ -6,6 +6,8 @@ import { eq } from "drizzle-orm";
 import { isTokenValid } from "@/lib/public-token";
 import { sendSignatureNotification, sendClientSignatureConfirmation } from "@/lib/email/send";
 import { notifyQuoteSigned } from "@/lib/notifications";
+import { storeSignatureImage } from "@/lib/cloudinary";
+import { queueSiteSync } from "@/lib/sites/sync";
 
 const bodySchema = z.object({
   signerName: z.string().min(2).max(100),
@@ -91,12 +93,18 @@ export async function POST(
   const userAgent = req.headers.get("user-agent") ?? null;
   const signedAt = new Date();
 
+  // L'immagine della firma va su Cloudinary (cartella del preventivo, così la
+  // pulizia del cestino la elimina insieme a lui): nel DB resta solo il link.
+  const storedSignature = signatureDataUrl
+    ? await storeSignatureImage(signatureDataUrl, quote.id)
+    : "";
+
   // neon-http driver doesn't support transactions — run sequentially
   await db.insert(quoteSignatures).values({
     quoteId: quote.id,
     signerName,
     signerEmail,
-    signatureDataUrl: signatureDataUrl ?? "",
+    signatureDataUrl: storedSignature,
     ipAddress,
     ipConsent,
     userAgent,
@@ -112,6 +120,8 @@ export async function POST(
       publicTokenExpiresAt: new Date(), // expire immediately after signing
     })
     .where(eq(quotes.id, quote.id));
+  // Accettato dal cliente → il cantiere diventa attivo (rifiutato → sparisce).
+  queueSiteSync();
 
   // Notifica in-app per titolare del preventivo e admin.
   await notifyQuoteSigned({

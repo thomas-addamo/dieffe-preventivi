@@ -4,6 +4,7 @@ import { db } from "@/lib/db/client";
 import { quotes, quoteSignatures, auditLog } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { generateId } from "@/lib/utils";
+import { queueSiteSync } from "@/lib/sites/sync";
 
 export async function DELETE(
   _req: NextRequest,
@@ -40,6 +41,7 @@ export async function DELETE(
       updatedAt: new Date().toISOString(),
     })
     .where(eq(quotes.id, id));
+  queueSiteSync();
 
   await db.insert(auditLog).values({
     id: generateId(),

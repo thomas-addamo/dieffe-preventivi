@@ -28,9 +28,11 @@ export function navigate(win: BrowserWindow | null, path: string) {
 
 const GO_TO: { label: string; path: string; key: string }[] = [
   { label: 'Dashboard', path: '/dashboard', key: '1' },
-  { label: 'Preventivi', path: '/preventivi', key: '2' },
-  { label: 'Lavori extra', path: '/lavori-extra', key: '3' },
-  { label: 'Clienti', path: '/clienti', key: '4' },
+  { label: 'Clienti', path: '/clienti', key: '2' },
+  { label: 'Preventivi', path: '/preventivi', key: '3' },
+  { label: 'Lavori extra', path: '/lavori-extra', key: '4' },
+  // Gestione Cantieri sospesa per manutenzione: si riaggiunge alla riattivazione.
+  // { label: 'Gestione Cantieri', path: '/cantieri', key: 'Shift+CmdOrCtrl+G' },
   { label: 'Crea comunicazione', path: '/comunicazioni', key: '5' },
   { label: 'Listino', path: '/listino', key: '6' },
   { label: 'Statistiche', path: '/statistiche', key: '7' },
@@ -104,6 +106,18 @@ export function buildAppMenu(getWindow: GetWindow) {
         accelerator: 'Shift+CmdOrCtrl+N',
         // Dentro un preventivo: extra di quel preventivo; altrove: scegli il preventivo.
         click: onQuote('extra', '1', goWith('/lavori-extra', 'nuovo')),
+      },
+      {
+        label: 'Duplica preventivo…',
+        accelerator: 'CmdOrCtrl+D',
+        // Solo dentro un preventivo: chiede stesso cliente o un altro.
+        click: onQuote('duplica'),
+      },
+      {
+        label: 'Invia per email…',
+        accelerator: 'Alt+CmdOrCtrl+E',
+        // Solo dentro un preventivo: mail pronta con PDF e link di accesso.
+        click: onQuote('email'),
       },
       { label: 'Nuova comunicazione', accelerator: 'Alt+CmdOrCtrl+N', click: goWith('/comunicazioni', 'nuova') },
       { label: 'Nuovo cliente', click: goWith('/clienti', 'nuovo') },
@@ -194,7 +208,7 @@ export function buildAppMenu(getWindow: GetWindow) {
       { type: 'separator' },
       ...GO_TO.map(
         ({ label, path, key }) =>
-          ({ label, accelerator: `CmdOrCtrl+${key}`, click: go(path) }) as MenuItemConstructorOptions
+          ({ label, accelerator: key.includes('+') ? key : `CmdOrCtrl+${key}`, click: go(path) }) as MenuItemConstructorOptions
       ),
       { type: 'separator' },
       {
@@ -274,8 +288,8 @@ export function buildAppMenu(getWindow: GetWindow) {
         { label: 'Nuova comunicazione', click: goWith('/comunicazioni', 'nuova') },
         { type: 'separator' },
         { label: 'Dashboard', click: go('/dashboard') },
-        { label: 'Lavori extra', click: go('/lavori-extra') },
         { label: 'Clienti', click: go('/clienti') },
+        { label: 'Lavori extra', click: go('/lavori-extra') },
         { label: 'Listino', click: go('/listino') },
       ])
     );

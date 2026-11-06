@@ -18,8 +18,10 @@ import {
   ChevronRight,
   Shield,
   Smartphone,
+  HardHat,
 } from "lucide-react";
 import { postToIOSApp } from "@/lib/ios-app";
+import { FEATURES } from "@/lib/features";
 import { MobilePage } from "@/components/shared/mobile/MobilePage";
 import { NEW_BADGE_CLASS, isNewPage } from "@/lib/new-pages";
 
@@ -82,6 +84,17 @@ export function AltroClient({ userRole, trashCount }: AltroClientProps) {
   const [helpOpen, setHelpOpen] = useState(false);
 
   const operativita: Item[] = [
+    ...(FEATURES.sites
+      ? [
+          {
+            href: "/cantieri",
+            label: "Gestione Cantieri",
+            description: "Mappa, avanzamento lavori, SAL e scadenze",
+            icon: HardHat,
+            iconClass: "bg-orange-500/10 text-orange-600 dark:text-orange-400",
+          },
+        ]
+      : []),
     {
       href: "/lavori-extra",
       label: "Lavori extra",

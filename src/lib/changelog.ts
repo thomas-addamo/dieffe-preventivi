@@ -19,7 +19,8 @@ export type ChangelogIcon =
   | "shield"
   | "zap"
   | "desktop"
-  | "keyboard";
+  | "keyboard"
+  | "site";
 
 export interface ChangelogHighlight {
   icon: ChangelogIcon;
@@ -36,11 +37,13 @@ export interface ChangelogEntry {
   highlights: ChangelogHighlight[];
   /** Aggiornamento importante: mostra la schermata "Novità" su tutte le piattaforme. */
   important?: boolean;
+  /** Pulsante principale della schermata Novità (es. apri la nuova sezione). */
+  cta?: { label: string; href: string };
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "3.20.0",
+    version: "4.4.0",
     date: "2026-11-06",
     headline: "Una Home tutta nuova sull'iPhone.",
     highlights: [
@@ -58,6 +61,149 @@ export const CHANGELOG: ChangelogEntry[] = [
         icon: "sparkles",
         title: "Archivio con filtri rapidi",
         description: "Bozze, Inviati, Accettati con un tocco; i riquadri In attesa e Bozze portano dritti all'elenco filtrato.",
+      },
+    ],
+  },
+  {
+    version: "4.3.0",
+    date: "2026-10-16",
+    headline: "Invia il preventivo per email, già pronto.",
+    important: true,
+    highlights: [
+      {
+        icon: "pdf",
+        title: "Mail pronta con PDF e link",
+        description: "Da Condividi → \"Invia per email\": parte da impresa.dieffe@gmail.com con il PDF allegato e il link per aprire e firmare il preventivo. La trovi anche in \"Inviati\" su Gmail.",
+      },
+      {
+        icon: "shield",
+        title: "Codice di accesso e più destinatari",
+        description: "Il codice lo comunichi tu di persona oppure lo alleghi alla mail. Aggiungi altri destinatari in copia (CC) o copia nascosta (CCN).",
+      },
+      {
+        icon: "sparkles",
+        title: "Note controllate dall'IA",
+        description: "Aggiungi note per il cliente: l'IA corregge ortografia e grammatica e ti mostra le correzioni prima di applicarle. Anteprima della mail prima dell'invio.",
+      },
+      {
+        icon: "keyboard",
+        title: "Su tutti i dispositivi",
+        description: "Sito, iPhone e app Mac/Windows (File → Invia per email…, ⌥⌘E / Ctrl+Alt+E).",
+      },
+    ],
+  },
+  {
+    version: "4.2.2",
+    date: "2026-10-15",
+    headline: "Gestione Cantieri in manutenzione.",
+    highlights: [
+      {
+        icon: "settings",
+        title: "Gestione Cantieri sospesa",
+        description: "La funzione è momentaneamente disabilitata per manutenzione su sito, Mac, Windows e iPhone: tornerà disponibile a breve. I dati restano conservati.",
+      },
+    ],
+  },
+  {
+    version: "4.2.1",
+    date: "2026-10-15",
+    headline: "PDF più ordinati, riepilogo sempre a vista.",
+    highlights: [
+      {
+        icon: "pdf",
+        title: "Voci lunghe nel PDF",
+        description: "Una voce che non sta a fine pagina passa intera alla pagina successiva: niente più testo tagliato oltre il margine.",
+      },
+      {
+        icon: "layout",
+        title: "Riepilogo fisso nell'editor",
+        description: "Il riepilogo a destra resta in alto mentre scorri le sezioni del preventivo.",
+      },
+    ],
+  },
+  {
+    version: "4.2.0",
+    date: "2026-10-15",
+    headline: "Duplica un preventivo in un clic.",
+    important: true,
+    highlights: [
+      {
+        icon: "layout",
+        title: "Duplica preventivo",
+        description: "Dall'editor o dall'elenco in dashboard: una copia completa di sezioni, voci, prezzi, condizioni e foto, come bozza con un nuovo codice.",
+      },
+      {
+        icon: "settings",
+        title: "Stesso cliente o un altro",
+        description: "Scegli se tenere il cliente o assegnarne uno dall'anagrafica: l'indirizzo del cantiere si aggiorna da solo ed è modificabile.",
+      },
+      {
+        icon: "keyboard",
+        title: "⌘D nell'app desktop",
+        description: "Su Mac e Windows: File › Duplica preventivo, anche con ⌘D / Ctrl+D.",
+      },
+    ],
+  },
+  {
+    version: "4.1.0",
+    date: "2026-10-14",
+    headline: "Gestione Cantieri anche su iPhone.",
+    highlights: [
+      {
+        icon: "site",
+        title: "Cantieri nativi su iPhone",
+        description: "Da Altro › Gestione Cantieri: mappa di Apple con indicazioni stradali, fasi da spuntare, SAL con Fatturato e Incassato, calendario con analisi del ritardo, diario e consigli dell'IA.",
+      },
+      {
+        icon: "zap",
+        title: "Dalle notifiche al cantiere",
+        description: "\"SAL da fatturare\" e i promemoria degli eventi aprono direttamente la scheda giusta del cantiere.",
+      },
+    ],
+  },
+  {
+    version: "4.0.0",
+    date: "2026-10-14",
+    headline: "Arriva la Gestione Cantieri.",
+    important: true,
+    cta: { label: "Apri Gestione Cantieri", href: "/cantieri" },
+    highlights: [
+      {
+        icon: "site",
+        title: "I cantieri si creano da soli",
+        description: "Ogni preventivo inviato o accettato diventa un cantiere sulla mappa, con indicazioni stradali e le informazioni essenziali a portata di clic.",
+      },
+      {
+        icon: "sparkles",
+        title: "Fasi e SAL preparati dall'IA",
+        description: "Dalle sezioni e dalle condizioni di pagamento del preventivo: avanzamento pesato sugli importi, SAL da fatturare con le spunte Fatturato e Incassato.",
+      },
+      {
+        icon: "zap",
+        title: "Calendario e costo del ritardo",
+        description: "Scadenze ed eventi (suolo pubblico, interventi di altre ditte), ritardo stimato e quanto costa ogni giorno in più, con i consigli dell'IA per ogni cantiere.",
+      },
+    ],
+  },
+  {
+    version: "3.19.1",
+    date: "2026-10-14",
+    headline: "Database più leggero.",
+    highlights: [
+      {
+        icon: "shield",
+        title: "Firme dei clienti su Cloudinary",
+        description: "L'immagine della firma non occupa più spazio nel database: resta solo il link, come per le foto delle voci.",
+      },
+      {
+        icon: "zap",
+        title: "Pulizia automatica notturna",
+        description: "Ogni notte vengono rimosse le sessioni scadute, gli accessi più vecchi di 12 mesi e le notifiche lette da oltre 90 giorni.",
+      },
+      {
+        icon: "settings",
+        title: "Rimossa la vecchia tabella dei template",
+        description: "Non era più usata dall'app: il database resta più ordinato.",
       },
     ],
   },

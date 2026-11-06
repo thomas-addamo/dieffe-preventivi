@@ -17,6 +17,7 @@ import {
   Wrench,
   AlertTriangle,
   LifeBuoy,
+  HardHat,
 } from "lucide-react";
 import type { Notification } from "@/lib/db/schema";
 
@@ -113,6 +114,12 @@ export const NOTIFICATION_META: Record<NotificationType, NotificationMeta> = {
     label: "Richiesta d'aiuto",
     iconClass: "bg-sky-500/12 text-sky-600 dark:text-sky-400",
     accentClass: "border-sky-500/30 bg-sky-500/[0.05]",
+  },
+  site: {
+    icon: HardHat,
+    label: "Cantiere",
+    iconClass: "bg-orange-500/12 text-orange-600 dark:text-orange-400",
+    accentClass: "border-orange-500/30 bg-orange-500/[0.05]",
   },
 };
 
