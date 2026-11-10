@@ -248,19 +248,30 @@ private struct SitePin: View {
     }
 }
 
-/// Scheda sotto la mappa per il segnaposto scelto.
+/// Scheda sotto la mappa per il segnaposto scelto. Tasti con stile plain:
+/// dentro una riga di List quelli standard scattano tutti insieme.
 private struct SelectedSiteCard: View {
+    @Environment(AppModel.self) private var model
     let site: SiteListItem
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(site.headline).font(.headline).lineLimit(2)
-                    Text([site.street == nil ? nil : site.clientName, site.locality, site.title].compactMap { $0 }.joined(separator: " · "))
-                        .font(.caption).foregroundStyle(.secondary).lineLimit(2)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 10) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(site.headline).font(.headline).lineLimit(1)
+                    if site.street != nil, let client = site.clientName {
+                        Label(client, systemImage: "person.fill")
+                            .labelStyle(TightLabel())
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                    Text([site.locality, site.title].compactMap { $0 }.joined(separator: " · "))
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
                 }
-                Spacer()
+                Spacer(minLength: 4)
                 HealthBadge(health: site.metrics.health)
             }
             if !site.isPending {
@@ -269,21 +280,53 @@ private struct SelectedSiteCard: View {
             HStack(spacing: 8) {
                 if let url = SiteLinks.directions(lat: site.lat, lng: site.lng, address: site.address) {
                     Link(destination: url) {
-                        Label("Indicazioni", systemImage: "car.fill").frame(maxWidth: .infinity)
+                        CardButton(title: "Naviga", symbol: "car.fill", prominent: false)
                     }
-                    .buttonStyle(.glassProminent)
+                    .buttonStyle(.plain)
                 }
                 if let phone = site.clientPhone, let url = URL(string: "tel:\(phone.filter { !$0.isWhitespace })") {
-                    Link(destination: url) { Image(systemName: "phone.fill") }
-                        .buttonStyle(.glass)
+                    Link(destination: url) {
+                        CardButton(title: "Chiama", symbol: "phone.fill", prominent: false)
+                    }
+                    .buttonStyle(.plain)
                 }
-                NavigationLink(value: AltroRoute.site(site.id, tab: nil)) {
-                    Text("Apri").frame(maxWidth: .infinity)
+                Button { model.open(.site(site.id, tab: nil)) } label: {
+                    CardButton(title: "Apri", symbol: "arrow.right", prominent: true)
                 }
-                .buttonStyle(.glass)
+                .buttonStyle(.plain)
             }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 6)
+    }
+}
+
+private struct CardButton: View {
+    let title: String
+    let symbol: String
+    let prominent: Bool
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: symbol).imageScale(.small)
+            Text(title)
+        }
+        .font(.subheadline.weight(.semibold))
+        .lineLimit(1)
+        .foregroundStyle(prominent ? Color.white : Color.accentColor)
+        .frame(maxWidth: .infinity, minHeight: 44)
+        .background(prominent ? AnyShapeStyle(Color.accentColor.gradient) : AnyShapeStyle(Color.accentColor.opacity(0.14)),
+                    in: Capsule())
+        .contentShape(Capsule())
+    }
+}
+
+/// Icona attaccata al testo anche dentro una List.
+private struct TightLabel: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 5) {
+            configuration.icon.imageScale(.small)
+            configuration.title
+        }
     }
 }
 

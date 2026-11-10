@@ -19,6 +19,7 @@ struct QuoteEditorView: View {
     @State private var orderingSections = false
     @State private var showSummary = false
     @State private var showChat = false
+    @State private var keyboardVisible = false
     @State private var showSignature = false
     /// Inizio del sopralluogo in corso su questo preventivo (Dynamic Island).
     @State private var siteVisitStart: Date?
@@ -192,8 +193,12 @@ struct QuoteEditorView: View {
                 }
             }
             .padding(.horizontal, 16)
-            .padding(.bottom, 4)
+            // Alla stessa altezza della tab bar di sistema: scende nella zona
+            // dell'indicatore Home (non con la tastiera aperta).
+            .padding(.bottom, keyboardVisible ? 6 : -11)
         }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in keyboardVisible = true }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in keyboardVisible = false }
         .navigationTitle(quote.code)
         .navigationSubtitle(quote.title)
     }
