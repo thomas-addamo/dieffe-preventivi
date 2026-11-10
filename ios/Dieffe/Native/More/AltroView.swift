@@ -98,6 +98,8 @@ struct AltroView: View {
                 switch route {
                 case .sites:
                     if model.sitesEnabled { SitesView() } else { SitesMaintenanceView() }
+                case .sitesArchive:
+                    if model.sitesEnabled { SitesView(initialFilter: .archive) } else { SitesMaintenanceView() }
                 case .site(let id, let tab):
                     if model.sitesEnabled { SiteDetailView(siteID: id, initialTab: tab) } else { SitesMaintenanceView() }
                 case .extras: ExtrasView()
@@ -124,6 +126,8 @@ struct AltroView: View {
 /// Schermate native raggiungibili da Altro.
 enum AltroRoute: Hashable {
     case sites
+    /// Dashboard dei cantieri aperta sull'archivio (/cantieri?filtro=archivio).
+    case sitesArchive
     /// Un cantiere, con la scheda da aprire (sal, calendario, note).
     case site(String, tab: String?)
     case extras, stats, communications, trash, notify, users, company
@@ -133,7 +137,8 @@ enum AltroRoute: Hashable {
         let parts = path.split(separator: "?", maxSplits: 1).map(String.init)
         let query = parts.count > 1 ? URLComponents(string: "?\(parts[1])")?.queryItems : nil
         switch (parts.first ?? "").split(separator: "/").map(String.init) {
-        case ["cantieri"]: self = .sites
+        case ["cantieri"]:
+            self = query?.first { $0.name == "filtro" }?.value == "archivio" ? .sitesArchive : .sites
         case let segments where segments.count == 2 && segments[0] == "cantieri":
             self = .site(segments[1], tab: query?.first { $0.name == "tab" }?.value)
         case ["lavori-extra"]: self = .extras

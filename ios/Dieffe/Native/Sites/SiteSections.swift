@@ -191,7 +191,7 @@ struct SiteCalendarSection: View {
 
     var body: some View {
         Section {
-            MonthGrid(detail: detail, month: $month) { day in
+            MonthGrid(detail: detail, month: $month, canAdd: canEdit) { day in
                 if canEdit { present(.event(EventDraft(date: day))) }
             }
             .listRowInsets(EdgeInsets(top: 10, leading: 10, bottom: 10, trailing: 10))
@@ -323,6 +323,7 @@ struct EventSheet: View {
 private struct MonthGrid: View {
     let detail: SiteDetail
     @Binding var month: Date
+    var canAdd = true
     let onDay: (Date) -> Void
 
     private let cal: Calendar = {
@@ -342,9 +343,15 @@ private struct MonthGrid: View {
                 Spacer()
                 Button("Oggi") { month = cal.dateInterval(of: .month, for: .now)?.start ?? .now }
                     .font(.subheadline)
-                Button { shift(-1) } label: { Image(systemName: "chevron.left") }
-                    .padding(.horizontal, 6)
-                Button { shift(1) } label: { Image(systemName: "chevron.right") }
+                    .frame(minHeight: 44)
+                Button { shift(-1) } label: {
+                    Image(systemName: "chevron.left").frame(width: 44, height: 44)
+                }
+                .accessibilityLabel("Mese precedente")
+                Button { shift(1) } label: {
+                    Image(systemName: "chevron.right").frame(width: 44, height: 44)
+                }
+                .accessibilityLabel("Mese successivo")
             }
             .buttonStyle(.borderless)
 
@@ -360,8 +367,10 @@ private struct MonthGrid: View {
                             isToday: day == today,
                             inMonth: cal.isDate(day, equalTo: month, toGranularity: .month),
                             marker: marker(day),
+                            isHoliday: SiteWorkdays.isHoliday(day, calendar: cal),
                             eventColors: eventsOn(day).prefix(3).map { SiteEventType(raw: $0.type).color },
-                            phase: phaseOn(day)) { onDay(day) }
+                            phase: phaseOn(day),
+                            canAdd: canAdd) { onDay(day) }
                 }
             }
 
@@ -370,6 +379,7 @@ private struct MonthGrid: View {
                 legend(Color.purple.opacity(0.25), "Fine prevista")
                 if detail.metrics.delayDays > 0 { legend(Color.red.opacity(0.25), "Fine stimata") }
                 Spacer()
+                Text("Festivi in rosso").foregroundStyle(.red.opacity(0.8))
             }
             .font(.caption2)
             .foregroundStyle(.secondary)
@@ -406,9 +416,10 @@ private struct MonthGrid: View {
         }
     }
 
+    /// Le fasi avanzano solo nei giorni lavorativi: niente weekend né festività
+    /// nazionali (come il programma del server).
     private func phaseOn(_ day: Date) -> SiteDetail.Phase? {
-        let weekday = cal.component(.weekday, from: day)
-        guard weekday != 1, weekday != 7 else { return nil }
+        guard SiteWorkdays.isWorkday(day, calendar: cal) else { return nil }
         return detail.phases.first {
             guard let s = SiteDate.date($0.plannedStart), let e = SiteDate.date($0.plannedEnd) else { return false }
             return day >= s && day <= e
@@ -432,8 +443,10 @@ private struct DayCell: View {
     let isToday: Bool
     let inMonth: Bool
     let marker: Color?
+    let isHoliday: Bool
     let eventColors: [Color]
     let phase: SiteDetail.Phase?
+    let canAdd: Bool
     let action: () -> Void
 
     var body: some View {
@@ -441,7 +454,9 @@ private struct DayCell: View {
             VStack(spacing: 3) {
                 Text("\(number)")
                     .font(.subheadline.weight(isToday ? .bold : .regular))
-                    .foregroundStyle(isToday ? Color.white : inMonth ? Color.primary : Color.secondary.opacity(0.5))
+                    .foregroundStyle(isToday ? Color.white
+                                     : !inMonth ? Color.secondary.opacity(0.5)
+                                     : isHoliday ? Color.red : Color.primary)
                     .frame(width: 30, height: 30)
                     .background(isToday ? Color.accentColor : (marker ?? .clear), in: Circle())
                 HStack(spacing: 2) {
@@ -455,11 +470,13 @@ private struct DayCell: View {
                     .frame(height: 3)
                     .padding(.horizontal, 2)
             }
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, minHeight: 44)
             .padding(.vertical, 2)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(label)
+        .accessibilityHint(canAdd ? "Tocca per aggiungere un evento" : "")
     }
 
     private var phaseColor: Color {
@@ -468,8 +485,11 @@ private struct DayCell: View {
     }
 
     private var label: String {
-        let date = day.formatted(date: .complete, time: .omitted)
-        return eventColors.isEmpty ? date : "\(date), \(eventColors.count) eventi"
+        var parts = [day.formatted(.dateTime.weekday(.wide).day().month(.wide).locale(Locale(identifier: "it_IT")))]
+        if isHoliday { parts.append("festivo") }
+        if !eventColors.isEmpty { parts.append(eventColors.count == 1 ? "1 evento" : "\(eventColors.count) eventi") }
+        if let phase { parts.append("fase \(phase.title)") }
+        return parts.joined(separator: ", ")
     }
 }
 
@@ -633,50 +653,61 @@ struct SiteNotesSection: View {
     let canEdit: Bool
     let loadingInsights: Bool
     let refreshInsights: () -> Void
-    let mutate: SiteMutation
+    /// Modifica ed eliminazione: autore della nota o admin.
+    let canManage: (SiteDetail.Note) -> Bool
+    let add: (String) -> Void
+    let edit: (SiteDetail.Note) -> Void
+    let delete: (SiteDetail.Note) -> Void
 
     @State private var text = ""
+    @FocusState private var focused: Bool
 
     var body: some View {
         let insights = detail.site.aiInsights
-        Section {
-            if let tips = insights?.tips, !tips.isEmpty {
-                ForEach(tips, id: \.self) { TipRow(tip: $0) }
-                    .opacity(loadingInsights ? 0.5 : 1)
-            } else {
-                Text(loadingInsights ? "L'IA sta analizzando fasi, SAL, scadenze e meteo…"
-                     : detail.isPending ? "I consigli arrivano quando il preventivo viene accettato." : "Nessun consiglio per ora.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-            if let weather = insights?.weather, !weather.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(weather, id: \.self) { w in
-                            VStack(spacing: 4) {
-                                Text(SiteDate.short(w.date)).font(.caption2).foregroundStyle(.secondary)
-                                Image(systemName: w.rain >= 2 ? "cloud.rain.fill" : "sun.max.fill")
-                                    .symbolRenderingMode(.multicolor)
-                                Text("\(Int(w.tmax.rounded()))°").font(.caption).monospacedDigit()
+        if !detail.isArchived {
+            Section {
+                if let tips = insights?.tips, !tips.isEmpty {
+                    ForEach(tips, id: \.self) { TipRow(tip: $0) }
+                        .opacity(loadingInsights ? 0.5 : 1)
+                } else {
+                    Text(loadingInsights ? "L'IA sta analizzando fasi, SAL, scadenze e meteo…"
+                         : detail.isPending ? "I consigli arrivano quando il preventivo viene accettato." : "Nessun consiglio per ora.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                if let weather = insights?.weather, !weather.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(weather, id: \.self) { w in
+                                VStack(spacing: 4) {
+                                    Text(SiteDate.short(w.date)).font(.caption2).foregroundStyle(.secondary)
+                                    Image(systemName: w.rain >= 2 ? "cloud.rain.fill" : "sun.max.fill")
+                                        .symbolRenderingMode(.multicolor)
+                                    Text("\(Int(w.tmax.rounded()))°").font(.caption).monospacedDigit()
+                                }
+                                .frame(minWidth: 54)
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, 4)
+                                .background((w.rain >= 2 ? Color.blue : Color.primary).opacity(0.07),
+                                            in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                .accessibilityElement(children: .ignore)
+                                .accessibilityLabel("\(SiteDate.short(w.date)): \(w.rain >= 2 ? "pioggia" : "sereno"), massima \(Int(w.tmax.rounded())) gradi")
                             }
-                            .frame(width: 54)
-                            .padding(.vertical, 8)
-                            .background((w.rain >= 2 ? Color.blue : Color.primary).opacity(0.07),
-                                        in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                         }
                     }
                 }
-            }
-        } header: {
-            HStack {
-                Label("Consigli per questo cantiere", systemImage: "sparkles")
-                Spacer()
-                if !detail.isPending, !detail.phases.isEmpty {
-                    if loadingInsights {
-                        ProgressView().controlSize(.mini)
-                    } else {
-                        Button("Rigenera", systemImage: "arrow.clockwise", action: refreshInsights)
-                            .labelStyle(.iconOnly)
+            } header: {
+                HStack {
+                    Label("Consigli per questo cantiere", systemImage: "sparkles")
+                    Spacer()
+                    if !detail.isPending, !detail.phases.isEmpty {
+                        if loadingInsights {
+                            ProgressView().controlSize(.mini)
+                        } else {
+                            Button("Rigenera", systemImage: "arrow.clockwise", action: refreshInsights)
+                                .labelStyle(.iconOnly)
+                                .frame(minWidth: 44, minHeight: 44)
+                        }
                     }
                 }
             }
@@ -687,38 +718,107 @@ struct SiteNotesSection: View {
                 HStack(alignment: .bottom) {
                     TextField("Diario: cosa è successo oggi…", text: $text, axis: .vertical)
                         .lineLimit(1...6)
-                    Button("Aggiungi", systemImage: "arrow.up.circle.fill") {
-                        let body = text.trimmingCharacters(in: .whitespacesAndNewlines)
-                        guard !body.isEmpty else { return }
-                        text = ""
-                        Task { await mutate("POST", "/api/sites/\(detail.site.id)/notes", ["body": body]) }
-                    }
-                    .labelStyle(.iconOnly)
-                    .font(.title2)
-                    .disabled(text.trimmingCharacters(in: .whitespaces).isEmpty)
+                        .focused($focused)
+                    Button("Aggiungi nota", systemImage: "arrow.up.circle.fill", action: submit)
+                        .labelStyle(.iconOnly)
+                        .font(.title2)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
             if detail.notes.isEmpty {
-                Text("Nessuna nota.").foregroundStyle(.secondary)
+                Text(canEdit ? "Nessuna nota. Annota cosa succede in cantiere: ditte, consegne, problemi." : "Nessuna nota.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
             }
             ForEach(detail.notes) { n in
+                let pending = n.id.hasPrefix("tmp-")
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("\(n.userName ?? "—") · \(SiteDate.short(n.createdAt))")
+                    Text(meta(n))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Text(n.body).textSelection(.enabled)
                 }
                 .padding(.vertical, 2)
+                .opacity(pending ? 0.6 : 1)
+                .accessibilityElement(children: .combine)
                 .swipeActions(edge: .trailing) {
-                    if canEdit {
-                        Button(role: .destructive) {
-                            Task { await mutate("DELETE", "/api/sites/\(detail.site.id)/notes/\(n.id)", [:]) }
-                        } label: { Label("Elimina", systemImage: "trash") }
+                    if !pending, canManage(n) {
+                        Button(role: .destructive) { delete(n) } label: { Label("Elimina", systemImage: "trash") }
+                        Button { edit(n) } label: { Label("Modifica", systemImage: "pencil") }
+                            .tint(.blue)
+                    }
+                }
+                .contextMenu {
+                    Button("Copia", systemImage: "doc.on.doc") { UIPasteboard.general.string = n.body }
+                    if !pending, canManage(n) {
+                        Button("Modifica", systemImage: "pencil") { edit(n) }
+                        Button("Elimina", systemImage: "trash", role: .destructive) { delete(n) }
                     }
                 }
             }
         } header: {
             Text("Diario di cantiere")
+        } footer: {
+            if detail.notes.contains(where: canManage) {
+                Text("Scorri una nota verso sinistra per modificarla o eliminarla.")
+            }
         }
+    }
+
+    private func meta(_ n: SiteDetail.Note) -> String {
+        var s = "\(n.userName ?? "—") · \(SiteDate.short(n.createdAt))"
+        if n.updatedAt != nil { s += " · modificata" }
+        return s
+    }
+
+    private func submit() {
+        let body = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !body.isEmpty else { return }
+        text = ""
+        add(body)
+    }
+}
+
+struct NoteEditSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let note: SiteDetail.Note
+    let save: (String) async -> Bool
+
+    @State private var text = ""
+    @State private var saving = false
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                TextField("Nota", text: $text, axis: .vertical)
+                    .lineLimit(4...16)
+                    .focused($focused)
+            }
+            .navigationTitle("Modifica nota")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Annulla") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Salva") {
+                        let body = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                        guard body != note.body else { dismiss(); return }
+                        saving = true
+                        Task {
+                            let ok = await save(body)
+                            saving = false
+                            if ok { dismiss() }
+                        }
+                    }
+                    .disabled(saving || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+            .onAppear {
+                text = note.body
+                focused = true
+            }
+        }
+        .presentationDetents([.medium, .large])
     }
 }

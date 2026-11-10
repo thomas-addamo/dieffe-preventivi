@@ -2,8 +2,8 @@ import SwiftUI
 
 /// Pagina del cantiere (come src/app/(app)/cantieri/[id]/CantiereClient.tsx):
 /// fasi da spuntare, SAL e fatture, calendario con analisi del ritardo,
-/// diario e consigli IA. "Concludi lavori" elimina il cantiere e i suoi dati;
-/// i preventivi restano.
+/// diario e consigli IA, foto. "Concludi lavori" sposta il cantiere in
+/// archivio: si consulta in sola lettura, si riapre o (admin) si elimina.
 struct SiteDetailView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
@@ -11,13 +11,24 @@ struct SiteDetailView: View {
     var initialTab: String?
 
     enum Tab: String, CaseIterable {
-        case avanzamento = "Fasi", sal = "SAL", calendario = "Calendario", note = "Note"
+        case avanzamento = "Fasi", sal = "SAL", calendario = "Calendario", note = "Note", foto = "Foto"
         init(param: String?) {
             switch param {
             case "sal": self = .sal
             case "calendario": self = .calendario
             case "note": self = .note
+            case "foto": self = .foto
             default: self = .avanzamento
+            }
+        }
+
+        var symbol: String {
+            switch self {
+            case .avanzamento: "checklist"
+            case .sal: "eurosign.circle"
+            case .calendario: "calendar"
+            case .note: "note.text"
+            case .foto: "photo.on.rectangle"
             }
         }
     }
@@ -34,8 +45,22 @@ struct SiteDetailView: View {
     @State private var sheet: SiteSheet?
     @State private var invoicing: SiteDetail.Milestone?
     @State private var invoiceNumber = ""
+    @State private var confirmPurge = false
+    @State private var busy = false
+    @State private var editMode: EditMode = .inactive
+    @State private var uploader = SitePhotoUploader()
+    @State private var viewer: PhotoViewerItem?
+    @State private var camera: CameraRequest?
+    @State private var confirmDeletePhoto: SiteDetail.Photo?
 
     private var canEdit: Bool { model.canEdit }
+    private var isAdmin: Bool { model.currentUser?.role == "admin" }
+    private var me: String? { model.currentUser?.id }
+    /// Si modifica solo un cantiere in corso: quelli in archivio si consultano.
+    private var editable: Bool { canEdit && data?.isArchived != true }
+
+    /// Note e foto: le elimina (e le note le modifica) chi le ha scritte o un admin.
+    private func owns(_ userId: String?) -> Bool { isAdmin || (userId != nil && userId == me) }
 
     var body: some View {
         Group {
@@ -51,9 +76,9 @@ struct SiteDetailView: View {
             tab = Tab(param: initialTab)
             await load()
         }
-        .task(id: data?.setupPending == true) {
+        .task(id: data?.setupPending == true && data?.isArchived != true) {
             // L'IA sta ricavando fasi e SAL: si ricontrolla ogni pochi secondi.
-            while data?.setupPending == true, !Task.isCancelled {
+            while data?.setupPending == true, data?.isArchived != true, !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(4))
                 await load()
             }
@@ -66,9 +91,14 @@ struct SiteDetailView: View {
     @ViewBuilder
     private func content(_ d: SiteDetail) -> some View {
         List {
+            if d.isArchived {
+                ArchivedBanner(detail: d, canReopen: canEdit && d.archiveReason == .completed, canPurge: isAdmin,
+                               busy: busy, reopen: reopen, purge: { confirmPurge = true })
+            }
+
             HeaderSection(detail: d, openQuote: { model.openQuote($0) })
 
-            if d.isPending {
+            if d.isPending, !d.isArchived {
                 Section {
                     Label("Il preventivo è stato inviato ma non ancora accettato: fasi e SAL arrivano all'accettazione. Puoi già annotare sopralluoghi ed eventi.",
                           systemImage: "hourglass")
@@ -80,41 +110,55 @@ struct SiteDetailView: View {
             }
 
             Section {
-                Picker("Sezione", selection: $tab) {
-                    ForEach(Tab.allCases, id: \.self) { t in
-                        if t == .sal, d.metrics.toInvoice > 0 {
-                            Text("SAL •").tag(t)
-                        } else {
-                            Text(t.rawValue).tag(t)
-                        }
-                    }
-                }
-                .pickerStyle(.segmented)
+                SiteFilterBar(selection: $tab, items: Tab.allCases.map { t in
+                    .init(value: t, title: t == .sal && d.metrics.toInvoice > 0 ? "SAL •" : t.rawValue,
+                          count: t == .foto ? (d.allPhotos.isEmpty ? nil : d.allPhotos.count) : nil, symbol: t.symbol)
+                })
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
             }
 
             switch tab {
             case .avanzamento:
-                SitePhasesSection(detail: d, canEdit: canEdit, onSettings: { showSettings = true },
-                                  mutate: mutate, toggle: togglePhase, present: present)
+                SitePhasesSection(detail: d, canEdit: editable, onSettings: { showSettings = true },
+                                  mutate: mutate, toggle: togglePhase, present: present, reorder: movePhase,
+                                  editMode: $editMode)
             case .sal:
-                SiteMilestonesSection(detail: d, canEdit: canEdit, mutate: mutate, present: present)
+                SiteMilestonesSection(detail: d, canEdit: editable, mutate: mutate, present: present)
             case .calendario:
-                SiteCalendarSection(detail: d, canEdit: canEdit, mutate: mutate, onSettings: { showSettings = true },
+                SiteCalendarSection(detail: d, canEdit: editable, mutate: mutate, onSettings: { showSettings = true },
                                     present: present)
             case .note:
-                SiteNotesSection(detail: d, canEdit: canEdit, loadingInsights: loadingInsights,
-                                 refreshInsights: { Task { await loadInsights(force: true) } }, mutate: mutate)
+                SiteNotesSection(detail: d, canEdit: editable, loadingInsights: loadingInsights,
+                                 refreshInsights: { Task { await loadInsights(force: true) } },
+                                 canManage: { editable && owns($0.userId) },
+                                 add: addNote, edit: { present(.editNote($0)) }, delete: deleteNote)
+            case .foto:
+                SitePhotosSection(detail: d, editable: editable, uploader: uploader,
+                                  canDelete: { editable && owns($0.userId) },
+                                  upload: uploadPhotos, openCamera: { camera = CameraRequest(phaseID: $0) },
+                                  open: { viewer = PhotoViewerItem(id: $0.id, photos: $1) },
+                                  edit: { present(.editPhoto($0)) },
+                                  delete: { confirmDeletePhoto = $0 })
             }
         }
+        .environment(\.editMode, $editMode)
+        .onChange(of: tab) { editMode = .inactive }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu("Azioni", systemImage: "ellipsis") {
                     if let url = SiteLinks.directions(lat: d.site.lat, lng: d.site.lng, address: d.site.address) {
                         Link(destination: url) { Label("Indicazioni", systemImage: "car.fill") }
                     }
-                    if canEdit {
+                    if d.isArchived {
+                        if canEdit, d.archiveReason == .completed {
+                            Button("Riapri cantiere", systemImage: "arrow.uturn.backward", action: reopen)
+                        }
+                        if isAdmin {
+                            Divider()
+                            Button("Elimina definitivamente", systemImage: "trash", role: .destructive) { confirmPurge = true }
+                        }
+                    } else if canEdit {
                         Button("Tempi e costi", systemImage: "calendar.badge.clock") { showSettings = true }
                         if !d.isPending {
                             Divider()
@@ -122,6 +166,7 @@ struct SiteDetailView: View {
                         }
                     }
                 }
+                .disabled(busy)
             }
         }
         .sheet(isPresented: $showSettings) {
@@ -138,9 +183,34 @@ struct SiteDetailView: View {
                     if let id = draft.id { return await mutate("PATCH", "/api/sites/\(siteID)/events/\(id)", body) }
                     return await mutate("POST", "/api/sites/\(siteID)/events", body)
                 }
+            case .editNote(let n):
+                NoteEditSheet(note: n) { body in await editNote(n, body) }
+            case .editPhoto(let p):
+                PhotoEditSheet(photo: p, phases: d.phases) { await savePhoto($0) }
             case .invoice:
                 EmptyView()
             }
+        }
+        .fullScreenCover(item: $viewer) { item in
+            SitePhotoViewer(item: item, phases: d.phases, editable: editable,
+                            canDelete: { editable && owns($0.userId) },
+                            save: savePhoto, delete: deletePhoto)
+        }
+        .fullScreenCover(item: $camera) { request in
+            CameraPicker { image in uploadPhotos([.camera(image)], request.phaseID) }
+                .ignoresSafeArea()
+        }
+        .confirmationDialog("Eliminare la foto?", isPresented: Binding(get: { confirmDeletePhoto != nil },
+                                                                      set: { if !$0 { confirmDeletePhoto = nil } }),
+                            titleVisibility: .visible, presenting: confirmDeletePhoto) { p in
+            Button("Elimina foto", role: .destructive) { Task { await deletePhoto(p) } }
+        } message: { _ in
+            Text("La foto viene cancellata per tutti e non si può recuperare.")
+        }
+        .confirmationDialog("Eliminare definitivamente il cantiere?", isPresented: $confirmPurge, titleVisibility: .visible) {
+            Button("Elimina definitivamente", role: .destructive, action: purge)
+        } message: {
+            Text("«\(SiteText.title(d.site.name))»: fasi, SAL, calendario, diario e foto non si potranno recuperare. I preventivi restano.")
         }
         .alert("Segna come fatturato", isPresented: Binding(get: { invoicing != nil }, set: { if !$0 { invoicing = nil } })) {
             TextField("Numero fattura (facoltativo)", text: $invoiceNumber)
@@ -156,13 +226,15 @@ struct SiteDetailView: View {
             if let x = invoicing { Text("\(x.label): \(Format.currency(x.value)) + IVA") }
         }
         .confirmationDialog("Concludere i lavori?", isPresented: $confirmComplete, titleVisibility: .visible) {
-            Button("Concludi ed elimina cantiere", role: .destructive) { complete() }
+            Button("Concludi e archivia") { complete() }
+            Button("Non ancora", role: .cancel) {}
         } message: {
             Text(completeMessage(d))
         }
         .overlay {
-            if completing { ProgressView().controlSize(.large) }
+            if completing || busy { ProgressView().controlSize(.large) }
         }
+        .sensoryFeedback(.success, trigger: d.isArchived)
     }
 
     private func present(_ item: SiteSheet) {
@@ -176,9 +248,9 @@ struct SiteDetailView: View {
 
     private func completeMessage(_ d: SiteDetail) -> String {
         let open = d.milestones.filter { $0.invoicedAt == nil }
-        var text = "Il cantiere viene chiuso ed eliminato con fasi, SAL, calendario e note, per tenere leggero il database. I preventivi restano."
+        var text = "Il cantiere va in archivio con fasi, SAL, calendario, diario e foto: si consulta quando serve e si può riaprire. I preventivi vengono segnati \"lavori conclusi\"."
         if !open.isEmpty {
-            text += "\n\nAttenzione: \(open.count == 1 ? "1 SAL non è" : "\(open.count) SAL non sono") ancora fatturati (\(Format.currency(open.reduce(0) { $0 + $1.value })))."
+            text += "\n\nAttenzione: \(open.count == 1 ? "1 SAL non è" : "\(open.count) SAL non sono") ancora fatturati (\(Format.currency(open.reduce(0) { $0 + $1.value }))). In archivio non arrivano più i promemoria."
         }
         return text
     }
@@ -228,9 +300,20 @@ struct SiteDetailView: View {
             model.sites.reset()
             return true
         } catch {
-            model.lastError = error.localizedDescription
+            await fail(error)
             return false
         }
+    }
+
+    /// Errore di una modifica. 409 `{ archived: true }`: il cantiere è stato
+    /// archiviato nel frattempo (da un altro dispositivo o dal promemoria
+    /// automatico): si ricarica e compare il riquadro dell'archivio.
+    private func fail(_ error: Error) async {
+        model.lastError = error.localizedDescription
+        if case APIError.server(let message) = error, message.localizedCaseInsensitiveContains("archivio") {
+            model.sites.reset()
+        }
+        await load()
     }
 
     /// Spunta immediata (l'interfaccia non aspetta la rete); con l'ultima fase
@@ -248,8 +331,7 @@ struct SiteDetailView: View {
                 model.sites.reset()
                 if done, r.allDone == true { confirmComplete = true }
             } catch {
-                model.lastError = error.localizedDescription
-                await load()
+                await fail(error)
             }
         }
     }
@@ -262,10 +344,119 @@ struct SiteDetailView: View {
                 try await APIClient.shared.send("POST", "/api/sites/\(siteID)/complete", as: Empty.self)
                 model.sites.reset()
                 model.dataChanged()
+                // Resta sulla pagina: compare il riquadro dell'archivio con "Riapri".
+                await load()
+            } catch {
+                await fail(error)
+            }
+        }
+    }
+
+    // MARK: Archivio
+
+    private func reopen() {
+        busy = true
+        Task {
+            defer { busy = false }
+            do {
+                try await APIClient.shared.send("POST", "/api/sites/\(siteID)/reopen", as: Empty.self)
+                model.sites.reset()
+                model.dataChanged()
+                await load()
+            } catch {
+                // 409: archiviato per preventivo ritirato, si riapre da solo.
+                model.lastError = error.localizedDescription
+            }
+        }
+    }
+
+    private func purge() {
+        busy = true
+        Task {
+            defer { busy = false }
+            do {
+                try await APIClient.shared.delete("/api/sites/\(siteID)")
+                model.sites.reset()
+                model.dataChanged()
                 dismiss()
             } catch {
                 model.lastError = error.localizedDescription
             }
+        }
+    }
+
+    // MARK: Fasi
+
+    /// Trascinamento nativo: `onMove` dà la destinazione prima della rimozione,
+    /// il server vuole la posizione finale (`toIndex`).
+    private func movePhase(_ from: IndexSet, _ to: Int) {
+        guard editable, let source = from.first, let phase = data?.phases[source] else { return }
+        let target = to > source ? to - 1 : to
+        guard target != source else { return }
+        data?.phases.move(fromOffsets: from, toOffset: to)
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        Task { await mutate("PATCH", "/api/sites/\(siteID)/phases/\(phase.id)", ["toIndex": target]) }
+    }
+
+    // MARK: Note
+
+    /// La nota compare subito (in cima, come sul sito), poi si ricarica.
+    private func addNote(_ body: String) {
+        let note = SiteDetail.Note(id: "tmp-\(UUID().uuidString)", body: body, createdAt: ISO8601DateFormatter().string(from: .now),
+                                   updatedAt: nil, userId: me, userName: model.currentUser?.name)
+        withAnimation { data?.notes.insert(note, at: 0) }
+        Task { await mutate("POST", "/api/sites/\(siteID)/notes", ["body": body]) }
+    }
+
+    private func editNote(_ note: SiteDetail.Note, _ body: String) async -> Bool {
+        if let i = data?.notes.firstIndex(where: { $0.id == note.id }) {
+            data?.notes[i].body = body
+            data?.notes[i].updatedAt = ISO8601DateFormatter().string(from: .now)
+        }
+        return await mutate("PATCH", "/api/sites/\(siteID)/notes/\(note.id)", ["body": body])
+    }
+
+    private func deleteNote(_ note: SiteDetail.Note) {
+        withAnimation { data?.notes.removeAll { $0.id == note.id } }
+        Task { await mutate("DELETE", "/api/sites/\(siteID)/notes/\(note.id)", [:]) }
+    }
+
+    // MARK: Foto
+
+    private func uploadPhotos(_ sources: [SitePhotoUploader.Source], _ phaseID: String?) {
+        Task {
+            let result = await uploader.upload(sources, siteID: siteID, phaseID: phaseID)
+            await load()
+            if result.failed > 0 {
+                let what = result.failed == 1 ? "Una foto non è stata caricata" : "\(result.failed) foto non sono state caricate"
+                model.lastError = [what, result.error].compactMap { $0 }.joined(separator: ": ")
+                if let e = result.error, e.localizedCaseInsensitiveContains("archivio") { model.sites.reset() }
+            } else {
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+            }
+        }
+    }
+
+    private func savePhoto(_ photo: SiteDetail.Photo) async -> Bool {
+        if let i = data?.photos?.firstIndex(where: { $0.id == photo.id }) { data?.photos?[i] = photo }
+        do {
+            try await APIClient.shared.send("PATCH", "/api/sites/\(siteID)/photos/\(photo.id)",
+                                            json: ["caption": photo.caption, "phaseId": photo.phaseId], as: Empty.self)
+            return true
+        } catch {
+            await fail(error)
+            return false
+        }
+    }
+
+    private func deletePhoto(_ photo: SiteDetail.Photo) async -> Bool {
+        withAnimation { data?.photos?.removeAll { $0.id == photo.id } }
+        do {
+            try await APIClient.shared.delete("/api/sites/\(siteID)/photos/\(photo.id)")
+            return true
+        } catch {
+            await fail(error)
+            return false
         }
     }
 }
@@ -278,6 +469,8 @@ enum SiteSheet: Identifiable {
     case addMilestone
     case event(EventDraft)
     case invoice(SiteDetail.Milestone)
+    case editNote(SiteDetail.Note)
+    case editPhoto(SiteDetail.Photo)
 
     var id: String {
         switch self {
@@ -285,6 +478,8 @@ enum SiteSheet: Identifiable {
         case .addMilestone: "milestone"
         case .event(let d): "event-\(d.id ?? "new")"
         case .invoice(let m): "invoice-\(m.id)"
+        case .editNote(let n): "note-\(n.id)"
+        case .editPhoto(let p): "photo-\(p.id)"
         }
     }
 }
@@ -303,7 +498,16 @@ private struct HeaderSection: View {
                     Text(SiteText.title(s.name))
                         .font(.title3.weight(.bold))
                     Spacer(minLength: 6)
-                    HealthBadge(health: detail.metrics.health)
+                    if let reason = detail.archiveReason {
+                        Label("Archivio", systemImage: "archivebox.fill")
+                            .font(.caption2.weight(.semibold))
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 2)
+                            .foregroundStyle(reason.color)
+                            .background(reason.color.opacity(0.14), in: Capsule())
+                    } else {
+                        HealthBadge(health: detail.metrics.health)
+                    }
                 }
                 Label(s.address ?? "Indirizzo mancante", systemImage: "mappin.and.ellipse")
                     .font(.subheadline)
@@ -350,11 +554,75 @@ private struct HeaderSection: View {
                 Image(systemName: symbol).font(.system(size: 16, weight: .semibold))
                 Text(title).font(.caption2.weight(.medium))
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .padding(.vertical, 4)
         }
         .buttonStyle(.glass)
         .disabled(url == nil)
+        .accessibilityLabel(title)
+    }
+}
+
+/// Riquadro in cima a un cantiere in archivio (come sul sito).
+private struct ArchivedBanner: View {
+    let detail: SiteDetail
+    let canReopen: Bool
+    let canPurge: Bool
+    let busy: Bool
+    let reopen: () -> Void
+    let purge: () -> Void
+
+    var body: some View {
+        let reason = detail.archiveReason ?? .completed
+        Section {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "archivebox.fill")
+                        .font(.title2)
+                        .foregroundStyle(.purple)
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(reason == .completed ? "Lavori conclusi il \(SiteDate.long(detail.site.archivedAt))" : "In archivio")
+                            .font(.headline)
+                        Text(reason == .completed
+                             ? "Il cantiere è in archivio e si consulta in sola lettura."
+                             : "Il preventivo principale non è più inviato o accettato (bozza, rifiutato o cestinato). Torna in corso da solo, con tutti i suoi dati, quando il preventivo torna inviato o accettato.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .accessibilityElement(children: .combine)
+                if canReopen || canPurge {
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 8) { buttons }
+                        VStack(spacing: 8) { buttons }
+                    }
+                    .disabled(busy)
+                }
+            }
+            .padding(.vertical, 6)
+        }
+        .listRowBackground(Color.purple.opacity(0.08))
+    }
+
+    @ViewBuilder private var buttons: some View {
+        if canReopen {
+            Button(action: reopen) {
+                Label("Riapri cantiere", systemImage: "arrow.uturn.backward")
+                    .frame(maxWidth: .infinity, minHeight: 44)
+            }
+            .buttonStyle(.glassProminent)
+            .tint(.purple)
+        }
+        if canPurge {
+            Button(role: .destructive, action: purge) {
+                Label("Elimina definitivamente", systemImage: "trash")
+                    .frame(maxWidth: .infinity, minHeight: 44)
+            }
+            .buttonStyle(.glass)
+            .tint(.red)
+        }
     }
 }
 
@@ -406,6 +674,8 @@ private struct SitePhasesSection: View {
     let mutate: SiteMutation
     let toggle: (SiteDetail.Phase) -> Void
     let present: (SiteSheet) -> Void
+    let reorder: (IndexSet, Int) -> Void
+    @Binding var editMode: EditMode
 
     @State private var newTitle = ""
 
@@ -440,8 +710,11 @@ private struct SitePhasesSection: View {
                             .contentTransition(.symbolEffect(.replace))
                     }
                     .buttonStyle(.plain)
-                    .disabled(!canEdit)
-                    .accessibilityLabel(p.isDone ? "Segna da fare" : "Segna completata")
+                    .frame(minWidth: 44, minHeight: 44, alignment: .topLeading)
+                    .contentShape(Rectangle())
+                    .disabled(!canEdit || editMode.isEditing)
+                    .accessibilityLabel(p.isDone ? "\(p.title), completata" : "\(p.title), da fare")
+                    .accessibilityHint(canEdit ? (p.isDone ? "Tocca per segnarla da fare" : "Tocca per segnarla completata") : "")
 
                     VStack(alignment: .leading, spacing: 3) {
                         HStack(spacing: 6) {
@@ -466,6 +739,8 @@ private struct SitePhasesSection: View {
                         Button(role: .destructive) {
                             Task { await mutate("DELETE", "/api/sites/\(detail.site.id)/phases/\(p.id)", [:]) }
                         } label: { Label("Elimina", systemImage: "trash") }
+                        Button { present(.editPhase(p)) } label: { Label("Modifica", systemImage: "pencil") }
+                            .tint(.blue)
                     }
                 }
                 .contextMenu {
@@ -480,7 +755,8 @@ private struct SitePhasesSection: View {
                     }
                 }
             }
-            if canEdit {
+            .onMove(perform: canEdit ? reorder : nil)
+            if canEdit, !editMode.isEditing {
                 HStack {
                     TextField("Nuova fase (es. Tetto)", text: $newTitle)
                         .submitLabel(.done)
@@ -492,10 +768,23 @@ private struct SitePhasesSection: View {
                 }
             }
         } header: {
-            Text(Format.count(detail.phases.count, "fase", "fasi"))
+            HStack {
+                Text(Format.count(detail.phases.count, "fase", "fasi"))
+                Spacer()
+                if canEdit, detail.phases.count > 1 {
+                    Button(editMode.isEditing ? "Fine" : "Riordina") {
+                        withAnimation { editMode = editMode.isEditing ? .inactive : .active }
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .textCase(nil)
+                    .frame(minHeight: 44)
+                }
+            }
         } footer: {
             if !detail.phases.isEmpty {
-                Text("Ogni fase pesa quanto il suo importo nel preventivo. Tieni premuto per modificarla o spostarla.")
+                Text(editMode.isEditing
+                     ? "Trascina le fasi nell'ordine dei lavori: le date si ricalcolano da sole."
+                     : "Ogni fase pesa quanto il suo importo nel preventivo. Scorri o tieni premuto per modificarla; Riordina per spostarle.")
             }
         }
     }

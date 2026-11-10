@@ -115,6 +115,8 @@ struct SitesOverview: Decodable {
         let toCollect: Double
         let late: Int
         let delayCost: Double
+        /// Cantieri in archivio (4.5.0).
+        let archived: Int?
     }
 
     struct UpcomingEvent: Decodable, Identifiable {
@@ -144,6 +146,9 @@ struct SiteListItem: Decodable, Identifiable {
     let metrics: SiteMetrics
     let nextEvent: NextEvent?
     let topTip: SiteTip?
+    /// Solo nell'elenco dell'archivio (GET /api/sites/archive).
+    let archivedAt: String?
+    let archiveReason: String?
 
     struct QuoteChip: Decodable, Identifiable {
         let id: String
@@ -161,7 +166,42 @@ struct SiteListItem: Decodable, Identifiable {
     }
 
     var isPending: Bool { status == "pending" }
+    var isArchived: Bool { archivedAt != nil }
+    var reason: SiteArchiveReason? { archivedAt == nil ? nil : SiteArchiveReason(raw: archiveReason) }
     var title: String { SiteText.title(name) }
+}
+
+/// GET /api/sites/archive
+struct SitesArchive: Decodable {
+    let sites: [SiteListItem]
+}
+
+/// Perché un cantiere è in archivio.
+enum SiteArchiveReason: String {
+    case completed, withdrawn
+
+    init(raw: String?) { self = raw == "withdrawn" ? .withdrawn : .completed }
+
+    var label: String {
+        switch self {
+        case .completed: "Lavori conclusi"
+        case .withdrawn: "Preventivo ritirato"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .completed: "flag.checkered"
+        case .withdrawn: "arrow.uturn.backward.circle"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .completed: .purple
+        case .withdrawn: .gray
+        }
+    }
 }
 
 // MARK: Pagina del cantiere
@@ -176,6 +216,8 @@ struct SiteDetail: Decodable {
     var milestones: [Milestone]
     var events: [Event]
     var notes: [Note]
+    /// Foto di cantiere (4.5.0): assenti sui server più vecchi.
+    var photos: [Photo]?
     var metrics: SiteMetrics
     let setupPending: Bool
     var insightsStale: Bool?
@@ -195,6 +237,9 @@ struct SiteDetail: Decodable {
         let marginPct: Double
         var progress: Double
         var aiInsights: SiteInsights?
+        /// In archivio da quando e perché (4.5.0).
+        var archivedAt: String?
+        var archiveReason: String?
     }
 
     struct Quote: Decodable, Identifiable {
@@ -247,14 +292,37 @@ struct SiteDetail: Decodable {
         let notes: String?
     }
 
-    struct Note: Decodable, Identifiable {
+    struct Note: Decodable, Identifiable, Hashable {
         let id: String
-        let body: String
+        var body: String
         let createdAt: String
+        var updatedAt: String?
+        let userId: String?
         let userName: String?
     }
 
+    struct Photo: Decodable, Identifiable, Hashable {
+        let id: String
+        var phaseId: String?
+        let publicId: String?
+        let url: String
+        let width: Double?
+        let height: Double?
+        var caption: String?
+        let userId: String?
+        let userName: String?
+        let createdAt: String
+
+        /// Miniatura quadrata di Cloudinary (come il sito).
+        var thumbURL: URL? { URL(string: SitePhotoURL.transform(url, "f_auto,q_auto,w_400,h_400,c_fill,g_auto")) }
+        /// Per il visore a schermo intero.
+        var fullURL: URL? { URL(string: SitePhotoURL.transform(url, "f_auto,q_auto,w_2000,c_limit")) }
+    }
+
     var isPending: Bool { site.status == "pending" }
+    var isArchived: Bool { site.archivedAt != nil }
+    var archiveReason: SiteArchiveReason? { isArchived ? SiteArchiveReason(raw: site.archiveReason) : nil }
+    var allPhotos: [Photo] { photos ?? [] }
 }
 
 // MARK: Testi e date
@@ -279,6 +347,49 @@ enum SiteText {
     static func days(_ n: Int) -> String { n == 1 ? "1 giorno" : "\(n) giorni" }
 }
 
+enum SitePhotoURL {
+    /// Aggiunge una trasformazione di Cloudinary all'indirizzo della foto.
+    static func transform(_ url: String, _ t: String) -> String {
+        guard url.contains("res.cloudinary.com"), url.contains("/upload/") else { return url }
+        return url.replacingOccurrences(of: "/upload/", with: "/upload/\(t)/")
+    }
+}
+
+/// Giorni lavorativi come sul server (src/lib/sites/metrics.ts): dal lunedì
+/// al venerdì, festività nazionali escluse (Pasquetta compresa).
+enum SiteWorkdays {
+    private static let fixed: Set<String> = ["01-01", "01-06", "04-25", "05-01", "06-02", "08-15", "11-01", "12-08", "12-25", "12-26"]
+
+    static func isHoliday(_ date: Date, calendar cal: Calendar = .current) -> Bool {
+        let c = cal.dateComponents([.year, .month, .day], from: date)
+        guard let y = c.year, let m = c.month, let d = c.day else { return false }
+        if fixed.contains(String(format: "%02d-%02d", m, d)) { return true }
+        let (em, ed) = easter(y)
+        // Lunedì dell'Angelo: il giorno dopo Pasqua.
+        guard let e = cal.date(from: DateComponents(year: y, month: em, day: ed)),
+              let monday = cal.date(byAdding: .day, value: 1, to: e) else { return false }
+        return cal.isDate(date, inSameDayAs: monday)
+    }
+
+    static func isWorkday(_ date: Date, calendar cal: Calendar = .current) -> Bool {
+        let wd = cal.component(.weekday, from: date)
+        return wd != 1 && wd != 7 && !isHoliday(date, calendar: cal)
+    }
+
+    /// Pasqua (calendario gregoriano, algoritmo di Meeus/Jones/Butcher) → (mese, giorno).
+    static func easter(_ y: Int) -> (Int, Int) {
+        let a = y % 19, b = y / 100, c = y % 100, d = b / 4, e = b % 4
+        let f = (b + 8) / 25, g = (b - f + 1) / 3
+        let h = (19 * a + b - d - g + 15) % 30
+        let i = c / 4, k = c % 4
+        let l = (32 + 2 * e + 2 * i - h - k) % 7
+        let m = (a + 11 * h + 22 * l) / 451
+        let month = (h + l - 7 * m + 114) / 31
+        let day = (h + l - 7 * m + 114) % 31 + 1
+        return (month, day)
+    }
+}
+
 enum SiteDate {
     private static let iso: DateFormatter = {
         let f = DateFormatter()
@@ -299,6 +410,12 @@ enum SiteDate {
     }
 
     static func string(_ date: Date) -> String { iso.string(from: date) }
+
+    /// "14 ott 2025"
+    static func long(_ raw: String?) -> String {
+        guard let d = date(raw) else { return "—" }
+        return d.formatted(.dateTime.day().month(.abbreviated).year().locale(Locale(identifier: "it_IT")))
+    }
 
     /// "14 ott"
     static func short(_ raw: String?) -> String {
@@ -362,14 +479,20 @@ enum SiteEventType: String, CaseIterable, Identifiable {
 
 // MARK: Archivio della dashboard
 
-/// GET /api/sites; finché il server ha cantieri da preparare (posizione,
-/// fasi e SAL dell'IA) li fa avanzare a piccoli lotti, come la dashboard web.
+/// GET /api/sites. Il server prepara da solo i cantieri nuovi (posizione,
+/// fasi e SAL dell'IA) dopo ogni lettura: finché `pendingWork > 0` l'app
+/// rilegge ogni 5 secondi, al massimo per 3 minuti. Niente più /process.
 @MainActor
 @Observable
 final class SitesStore {
     private(set) var data: SitesOverview?
     private(set) var error: String?
     private(set) var preparing = false
+    /// Archivio (GET /api/sites/archive), caricato quando serve.
+    private(set) var archive: [SiteListItem]?
+    private(set) var archiveError: String?
+
+    @ObservationIgnored private var watcher: Task<Void, Never>?
 
     func load() async {
         do {
@@ -381,19 +504,54 @@ final class SitesStore {
             if (error as? URLError)?.code == .cancelled { return }
             self.error = error.localizedDescription
         }
-        if (data?.pendingWork ?? 0) > 0, !preparing { await prepare() }
+        if (data?.pendingWork ?? 0) > 0 { watch() }
     }
 
-    private func prepare() async {
+    private func watch() {
+        guard watcher == nil else { return }
         preparing = true
-        defer { preparing = false }
-        struct Remaining: Decodable { let remaining: Int }
-        for _ in 0..<25 {
-            guard let r: Remaining = try? await APIClient.shared.send("POST", "/api/sites/process") else { break }
-            if let fresh: SitesOverview = try? await APIClient.shared.get("/api/sites") { data = fresh }
-            if r.remaining <= 0 { break }
+        watcher = Task { [weak self] in
+            let deadline = Date.now.addingTimeInterval(180)
+            while Date.now < deadline, !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(5))
+                guard !Task.isCancelled else { break }
+                guard let fresh: SitesOverview = try? await APIClient.shared.get("/api/sites") else { continue }
+                self?.data = fresh
+                if fresh.pendingWork <= 0 { break }
+            }
+            // Se è stato fermato, ci ha già pensato stopWatching (e può esserci un nuovo giro).
+            if !Task.isCancelled {
+                self?.preparing = false
+                self?.watcher = nil
+            }
         }
     }
 
-    func reset() { data = nil; error = nil }
+    /// La dashboard non è più visibile: smette di rileggere.
+    func stopWatching() {
+        watcher?.cancel()
+        watcher = nil
+        preparing = false
+    }
+
+    func loadArchive() async {
+        do {
+            let r: SitesArchive = try await APIClient.shared.get("/api/sites/archive")
+            archive = r.sites
+            archiveError = nil
+        } catch is CancellationError {
+        } catch APIError.unauthorized {
+        } catch {
+            if (error as? URLError)?.code == .cancelled { return }
+            archiveError = error.localizedDescription
+        }
+    }
+
+    func reset() {
+        stopWatching()
+        data = nil
+        error = nil
+        archive = nil
+        archiveError = nil
+    }
 }

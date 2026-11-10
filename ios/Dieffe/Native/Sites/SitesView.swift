@@ -4,15 +4,20 @@ import SwiftUI
 /// Gestione Cantieri (come src/app/(app)/cantieri/CantieriClient.tsx): mappa di
 /// Apple con i cantieri, panoramica economica e dei tempi, prossimi eventi,
 /// consigli IA ed elenco. I cantieri nascono da soli dai preventivi inviati
-/// (in attesa) e accettati (attivi).
+/// (in attesa) e accettati (attivi); quelli conclusi o ritirati vanno in
+/// Archivio (sola lettura, si riaprono dal cantiere).
 struct SitesView: View {
     @Environment(AppModel.self) private var model
-    @State private var filter: Filter = .active
+    @State private var filter: Filter
     @State private var search = ""
     @State private var selection: String?
     @State private var camera: MapCameraPosition = .automatic
 
-    enum Filter: String, CaseIterable { case active = "Attivi", pending = "In attesa", all = "Tutti" }
+    enum Filter: String, CaseIterable { case active, pending, all, archive }
+
+    init(initialFilter: Filter = .active) {
+        _filter = State(initialValue: initialFilter)
+    }
 
     private var store: SitesStore { model.sites }
 
@@ -26,8 +31,15 @@ struct SitesView: View {
         }
         .navigationTitle("Cantieri")
         .searchable(text: $search, placement: .navigationBarDrawer, prompt: "Cantiere, cliente o indirizzo")
-        .refreshable { await store.load() }
+        .refreshable {
+            await store.load()
+            if filter == .archive { await store.loadArchive() }
+        }
         .task(id: model.dataVersion) { await store.load() }
+        .task(id: filter) {
+            if filter == .archive, store.archive == nil { await store.loadArchive() }
+        }
+        .onDisappear { store.stopWatching() }
         .toolbar {
             if store.preparing {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -35,6 +47,7 @@ struct SitesView: View {
                         ProgressView().controlSize(.small)
                         Text("L'IA prepara i cantieri").font(.caption)
                     }
+                    .accessibilityElement(children: .combine)
                 }
             }
         }
@@ -42,15 +55,20 @@ struct SitesView: View {
 
     private func content(_ data: SitesOverview) -> some View {
         let needle = search.trimmingCharacters(in: .whitespaces)
-        let list = data.sites
-            .filter { filter == .all || (filter == .active ? !$0.isPending : $0.isPending) }
+        let archived = filter == .archive
+        let source = archived ? (store.archive ?? []) : data.sites
+        let list = source
+            .filter { archived || filter == .all || (filter == .active ? !$0.isPending : $0.isPending) }
             .filter {
                 needle.isEmpty || $0.name.localizedStandardContains(needle)
                     || ($0.clientName?.localizedStandardContains(needle) ?? false)
                     || ($0.address?.localizedStandardContains(needle) ?? false)
                     || $0.quotes.contains { $0.code.localizedStandardContains(needle) }
             }
-            .sorted { ($0.metrics.health.rank, -$0.metrics.toInvoice) < ($1.metrics.health.rank, -$1.metrics.toInvoice) }
+            .sorted {
+                archived ? ($0.archivedAt ?? "") > ($1.archivedAt ?? "")
+                    : ($0.metrics.health.rank, -$0.metrics.toInvoice) < ($1.metrics.health.rank, -$1.metrics.toInvoice)
+            }
 
         return List {
             if needle.isEmpty {
@@ -97,41 +115,78 @@ struct SitesView: View {
             }
 
             Section {
-                Picker("Filtro", selection: $filter) {
-                    Text("Attivi (\(data.totals.active))").tag(Filter.active)
-                    Text("In attesa (\(data.totals.pending))").tag(Filter.pending)
-                    Text("Tutti").tag(Filter.all)
-                }
-                .pickerStyle(.segmented)
+                SiteFilterBar(selection: $filter, items: [
+                    .init(value: .active, title: "Attivi", count: data.totals.active, symbol: "hammer"),
+                    .init(value: .pending, title: "In attesa", count: data.totals.pending, symbol: "hourglass"),
+                    .init(value: .all, title: "Tutti", count: nil, symbol: "square.grid.2x2"),
+                    .init(value: .archive, title: "Archivio", count: data.totals.archived, symbol: "archivebox"),
+                ])
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
             }
 
             Section {
+                if archived, store.archive == nil {
+                    if let error = store.archiveError {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label(error, systemImage: "wifi.exclamationmark").foregroundStyle(.secondary)
+                            Button("Riprova") { Task { await store.loadArchive() } }
+                        }
+                    } else {
+                        HStack(spacing: 10) {
+                            ProgressView()
+                            Text("Caricamento dell'archivio…").foregroundStyle(.secondary)
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 60)
+                    }
+                } else if list.isEmpty {
+                    emptyRow(archived: archived, searching: !needle.isEmpty)
+                }
                 ForEach(list) { site in
                     NavigationLink(value: AltroRoute.site(site.id, tab: nil)) {
                         SiteRow(site: site)
                     }
                     .contextMenu {
-                        Button("Mostra sulla mappa", systemImage: "map") { show(site) }
+                        if !site.isArchived {
+                            Button("Mostra sulla mappa", systemImage: "map") { show(site) }
+                        }
                         if let url = SiteLinks.directions(lat: site.lat, lng: site.lng, address: site.address) {
                             Link(destination: url) { Label("Indicazioni", systemImage: "car.fill") }
                         }
                     }
                 }
+            } footer: {
+                if archived, !list.isEmpty {
+                    Text("I cantieri in archivio si consultano in sola lettura. Quelli conclusi si possono riaprire dalla loro pagina.")
+                }
             }
         }
+        .animation(.default, value: filter)
         .overlay {
-            if data.sites.isEmpty {
+            if data.sites.isEmpty, (data.totals.archived ?? 0) == 0 {
                 ContentUnavailableView {
                     Label("Nessun cantiere", systemImage: "hammer")
                 } description: {
                     Text("I cantieri nascono da soli quando un preventivo viene inviato o accettato.")
                 }
-            } else if list.isEmpty, !needle.isEmpty {
-                ContentUnavailableView.search(text: search)
             }
         }
+    }
+
+    @ViewBuilder
+    private func emptyRow(archived: Bool, searching: Bool) -> some View {
+        let (symbol, text): (String, String) = searching
+            ? ("magnifyingglass", "Nessun risultato per «\(search)».")
+            : archived ? ("archivebox", "L'archivio è vuoto: qui finiscono i cantieri conclusi e quelli con il preventivo ritirato.")
+            : filter == .pending ? ("hourglass", "Nessun preventivo in attesa di risposta.")
+            : ("hammer", "Nessun cantiere in corso.")
+        VStack(spacing: 8) {
+            Image(systemName: symbol).font(.title2).foregroundStyle(.tertiary)
+            Text(text).font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 20)
+        .accessibilityElement(children: .combine)
     }
 
     private func show(_ site: SiteListItem) {
@@ -294,20 +349,29 @@ struct SiteRow: View {
                     .font(.body.weight(.semibold))
                     .lineLimit(2)
                 Spacer(minLength: 4)
-                if !site.isPending {
+                if !site.isPending, !site.isArchived {
                     Text("\(Int(m.progress.rounded()))%")
                         .font(.subheadline.weight(.semibold))
                         .monospacedDigit()
                 }
             }
             HStack(spacing: 6) {
-                HealthBadge(health: m.health)
+                if !site.isArchived { HealthBadge(health: m.health) }
                 Text(site.clientName ?? "Nessun cliente")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
-            if site.isPending {
+            if let reason = site.reason {
+                HStack(spacing: 6) {
+                    Label(reason == .completed ? "Concluso il \(SiteDate.long(site.archivedAt))" : reason.label,
+                          systemImage: reason.symbol)
+                        .foregroundStyle(reason.color)
+                    Spacer()
+                    Text(Format.currency(site.metrics.contractNet)).monospacedDigit().foregroundStyle(.secondary)
+                }
+                .font(.caption)
+            } else if site.isPending {
                 Text("Preventivo inviato · \(Format.currency(site.quotes.reduce(0) { $0 + $1.net })) + IVA")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -329,6 +393,59 @@ struct SiteRow: View {
             }
         }
         .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// Filtri della dashboard come chip scorrevoli: con quattro voci e i numeri
+/// un controllo segmentato non ci sta su iPhone (né con il testo grande).
+struct SiteFilterBar<Value: Hashable>: View {
+    struct Item {
+        let value: Value
+        let title: String
+        let count: Int?
+        let symbol: String
+    }
+
+    @Binding var selection: Value
+    let items: [Item]
+
+    var body: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 8) {
+                ForEach(items, id: \.value) { item in
+                    let (value, title, count, symbol) = (item.value, item.title, item.count, item.symbol)
+                    let selected = value == selection
+                    Button {
+                        selection = value
+                        UISelectionFeedbackGenerator().selectionChanged()
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: symbol).imageScale(.small)
+                            Text(title)
+                            if let count {
+                                Text("\(count)")
+                                    .monospacedDigit()
+                                    .foregroundStyle(selected ? Color.white.opacity(0.85) : Color.secondary)
+                            }
+                        }
+                        .font(.subheadline.weight(.semibold))
+                        .padding(.horizontal, 14)
+                        .frame(minHeight: 44)
+                        .foregroundStyle(selected ? Color.white : Color.primary)
+                        .background(selected ? AnyShapeStyle(Color.accentColor.gradient) : AnyShapeStyle(Color(.secondarySystemGroupedBackground)),
+                                    in: Capsule())
+                        .contentShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(count.map { "\(title), \($0)" } ?? title)
+                    .accessibilityAddTraits(selected ? .isSelected : [])
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 2)
+        }
+        .scrollIndicators(.hidden)
     }
 }
 
