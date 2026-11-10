@@ -13,8 +13,8 @@ export type Rollout = "off" | "admin" | "all";
 
 export const FEATURES = {
   /** Gestione Cantieri. `web` vale per sito e app desktop (Mac, Windows),
-   *  `ios` per l'app iPhone, che si riaccende in un secondo momento. */
-  sites: { web: "admin", ios: "off" } as { web: Rollout; ios: Rollout },
+   *  `ios` per l'app iPhone. */
+  sites: { web: "all", ios: "all" } as { web: Rollout; ios: Rollout },
 } as const;
 
 export type Platform = "web" | "ios";

@@ -18,7 +18,7 @@ settings:
     SWIFT_VERSION: "5.0"
     # La versione vera arriva da src/lib/version.ts (fonte unica per sito,
     # app desktop e iPhone): la imposta lo script "Versione" a ogni build.
-    MARKETING_VERSION: "4.4.0"
+    MARKETING_VERSION: "4.6.0"
     CURRENT_PROJECT_VERSION: "1"
 targets:
   Dieffe:
@@ -64,8 +64,8 @@ targets:
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
         INFOPLIST_KEY_NSFaceIDUsageDescription: Per sbloccare l'app con Face ID.
-        INFOPLIST_KEY_NSCameraUsageDescription: Per scattare foto da allegare ai preventivi.
-        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: Per scegliere foto da allegare ai preventivi.
+        INFOPLIST_KEY_NSCameraUsageDescription: Per scattare foto da allegare ai preventivi e ai cantieri.
+        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: Per scegliere foto da allegare ai preventivi e ai cantieri.
         INFOPLIST_KEY_NSMicrophoneUsageDescription: Per dettare le descrizioni delle lavorazioni.
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.business
     info:

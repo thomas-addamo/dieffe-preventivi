@@ -43,6 +43,35 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "4.6.0",
+    date: "2026-11-10",
+    headline: "Torna la Gestione Cantieri, per tutti e su ogni dispositivo.",
+    important: true,
+    cta: { label: "Apri Gestione Cantieri", href: "/cantieri" },
+    highlights: [
+      {
+        icon: "site",
+        title: "Cantieri su sito, Mac, Windows e iPhone",
+        description: "Ogni preventivo inviato o accettato diventa un cantiere: mappa, fasi da spuntare, SAL con Fatturato e Incassato, calendario con analisi del ritardo, diario e consigli dell'IA.",
+      },
+      {
+        icon: "shield",
+        title: "Niente va perso: c'è l'Archivio",
+        description: "Concludere i lavori o riportare il preventivo in bozza non cancella nulla: il cantiere va in Archivio con tutto il suo contenuto e si può riaprire.",
+      },
+      {
+        icon: "sparkles",
+        title: "Foto, diario e fasi più comodi",
+        description: "Foto di cantiere dal telefono o dal computer, con didascalia e fase; note del diario modificabili; fasi da riordinare trascinandole.",
+      },
+      {
+        icon: "zap",
+        title: "Più veloce, con le festività",
+        description: "Le pagine si aprono subito e i cantieri si preparano in background; le date delle fasi saltano weekend e festività nazionali.",
+      },
+    ],
+  },
+  {
     version: "4.5.0",
     date: "2026-11-10",
     headline: "Gestione Cantieri rinnovata, in prova per gli amministratori.",
