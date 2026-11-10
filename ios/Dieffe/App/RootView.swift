@@ -2,7 +2,7 @@ import QuickLook
 import SwiftUI
 import WebKit
 
-/// Tab bar nativa (Liquid Glass): Home, Clienti, Listino, Altro. Il nuovo
+/// Tab bar nativa (Liquid Glass): Home, Clienti, Cantieri (se attiva), Listino, Altro. Il nuovo
 /// preventivo si crea dal ＋ blu in alto nella Home.
 /// L'editor dei preventivi si apre a tutto schermo; il Profilo in un foglio.
 struct RootView: View {
@@ -18,6 +18,11 @@ struct RootView: View {
             }
             Tab(AppTab.clienti.title, systemImage: AppTab.clienti.symbol, value: AppTab.clienti) {
                 ClientsView()
+            }
+            if model.sitesEnabled {
+                Tab(AppTab.cantieri.title, systemImage: AppTab.cantieri.symbol, value: AppTab.cantieri) {
+                    SitesTab()
+                }
             }
             Tab(AppTab.listino.title, systemImage: AppTab.listino.symbol, value: AppTab.listino) {
                 PriceListHome()

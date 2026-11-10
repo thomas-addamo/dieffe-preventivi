@@ -150,6 +150,37 @@ struct SiteRemoteImage: View {
 
 // MARK: Sezione Foto
 
+/// Riquadro per aggiungere foto: icona colorata, titolo e sottotitolo.
+private struct PhotoSourceTile: View {
+    let title: String
+    let subtitle: String
+    let symbol: String
+    let tint: Color
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: symbol)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 40, height: 40)
+                .background(tint.gradient, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
+                Text(subtitle).font(.caption).foregroundStyle(.secondary)
+            }
+            .lineLimit(1)
+            .minimumScaleFactor(0.85)
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title), \(subtitle)")
+    }
+}
+
 struct SitePhotosSection: View {
     let detail: SiteDetail
     let editable: Bool
@@ -173,28 +204,34 @@ struct SitePhotosSection: View {
 
         if editable {
             Section {
+                // Due riquadri affiancati (fotocamera e libreria) fuori dalla
+                // card: stile plain, così il tocco su uno non attiva l'altro.
                 HStack(spacing: 10) {
-                    PhotosPicker(selection: $picked, maxSelectionCount: 20, selectionBehavior: .ordered, matching: .images) {
-                        Label("Dalla libreria", systemImage: "photo.on.rectangle.angled")
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                    }
-                    .buttonStyle(.glassProminent)
                     if cameraAvailable {
                         Button { openCamera(phase) } label: {
-                            Label("Scatta", systemImage: "camera.fill")
-                                .frame(maxWidth: .infinity, minHeight: 44)
+                            PhotoSourceTile(title: "Scatta", subtitle: "Fotocamera", symbol: "camera.fill", tint: .accentColor)
                         }
-                        .buttonStyle(.glass)
+                        .buttonStyle(.plain)
                     }
+                    PhotosPicker(selection: $picked, maxSelectionCount: 20, selectionBehavior: .ordered, matching: .images) {
+                        PhotoSourceTile(title: "Scegli", subtitle: "Dalla libreria", symbol: "photo.on.rectangle.angled", tint: .orange)
+                    }
+                    .buttonStyle(.plain)
                 }
                 .disabled(uploader.isUploading)
-                .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12))
+                .opacity(uploader.isUploading ? 0.5 : 1)
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
 
                 if uploader.isUploading {
                     ProgressView(value: Double(uploader.done), total: Double(max(1, uploader.total))) {
                         Text("Caricamento \(min(uploader.done + 1, uploader.total)) di \(uploader.total)…")
                             .font(.subheadline)
                     }
+                    .padding(14)
+                    .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 0, trailing: 0))
+                    .listRowBackground(Color.clear)
                     .accessibilityLabel("Caricamento foto, \(uploader.done) di \(uploader.total)")
                 }
             } footer: {

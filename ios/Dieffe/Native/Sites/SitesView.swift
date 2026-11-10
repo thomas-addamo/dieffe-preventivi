@@ -105,7 +105,7 @@ struct SitesView: View {
                     Section {
                         ForEach(Array(tips), id: \.0.id) { site, tip in
                             NavigationLink(value: AltroRoute.site(site.id, tab: "note")) {
-                                TipRow(tip: tip, footer: site.title)
+                                TipRow(tip: tip, footer: [site.headline, site.clientName].compactMap { $0 }.removingDuplicates().joined(separator: " · "))
                             }
                         }
                     } header: {
@@ -256,8 +256,8 @@ private struct SelectedSiteCard: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(site.title).font(.headline).lineLimit(2)
-                    Text([site.clientName, site.address].compactMap { $0 }.joined(separator: " · "))
+                    Text(site.headline).font(.headline).lineLimit(2)
+                    Text([site.street == nil ? nil : site.clientName, site.locality, site.title].compactMap { $0 }.joined(separator: " · "))
                         .font(.caption).foregroundStyle(.secondary).lineLimit(2)
                 }
                 Spacer()
@@ -294,16 +294,21 @@ private struct KpiGrid: View {
 
     var body: some View {
         let invoicedPct = totals.milestonesTotal > 0 ? totals.invoiced / totals.milestonesTotal * 100 : 0
-        LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-            Kpi(title: "Da fatturare", value: Format.currency(totals.toInvoice), symbol: "doc.text.fill",
-                tint: totals.toInvoice > 0 ? .orange : .accentColor, footer: "SAL raggiunti (+ IVA)")
-            Kpi(title: "Lavori in corso", value: Format.currency(totals.inProgressValue), symbol: "eurosign.circle.fill",
-                tint: .accentColor, footer: "\(totals.active) attivi, imponibile")
-            Kpi(title: "Fatturato", value: Format.currency(totals.invoiced), symbol: "checkmark.seal.fill",
-                tint: .green, footer: "\(Int(invoicedPct.rounded()))% dei SAL · da incassare \(Format.currency(totals.toCollect))")
-            Kpi(title: "In ritardo", value: "\(totals.late)", symbol: "exclamationmark.triangle.fill",
-                tint: totals.late > 0 ? .red : .green,
-                footer: totals.late > 0 ? "Costo stimato \(Format.currency(totals.delayCost))" : "Tutti nei tempi")
+        // Grid (non Lazy): le due card di ogni riga prendono la stessa altezza.
+        Grid(horizontalSpacing: 10, verticalSpacing: 10) {
+            GridRow {
+                Kpi(title: "Da fatturare", value: Format.currency(totals.toInvoice), symbol: "doc.text.fill",
+                    tint: totals.toInvoice > 0 ? .orange : .accentColor, footer: "SAL raggiunti (+ IVA)")
+                Kpi(title: "Lavori in corso", value: Format.currency(totals.inProgressValue), symbol: "eurosign.circle.fill",
+                    tint: .accentColor, footer: "\(totals.active) attivi, imponibile")
+            }
+            GridRow {
+                Kpi(title: "Fatturato", value: Format.currency(totals.invoiced), symbol: "checkmark.seal.fill",
+                    tint: .green, footer: "\(Int(invoicedPct.rounded()))% dei SAL · da incassare \(Format.currency(totals.toCollect))")
+                Kpi(title: "In ritardo", value: "\(totals.late)", symbol: "exclamationmark.triangle.fill",
+                    tint: totals.late > 0 ? .red : .green,
+                    footer: totals.late > 0 ? "Costo stimato \(Format.currency(totals.delayCost))" : "Tutti nei tempi")
+            }
         }
     }
 }
@@ -316,10 +321,16 @@ private struct Kpi: View {
     let footer: String
 
     var body: some View {
+        // HStack e non Label: dentro una List la Label allinea l'icona in una
+        // colonna sua, staccandola dal testo.
         VStack(alignment: .leading, spacing: 6) {
-            Label(title, systemImage: symbol)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(tint)
+            HStack(spacing: 5) {
+                Image(systemName: symbol)
+                Text(title)
+            }
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(tint)
+            .lineLimit(1)
             Text(value)
                 .font(.title3.weight(.bold))
                 .monospacedDigit()
@@ -328,9 +339,11 @@ private struct Kpi: View {
             Text(footer)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
-                .lineLimit(2)
+                .lineLimit(2, reservesSpace: true)
+            Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .accessibilityElement(children: .combine)
         .padding(14)
         .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
@@ -338,62 +351,105 @@ private struct Kpi: View {
 
 // MARK: Righe e componenti condivisi
 
+/// Riga dell'elenco: in evidenza la via e il cliente, che in cantiere dicono
+/// subito di quale lavoro si parla. Il titolo del preventivo è nella pagina.
 struct SiteRow: View {
     let site: SiteListItem
 
     var body: some View {
         let m = site.metrics
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(site.title)
+        HStack(alignment: .center, spacing: 14) {
+            SiteRing(site: site)
+            VStack(alignment: .leading, spacing: 5) {
+                Text(site.headline)
                     .font(.body.weight(.semibold))
-                    .lineLimit(2)
-                Spacer(minLength: 4)
-                if !site.isPending, !site.isArchived {
-                    Text("\(Int(m.progress.rounded()))%")
-                        .font(.subheadline.weight(.semibold))
-                        .monospacedDigit()
-                }
-            }
-            HStack(spacing: 6) {
-                if !site.isArchived { HealthBadge(health: m.health) }
-                Text(site.clientName ?? "Nessun cliente")
-                    .font(.caption)
+                    .lineLimit(1)
+                subtitle
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
-            }
-            if let reason = site.reason {
-                HStack(spacing: 6) {
-                    Label(reason == .completed ? "Concluso il \(SiteDate.long(site.archivedAt))" : reason.label,
-                          systemImage: reason.symbol)
-                        .foregroundStyle(reason.color)
-                    Spacer()
-                    Text(Format.currency(site.metrics.contractNet)).monospacedDigit().foregroundStyle(.secondary)
-                }
-                .font(.caption)
-            } else if site.isPending {
-                Text("Preventivo inviato · \(Format.currency(site.quotes.reduce(0) { $0 + $1.net })) + IVA")
+                status(m)
                     .font(.caption)
+                    .lineLimit(1)
+                    .padding(.top, 1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.vertical, 6)
+        .accessibilityElement(children: .combine)
+    }
+
+    /// Cliente e località; senza indirizzo, il cliente è già il titolo e qui va il lavoro.
+    @ViewBuilder private var subtitle: some View {
+        if site.street != nil {
+            HStack(spacing: 5) {
+                Image(systemName: "person.fill").imageScale(.small)
+                Text([site.clientName ?? "Nessun cliente", site.locality].compactMap { $0 }.joined(separator: " · "))
+            }
+        } else {
+            Text(site.clientName == nil ? "Indirizzo da completare" : site.title)
+        }
+    }
+
+    @ViewBuilder private func status(_ m: SiteMetrics) -> some View {
+        HStack(spacing: 8) {
+            if let reason = site.reason {
+                Label(reason == .completed ? "Concluso il \(SiteDate.long(site.archivedAt))" : reason.label,
+                      systemImage: reason.symbol)
+                    .foregroundStyle(reason.color)
+                Spacer(minLength: 4)
+                Text(Format.currency(m.contractNet)).monospacedDigit().foregroundStyle(.secondary)
+            } else if site.isPending {
+                Text("Preventivo inviato")
                     .foregroundStyle(.secondary)
+                Spacer(minLength: 4)
+                Text("\(Format.currency(site.quotes.reduce(0) { $0 + $1.net })) + IVA")
+                    .monospacedDigit().foregroundStyle(.secondary)
             } else {
-                SiteProgressBar(value: m.progress, expected: m.expectedProgress, health: m.health)
-                HStack {
-                    if m.toInvoice > 0 {
-                        Label("Da fatturare \(Format.currency(m.toInvoice))", systemImage: "doc.text")
-                            .foregroundStyle(.orange)
-                    }
-                    Spacer()
-                    if m.delayDays > 0 {
-                        Text("+\(m.delayDays) gg").foregroundStyle(.red)
-                    } else if let end = site.plannedEndDate {
-                        Text("Fine \(SiteDate.short(end))").foregroundStyle(.secondary)
-                    }
+                HealthBadge(health: m.health)
+                if m.toInvoice > 0 {
+                    Text("Da fatturare \(Format.currency(m.toInvoice))")
+                        .monospacedDigit()
+                        .foregroundStyle(.orange)
                 }
-                .font(.caption)
+                Spacer(minLength: 4)
+                if m.delayDays > 0 {
+                    Text("+\(m.delayDays) gg").fontWeight(.semibold).foregroundStyle(.red)
+                } else if let end = site.plannedEndDate {
+                    Text("Fine \(SiteDate.short(end))").foregroundStyle(.secondary)
+                }
             }
         }
-        .padding(.vertical, 4)
-        .accessibilityElement(children: .combine)
+    }
+}
+
+/// Anello di avanzamento a sinistra della riga (clessidra se in attesa,
+/// simbolo dell'archivio se concluso o ritirato).
+private struct SiteRing: View {
+    let site: SiteListItem
+
+    var body: some View {
+        let m = site.metrics
+        let color: Color = site.reason?.color ?? (site.isPending ? .blue : m.health.color)
+        ZStack {
+            Circle().stroke(color.opacity(0.18), lineWidth: 4)
+            if !site.isPending, site.reason == nil {
+                Circle()
+                    .trim(from: 0, to: min(1, max(0, m.progress / 100)))
+                    .stroke(color.gradient, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                Text("\(Int(m.progress.rounded()))%")
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .minimumScaleFactor(0.7)
+            } else {
+                Image(systemName: site.reason?.symbol ?? "hourglass")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(color)
+            }
+        }
+        .frame(width: 44, height: 44)
+        .accessibilityHidden(true)
     }
 }
 

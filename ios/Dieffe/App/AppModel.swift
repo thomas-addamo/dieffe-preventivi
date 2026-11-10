@@ -38,6 +38,7 @@ final class AppModel {
     /// Gestione Cantieri attiva (spenta = in manutenzione).
     var sitesEnabled: Bool { home.data?.features?.sites ?? false }
     var clientsPath = NavigationPath()
+    var sitesPath = NavigationPath()
     var priceListPath = NavigationPath()
     var altroPath = NavigationPath()
 
@@ -76,6 +77,7 @@ final class AppModel {
         if tab == selectedTab {
             switch tab {
             case .clienti: clientsPath = NavigationPath()
+            case .cantieri: sitesPath = NavigationPath()
             case .listino: priceListPath = NavigationPath()
             case .altro: altroPath = NavigationPath()
             default: break
@@ -137,6 +139,10 @@ final class AppModel {
     /// Una pagina dentro Altro: la schermata nativa se c'è, altrimenti il
     /// sito con titolo e "indietro" nativi.
     func openWebPage(_ path: String, title: String) {
+        if let route = AltroRoute(path: path), route.isSite, sitesEnabled {
+            open(route)
+            return
+        }
         selectedTab = .altro
         if let route = AltroRoute(path: path) {
             altroPath.append(route)
@@ -157,6 +163,13 @@ final class AppModel {
     }
 
     func open(_ route: AltroRoute) {
+        // I cantieri hanno la loro sezione nella tab bar.
+        if route.isSite, sitesEnabled {
+            selectedTab = .cantieri
+            sitesPath = NavigationPath()
+            if route != .sites { sitesPath.append(route) }
+            return
+        }
         selectedTab = .altro
         altroPath = NavigationPath()
         altroPath.append(route)
@@ -171,6 +184,7 @@ final class AppModel {
         sessionExpired()
         selectedTab = .home
         altroPath = NavigationPath()
+        sitesPath = NavigationPath()
     }
 
     private func sessionExpired() {

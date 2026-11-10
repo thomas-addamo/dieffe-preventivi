@@ -54,7 +54,13 @@ struct AltroView: View {
 
                 Section("Operatività") {
                     if model.sitesEnabled {
-                        link(.sites, "Gestione Cantieri", "Mappa, avanzamento lavori, SAL e scadenze", "hammer.fill", .orange)
+                        Button {
+                            model.select(.cantieri)
+                        } label: {
+                            MoreRow(title: "Gestione Cantieri", subtitle: "Mappa, avanzamento lavori, SAL e scadenze",
+                                    symbol: "hammer.fill", color: .orange, chevron: true)
+                        }
+                        .tint(.primary)
                     }
                     link(.extras, "Lavori extra", "Lavorazioni aggiuntive di un preventivo", "doc.badge.plus", .orange)
                     Button {
@@ -96,12 +102,8 @@ struct AltroView: View {
             }
             .navigationDestination(for: AltroRoute.self) { route in
                 switch route {
-                case .sites:
-                    if model.sitesEnabled { SitesView() } else { SitesMaintenanceView() }
-                case .sitesArchive:
-                    if model.sitesEnabled { SitesView(initialFilter: .archive) } else { SitesMaintenanceView() }
-                case .site(let id, let tab):
-                    if model.sitesEnabled { SiteDetailView(siteID: id, initialTab: tab) } else { SitesMaintenanceView() }
+                case .sites, .sitesArchive, .site:
+                    SiteRouteView(route: route)
                 case .extras: ExtrasView()
                 case .stats: StatsView()
                 case .communications: CommunicationsView()
@@ -123,6 +125,37 @@ struct AltroView: View {
     }
 }
 
+/// Sezione Cantieri della tab bar: dashboard, archivio e pagine dei cantieri.
+struct SitesTab: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        @Bindable var model = model
+        NavigationStack(path: $model.sitesPath) {
+            SiteRouteView(route: .sites)
+                .navigationDestination(for: AltroRoute.self) { SiteRouteView(route: $0) }
+        }
+    }
+}
+
+/// Le schermate dei cantieri, o l'avviso di manutenzione se la funzione è spenta.
+struct SiteRouteView: View {
+    @Environment(AppModel.self) private var model
+    let route: AltroRoute
+
+    var body: some View {
+        if !model.sitesEnabled {
+            SitesMaintenanceView()
+        } else {
+            switch route {
+            case .sitesArchive: SitesView(initialFilter: .archive)
+            case .site(let id, let tab): SiteDetailView(siteID: id, initialTab: tab)
+            default: SitesView()
+            }
+        }
+    }
+}
+
 /// Schermate native raggiungibili da Altro.
 enum AltroRoute: Hashable {
     case sites
@@ -131,6 +164,13 @@ enum AltroRoute: Hashable {
     /// Un cantiere, con la scheda da aprire (sal, calendario, note).
     case site(String, tab: String?)
     case extras, stats, communications, trash, notify, users, company
+
+    var isSite: Bool {
+        switch self {
+        case .sites, .sitesArchive, .site: true
+        default: false
+        }
+    }
 
     /// La pagina del sito corrispondente (link dai PDF, notifiche, menu).
     init?(path: String) {

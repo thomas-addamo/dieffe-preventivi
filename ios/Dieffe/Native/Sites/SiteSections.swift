@@ -194,7 +194,7 @@ struct SiteCalendarSection: View {
             MonthGrid(detail: detail, month: $month, canAdd: canEdit) { day in
                 if canEdit { present(.event(EventDraft(date: day))) }
             }
-            .listRowInsets(EdgeInsets(top: 10, leading: 10, bottom: 10, trailing: 10))
+            .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 14, trailing: 16))
         }
 
         Section {
@@ -336,8 +336,8 @@ private struct MonthGrid: View {
     var body: some View {
         let days = gridDays()
         let today = cal.startOfDay(for: .now)
-        VStack(spacing: 8) {
-            HStack {
+        VStack(spacing: 10) {
+            HStack(spacing: 0) {
                 Text(month.formatted(.dateTime.month(.wide).year().locale(Locale(identifier: "it_IT"))).capitalized)
                     .font(.headline)
                 Spacer()
@@ -355,26 +355,40 @@ private struct MonthGrid: View {
             }
             .buttonStyle(.borderless)
 
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 2), count: 7), spacing: 4) {
-                ForEach(["L", "M", "M", "G", "V", "S", "D"].indices, id: \.self) { i in
-                    Text(["L", "M", "M", "G", "V", "S", "D"][i])
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.secondary)
+            // Grid e non LazyVGrid: dentro una List la griglia "lazy" cambia
+            // altezza mentre si scorre e fa saltare la pagina.
+            let weeks = stride(from: 0, to: days.count, by: 7).map { Array(days[$0..<min($0 + 7, days.count)]) }
+            Grid(horizontalSpacing: 0, verticalSpacing: 2) {
+                GridRow {
+                    ForEach(Array(["L", "M", "M", "G", "V", "S", "D"].enumerated()), id: \.offset) { i, d in
+                        Text(d)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(i == 6 ? Color.red.opacity(0.8) : .secondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.bottom, 4)
+                    }
                 }
-                ForEach(days, id: \.self) { day in
-                    DayCell(day: day,
-                            number: cal.component(.day, from: day),
-                            isToday: day == today,
-                            inMonth: cal.isDate(day, equalTo: month, toGranularity: .month),
-                            marker: marker(day),
-                            isHoliday: SiteWorkdays.isHoliday(day, calendar: cal),
-                            eventColors: eventsOn(day).prefix(3).map { SiteEventType(raw: $0.type).color },
-                            phase: phaseOn(day),
-                            canAdd: canAdd) { onDay(day) }
+                ForEach(weeks, id: \.first) { week in
+                    GridRow {
+                        ForEach(week, id: \.self) { day in
+                            DayCell(day: day,
+                                    number: cal.component(.day, from: day),
+                                    isToday: day == today,
+                                    inMonth: cal.isDate(day, equalTo: month, toGranularity: .month),
+                                    marker: marker(day),
+                                    isHoliday: SiteWorkdays.isHoliday(day, calendar: cal),
+                                    eventColors: eventsOn(day).prefix(3).map { SiteEventType(raw: $0.type).color },
+                                    phase: phaseOn(day),
+                                    canAdd: canAdd) { onDay(day) }
+                        }
+                    }
                 }
             }
+            .transaction { $0.animation = nil }
 
-            HStack(spacing: 12) {
+            Divider().padding(.top, 2)
+
+            HStack(spacing: 14) {
                 legend(Color.blue.opacity(0.25), "Inizio")
                 legend(Color.purple.opacity(0.25), "Fine prevista")
                 if detail.metrics.delayDays > 0 { legend(Color.red.opacity(0.25), "Fine stimata") }
@@ -383,6 +397,8 @@ private struct MonthGrid: View {
             }
             .font(.caption2)
             .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
         }
     }
 
@@ -470,8 +486,7 @@ private struct DayCell: View {
                     .frame(height: 3)
                     .padding(.horizontal, 2)
             }
-            .frame(maxWidth: .infinity, minHeight: 44)
-            .padding(.vertical, 2)
+            .frame(maxWidth: .infinity, minHeight: 48)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -715,16 +730,31 @@ struct SiteNotesSection: View {
 
         Section {
             if canEdit {
-                HStack(alignment: .bottom) {
-                    TextField("Diario: cosa è successo oggi…", text: $text, axis: .vertical)
+                // Compositore compatto come in Messaggi: campo arrotondato e
+                // tasto d'invio dentro, che si colora quando c'è del testo.
+                let empty = text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                HStack(alignment: .bottom, spacing: 6) {
+                    TextField("Scrivi una nota…", text: $text, axis: .vertical)
                         .lineLimit(1...6)
                         .focused($focused)
-                    Button("Aggiungi nota", systemImage: "arrow.up.circle.fill", action: submit)
-                        .labelStyle(.iconOnly)
-                        .font(.title2)
-                        .frame(minWidth: 44, minHeight: 44)
-                        .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .padding(.vertical, 8)
+                        .padding(.leading, 14)
+                    Button(action: submit) {
+                        Image(systemName: "arrow.up")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(width: 30, height: 30)
+                            .background(empty ? AnyShapeStyle(Color.secondary.opacity(0.35)) : AnyShapeStyle(Color.accentColor.gradient),
+                                        in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(empty)
+                    .padding(4)
+                    .accessibilityLabel("Aggiungi nota")
+                    .animation(.easeOut(duration: 0.15), value: empty)
                 }
+                .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 19, style: .continuous))
+                .listRowInsets(EdgeInsets(top: 10, leading: 12, bottom: 10, trailing: 12))
             }
             if detail.notes.isEmpty {
                 Text(canEdit ? "Nessuna nota. Annota cosa succede in cantiere: ditte, consegne, problemi." : "Nessuna nota.")

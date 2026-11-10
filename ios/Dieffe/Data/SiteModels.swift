@@ -169,6 +169,12 @@ struct SiteListItem: Decodable, Identifiable {
     var isArchived: Bool { archivedAt != nil }
     var reason: SiteArchiveReason? { archivedAt == nil ? nil : SiteArchiveReason(raw: archiveReason) }
     var title: String { SiteText.title(name) }
+    /// "Via Roma 12" dall'indirizzo completo.
+    var street: String? { SiteText.street(address) }
+    /// "Torino TO", senza CAP né paese.
+    var locality: String? { SiteText.locality(address) }
+    /// Come si riconosce il cantiere nell'elenco: la via, altrimenti il cliente.
+    var headline: String { street ?? clientName ?? title }
 }
 
 /// GET /api/sites/archive
@@ -345,6 +351,27 @@ enum SiteText {
     }
 
     static func days(_ n: Int) -> String { n == 1 ? "1 giorno" : "\(n) giorni" }
+
+    private static func parts(_ address: String?) -> [String] {
+        (address ?? "").split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+    }
+
+    static func street(_ address: String?) -> String? { parts(address).first }
+
+    static func locality(_ address: String?) -> String? {
+        let rest = parts(address).dropFirst()
+            .filter { !["italia", "italy"].contains($0.lowercased()) }
+            .map { $0.replacingOccurrences(of: #"^\d{5}\s*"#, with: "", options: .regularExpression) }
+            .filter { !$0.isEmpty }
+        return rest.isEmpty ? nil : rest.joined(separator: ", ")
+    }
+}
+
+extension Array where Element: Hashable {
+    func removingDuplicates() -> [Element] {
+        var seen = Set<Element>()
+        return filter { seen.insert($0).inserted }
+    }
 }
 
 enum SitePhotoURL {
