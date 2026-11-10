@@ -31,6 +31,8 @@ const phasePatch = phaseCreate.partial().extend({
   plannedEnd: isoDate.nullable().optional(),
   /** Sposta la fase su (-1) o giù (+1) nella sequenza. */
   move: z.union([z.literal(-1), z.literal(1)]).optional(),
+  /** Sposta la fase in questa posizione (0 = prima): trascinamento. */
+  toIndex: z.number().int().min(0).max(1000).optional(),
 });
 
 const milestoneCreate = z.object({
@@ -57,6 +59,7 @@ const eventCreate = z.object({
 const eventPatch = eventCreate.partial();
 
 const noteCreate = z.object({ body: text(4000) });
+const notePatch = noteCreate;
 
 type Result = { ok: true; data?: unknown } | { ok: false; status: number; error: string };
 const bad = (error = "Dati non validi"): Result => ({ ok: false, status: 400, error });
@@ -106,20 +109,28 @@ export async function createEntity(siteId: string, entity: Entity, body: unknown
   }
 }
 
-export async function updateEntity(siteId: string, entity: Entity, itemId: string, body: unknown): Promise<Result> {
+export async function updateEntity(
+  siteId: string,
+  entity: Entity,
+  itemId: string,
+  body: unknown,
+  user: { id: string; role: string }
+): Promise<Result> {
   switch (entity) {
     case "phases": {
       const p = phasePatch.safeParse(body);
       if (!p.success) return bad();
-      const { done, move, ...fields } = p.data;
+      const { done, move, toIndex, ...fields } = p.data;
       const where = and(eq(sitePhases.id, itemId), eq(sitePhases.siteId, siteId));
 
-      if (move) {
+      if (move || toIndex !== undefined) {
         const list = await db.select({ id: sitePhases.id, orderIndex: sitePhases.orderIndex }).from(sitePhases).where(eq(sitePhases.siteId, siteId)).orderBy(asc(sitePhases.orderIndex));
         const i = list.findIndex((x) => x.id === itemId);
-        const j = i + move;
-        if (i < 0 || j < 0 || j >= list.length) return { ok: true };
-        [list[i], list[j]] = [list[j], list[i]];
+        if (i < 0) return { ok: true };
+        const j = Math.min(list.length - 1, Math.max(0, toIndex ?? i + (move ?? 0)));
+        if (i === j) return { ok: true };
+        const [item] = list.splice(i, 1);
+        list.splice(j, 0, item);
         // Rinumera solo le righe la cui posizione cambia (0, 1, 2…).
         const writes = list
           .map((x, k) => (x.orderIndex === k ? null : db.update(sitePhases).set({ orderIndex: k }).where(eq(sitePhases.id, x.id))))
@@ -133,14 +144,12 @@ export async function updateEntity(siteId: string, entity: Entity, itemId: strin
       if (done !== undefined) set.doneAt = done ? new Date() : null;
       if (Object.keys(set).length) await db.update(sitePhases).set(set).where(where);
       if (fields.durationDays !== undefined) await schedulePhases(siteId);
-      if (done !== undefined || fields.weight !== undefined) await recomputeSite(siteId);
-
       // Tutte le fasi completate → l'interfaccia propone di concludere i lavori.
-      const [r] = await db
-        .select({ open: sql<number>`count(*) filter (where ${sitePhases.doneAt} is null)::int`, total: sql<number>`count(*)::int` })
-        .from(sitePhases)
-        .where(eq(sitePhases.siteId, siteId));
-      return { ok: true, data: { allDone: r.total > 0 && r.open === 0 } };
+      if (done !== undefined || fields.weight !== undefined) {
+        const { allDone } = await recomputeSite(siteId);
+        return { ok: true, data: { allDone } };
+      }
+      return { ok: true, data: { allDone: false } };
     }
     case "milestones": {
       const p = milestonePatch.safeParse(body);
@@ -168,15 +177,32 @@ export async function updateEntity(siteId: string, entity: Entity, itemId: strin
       await db.update(siteEvents).set(p.data).where(and(eq(siteEvents.id, itemId), eq(siteEvents.siteId, siteId)));
       return { ok: true };
     }
-    case "notes":
-      return bad("Le note non si modificano");
+    case "notes": {
+      // Il testo si corregge: lo può fare chi l'ha scritta (o un admin).
+      const p = notePatch.safeParse(body);
+      if (!p.success) return bad();
+      const [n] = await db.select({ userId: siteNotes.userId }).from(siteNotes).where(and(eq(siteNotes.id, itemId), eq(siteNotes.siteId, siteId))).limit(1);
+      if (!n) return { ok: false, status: 404, error: "Nota non trovata" };
+      if (n.userId !== user.id && user.role !== "admin") return { ok: false, status: 403, error: "Puoi modificare solo le tue note" };
+      const updatedAt = new Date();
+      await db.update(siteNotes).set({ body: p.data.body, updatedAt }).where(eq(siteNotes.id, itemId));
+      return { ok: true, data: { id: itemId, body: p.data.body, updatedAt } };
+    }
   }
 }
 
 export async function deleteEntity(siteId: string, entity: Entity, itemId: string, user: { id: string; role: string }): Promise<Result> {
   switch (entity) {
     case "phases":
-      await db.delete(sitePhases).where(and(eq(sitePhases.id, itemId), eq(sitePhases.siteId, siteId)));
+      await db.batch([
+        // I SAL "a fine fase" di questa fase diventano da segnare a mano
+        // (altrimenti resterebbero agganciati a una fase che non c'è più).
+        db
+          .update(siteMilestones)
+          .set({ trigger: "manual", phaseId: null })
+          .where(and(eq(siteMilestones.siteId, siteId), eq(siteMilestones.phaseId, itemId))),
+        db.delete(sitePhases).where(and(eq(sitePhases.id, itemId), eq(sitePhases.siteId, siteId))),
+      ]);
       await schedulePhases(siteId);
       await recomputeSite(siteId);
       return { ok: true };

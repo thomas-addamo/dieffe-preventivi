@@ -35,7 +35,7 @@ import { NEW_BADGE_CLASS, isNewPage } from "@/lib/new-pages";
 import { HelpDialog } from "./HelpDialog";
 import { MENU_EVENTS } from "@/hooks/use-menu-param";
 import { HEALTH_COLORS, type SiteHealth } from "@/lib/sites/metrics";
-import { FEATURES } from "@/lib/features";
+import { sitesEnabledFor } from "@/lib/features";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Barra laterale (desktop web + app desktop).
@@ -51,13 +51,13 @@ import { FEATURES } from "@/lib/features";
 // rientro che centra l'icona nel quadrato.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const navItems = [
+const navItems: { href: string; label: string; icon: typeof LayoutDashboard; sites?: boolean }[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/clienti", label: "Clienti", icon: Users },
   { href: "/preventivi", label: "Preventivi", icon: FileText },
   { href: "/lavori-extra", label: "Lavori extra", icon: FilePlus2 },
-  // Gestione Cantieri: nascosta finché la funzione è sospesa (lib/features).
-  ...(FEATURES.sites ? [{ href: "/cantieri", label: "Gestione Cantieri", icon: HardHat }] : []),
+  // Gestione Cantieri: visibile secondo l'interruttore in lib/features (per ruolo).
+  { href: "/cantieri", label: "Gestione Cantieri", icon: HardHat, sites: true },
   { href: "/comunicazioni", label: "Crea comunicazione", icon: Mail },
   { href: "/listino", label: "Listino", icon: List },
   { href: "/statistiche", label: "Statistiche", icon: BarChart2 },
@@ -470,7 +470,7 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
 
             {sectionLabel("Operatività")}
             <div className="space-y-1">
-              {navItems.map(({ href, label, icon: Icon }) =>
+              {navItems.filter((i) => !i.sites || sitesEnabledFor(userRole)).map(({ href, label, icon: Icon }) =>
                 href === "/preventivi" ? (
                   // Riga "Preventivi" con freccia che apre l'elenco (solo da aperta)
                   <div key={href} className="relative">

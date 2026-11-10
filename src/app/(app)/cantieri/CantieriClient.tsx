@@ -2,10 +2,15 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+
+/** Oltre questo tempo la dashboard smette di ricontrollare (un elemento bloccato non la fa girare per sempre). */
+const MAX_POLL_MS = 3 * 60_000;
+import { useSearchParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
+  Archive,
   Banknote,
   CalendarDays,
   ChevronRight,
@@ -39,7 +44,7 @@ const SitesMap = dynamic(() => import("@/components/sites/SitesMap"), {
   loading: () => <div className="h-full w-full animate-pulse rounded-[inherit] bg-muted" />,
 });
 
-type Filter = "active" | "pending" | "all";
+type Filter = "active" | "pending" | "all" | "archive";
 
 async function fetchOverview(): Promise<SitesOverview> {
   const res = await fetch("/api/sites");
@@ -47,31 +52,10 @@ async function fetchOverview(): Promise<SitesOverview> {
   return res.json();
 }
 
-/** Prepara a piccoli lotti i cantieri in sospeso (posizione, fasi e SAL). */
-function usePendingWork(pending: number) {
-  const qc = useQueryClient();
-  const [working, setWorking] = useState(false);
-  const running = useRef(false);
-  useEffect(() => {
-    if (pending <= 0 || running.current) return;
-    running.current = true;
-    setWorking(true);
-    (async () => {
-      try {
-        for (let i = 0; i < 25; i++) {
-          const res = await fetch("/api/sites/process", { method: "POST" });
-          if (!res.ok) break;
-          const { remaining } = (await res.json()) as { remaining: number };
-          await qc.invalidateQueries({ queryKey: ["sites"] });
-          if (remaining <= 0) break;
-        }
-      } finally {
-        running.current = false;
-        setWorking(false);
-      }
-    })();
-  }, [pending, qc]);
-  return working;
+async function fetchArchive(): Promise<{ sites: SiteListItem[] }> {
+  const res = await fetch("/api/sites/archive");
+  if (!res.ok) throw new Error("Errore nel caricamento dell'archivio");
+  return res.json();
 }
 
 function Kpi({
@@ -112,7 +96,7 @@ function Kpi({
 
 function SiteRow({ s, selected, onSelect }: { s: SiteListItem; selected: boolean; onSelect: () => void }) {
   const m = s.metrics;
-  const pending = s.status === "pending";
+  const pending = s.status === "pending" && !s.archivedAt;
   return (
     <div
       className={cn(
@@ -124,7 +108,13 @@ function SiteRow({ s, selected, onSelect }: { s: SiteListItem; selected: boolean
       <button onClick={onSelect} className="min-w-0 flex-1 text-left" title="Mostra sulla mappa">
         <div className="flex items-center gap-2">
           <p className="truncate font-medium">{siteTitle(s.name)}</p>
-          <HealthBadge health={m.health} />
+          {s.archivedAt ? (
+            <span className="shrink-0 rounded-full bg-violet-500/10 px-2 py-0.5 text-[11px] font-medium text-violet-700 dark:text-violet-300">
+              {s.archiveReason === "completed" ? `Concluso il ${formatShortDate(s.archivedAt)}` : "Preventivo ritirato"}
+            </span>
+          ) : (
+            <HealthBadge health={m.health} />
+          )}
         </div>
         <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-muted-foreground">
           <MapPin className="h-3 w-3 shrink-0" />
@@ -189,17 +179,30 @@ function SiteRow({ s, selected, onSelect }: { s: SiteListItem; selected: boolean
 }
 
 export function CantieriClient({ initial }: { initial: SitesOverview }) {
-  const { data = initial } = useQuery({ queryKey: ["sites"], queryFn: fetchOverview, initialData: initial, staleTime: 30_000 });
-  const working = usePendingWork(data.pendingWork);
-  const [filter, setFilter] = useState<Filter>("active");
+  const [openedAt] = useState(() => Date.now());
+  // Finché il server prepara cantieri (posizione, fasi e SAL dell'IA) la
+  // dashboard si aggiorna da sola ogni pochi secondi: il lavoro lo fa il
+  // server dopo ogni lettura, il browser non deve "spingerlo".
+  const { data = initial } = useQuery({
+    queryKey: ["sites"],
+    queryFn: fetchOverview,
+    initialData: initial,
+    staleTime: 30_000,
+    refetchInterval: (q) => ((q.state.data?.pendingWork ?? 0) > 0 && Date.now() - openedAt < MAX_POLL_MS ? 5000 : false),
+  });
+  const working = data.pendingWork > 0;
+  const params = useSearchParams();
+  const [filter, setFilter] = useState<Filter>(params.get("filtro") === "archivio" ? "archive" : "active");
+  const archive = useQuery({ queryKey: ["sites", "archive"], queryFn: fetchArchive, enabled: filter === "archive", staleTime: 60_000 });
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
 
   const t = data.totals;
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return data.sites
-      .filter((s) => filter === "all" || s.status === filter)
+    const source = filter === "archive" ? (archive.data?.sites ?? []) : data.sites;
+    return source
+      .filter((s) => filter === "all" || filter === "archive" || s.status === filter)
       .filter(
         (s) =>
           !q ||
@@ -209,11 +212,19 @@ export function CantieriClient({ initial }: { initial: SitesOverview }) {
           s.quotes.some((x) => x.code.toLowerCase().includes(q))
       )
       .sort((a, b) => {
-        // Prima ciò che richiede attenzione: ritardo, rischio, soldi da fatturare.
+        // Archivio: dal più recente. Altrimenti prima ciò che richiede
+        // attenzione: ritardo, rischio, soldi da fatturare.
+        if (filter === "archive") return (b.archivedAt ?? "").localeCompare(a.archivedAt ?? "");
         const rank = { late: 0, at_risk: 1, on_track: 2, not_started: 3, done: 4, pending: 5 } as const;
         return rank[a.metrics.health] - rank[b.metrics.health] || b.metrics.toInvoice - a.metrics.toInvoice;
       });
-  }, [data.sites, filter, search]);
+  }, [data.sites, archive.data, filter, search]);
+  // La mappa mostra i cantieri del filtro scelto (gli "in attesa" non affollano la vista dei lavori in corso).
+  const mapSites = useMemo(() => {
+    if (filter === "archive") return archive.data?.sites ?? [];
+    if (filter === "all") return data.sites;
+    return data.sites.filter((s) => s.status === filter);
+  }, [data.sites, archive.data, filter]);
 
   const tips = data.sites
     .filter((s) => s.topTip)
@@ -235,7 +246,7 @@ export function CantieriClient({ initial }: { initial: SitesOverview }) {
         }
       />
 
-      {data.sites.length === 0 ? (
+      {data.sites.length === 0 && !t.archived ? (
         <EmptyState
           icon={HardHat}
           title="Nessun cantiere"
@@ -268,7 +279,7 @@ export function CantieriClient({ initial }: { initial: SitesOverview }) {
           {/* Mappa + colonna laterale */}
           <div className="mb-6 grid gap-4 lg:grid-cols-3">
             <div className="surface relative h-[360px] overflow-hidden !p-0 md:h-[460px] lg:col-span-2">
-              <SitesMap sites={data.sites} selectedId={selected} onSelect={setSelected} className="h-full w-full" />
+              <SitesMap sites={mapSites} selectedId={selected} onSelect={setSelected} className="h-full w-full" />
               <div className="pointer-events-none absolute bottom-2 left-2 z-[400] flex flex-wrap gap-1.5 rounded-xl bg-card/90 px-2.5 py-1.5 text-[10px] text-muted-foreground shadow-sm backdrop-blur">
                 {(["on_track", "at_risk", "late", "not_started", "pending"] as const).map((h) => (
                   <HealthBadge key={h} health={h} className="!bg-transparent !px-0" />
@@ -341,6 +352,7 @@ export function CantieriClient({ initial }: { initial: SitesOverview }) {
                   ["active", `Attivi (${t.active})`],
                   ["pending", `In attesa (${t.pending})`],
                   ["all", "Tutti"],
+                  ["archive", `Archivio (${t.archived ?? 0})`],
                 ] as const
               ).map(([k, label]) => (
                 <button
@@ -367,8 +379,17 @@ export function CantieriClient({ initial }: { initial: SitesOverview }) {
           </div>
 
           <div className="space-y-2">
-            {filtered.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">Nessun cantiere.</p>
+            {filter === "archive" && archive.isLoading ? (
+              <p className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" /> Caricamento dell’archivio…
+              </p>
+            ) : filtered.length === 0 ? (
+              <p className="flex flex-col items-center gap-2 py-8 text-center text-sm text-muted-foreground">
+                {filter === "archive" && <Archive className="h-6 w-6 opacity-50" />}
+                {filter === "archive"
+                  ? "Archivio vuoto: qui finiscono i cantieri con i lavori conclusi e quelli il cui preventivo torna indietro."
+                  : "Nessun cantiere."}
+              </p>
             ) : (
               filtered.map((s) => (
                 <SiteRow

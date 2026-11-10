@@ -166,8 +166,8 @@ export const quotes = pgTable(
     siteId: text("site_id").references((): AnyPgColumn => sites.id, { onDelete: "set null" }),
     /** Fasi e SAL di questo preventivo già generati nel cantiere. */
     siteSetupAt: timestamp("site_setup_at", { withTimezone: true }),
-    /** Lavori conclusi: il cantiere è stato chiuso ed eliminato, il
-     *  preventivo resta e non genera più un cantiere. */
+    /** Lavori conclusi: il cantiere è in archivio; il preventivo non ne
+     *  genera uno nuovo. */
     worksCompletedAt: timestamp("works_completed_at", { withTimezone: true }),
   },
   (t) => [
@@ -433,8 +433,10 @@ export const pushSubscriptions = pgTable(
 //
 // Un cantiere nasce da solo dal preventivo principale inviato (in attesa) o
 // accettato (attivo) e raccoglie anche i suoi lavori extra. Quando i lavori
-// sono conclusi il cantiere viene ELIMINATO con tutto ciò che contiene (fasi,
-// SAL, eventi, note: ON DELETE CASCADE); i preventivi restano.
+// sono conclusi, o il preventivo torna indietro (bozza, rifiutato, cestinato),
+// il cantiere va in ARCHIVIO con tutto ciò che contiene: si può riaprire.
+// Si elimina davvero solo a mano (admin), se era vuoto o se il preventivo
+// principale viene eliminato definitivamente (ON DELETE CASCADE).
 // Struttura pensata per un DB leggero: importi e avanzamento si calcolano dai
 // preventivi (niente copie), i consigli IA stanno in una colonna del cantiere.
 
@@ -470,6 +472,10 @@ export const sites = pgTable(
     aiInsights: jsonb("ai_insights"),
     aiInsightsHash: text("ai_insights_hash"),
     aiInsightsAt: timestamp("ai_insights_at", { withTimezone: true }),
+    /** In archivio da quando (null = cantiere in corso). */
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    /** completed = lavori conclusi · withdrawn = preventivo tornato indietro */
+    archiveReason: text("archive_reason", { enum: ["completed", "withdrawn"] }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -563,8 +569,31 @@ export const siteNotes = pgTable(
     body: text("body").notNull(),
     userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    /** Ultima modifica del testo (null = mai modificata). */
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
   },
   (t) => [index("site_notes_site_idx").on(t.siteId)]
+);
+
+/** Foto di cantiere (su Cloudinary, cartella dieffe-preventivi/cantieri/<id>). */
+export const sitePhotos = pgTable(
+  "site_photos",
+  {
+    id: text("id").primaryKey(),
+    siteId: text("site_id")
+      .notNull()
+      .references(() => sites.id, { onDelete: "cascade" }),
+    /** Fase a cui si riferisce la foto (facoltativa). */
+    phaseId: text("phase_id").references(() => sitePhases.id, { onDelete: "set null" }),
+    publicId: text("public_id").notNull(),
+    url: text("url").notNull(),
+    width: integer("width"),
+    height: integer("height"),
+    caption: text("caption"),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("site_photos_site_idx").on(t.siteId, t.createdAt)]
 );
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -597,3 +626,4 @@ export type SitePhase = typeof sitePhases.$inferSelect;
 export type SiteMilestone = typeof siteMilestones.$inferSelect;
 export type SiteEvent = typeof siteEvents.$inferSelect;
 export type SiteNote = typeof siteNotes.$inferSelect;
+export type SitePhoto = typeof sitePhotos.$inferSelect;

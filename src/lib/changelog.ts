@@ -43,6 +43,28 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "4.5.0",
+    date: "2026-11-10",
+    headline: "Gestione Cantieri rinnovata, in prova per gli amministratori.",
+    highlights: [
+      {
+        icon: "shield",
+        title: "Niente più cantieri persi",
+        description: "Concludere i lavori o riportare il preventivo in bozza non cancella più nulla: il cantiere va in Archivio con fasi, SAL, calendario, diario e foto, e si può riaprire.",
+      },
+      {
+        icon: "site",
+        title: "Foto di cantiere e diario modificabile",
+        description: "Nuova scheda Foto (anche trascinandole dal computer), con didascalia e fase. Le note del diario si correggono; le fasi si riordinano trascinandole.",
+      },
+      {
+        icon: "zap",
+        title: "Più veloce e calendario con le festività",
+        description: "La dashboard si apre subito e prepara i cantieri in background; le date delle fasi saltano weekend e festività nazionali.",
+      },
+    ],
+  },
+  {
     version: "4.4.0",
     date: "2026-11-06",
     headline: "Una Home tutta nuova sull'iPhone.",

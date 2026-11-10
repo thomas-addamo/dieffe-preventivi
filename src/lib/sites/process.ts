@@ -1,5 +1,5 @@
 import "server-only";
-import { sql, eq } from "drizzle-orm";
+import { sql, eq, and, isNull } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { sites, clients } from "@/lib/db/schema";
 import { geocodeAddress } from "./geocode";
@@ -20,7 +20,7 @@ export async function processPendingSites(
     .select({ id: sites.id, address: sites.address, clientAddress: clients.address })
     .from(sites)
     .leftJoin(clients, eq(sites.clientId, clients.id))
-    .where(eq(sites.geoStatus, "pending"))
+    .where(and(eq(sites.geoStatus, "pending"), isNull(sites.archivedAt)))
     .limit(maxGeocode);
 
   for (const s of toGeocode) {
@@ -36,7 +36,7 @@ export async function processPendingSites(
     await db.execute<{ site_id: string; quote_id: string }>(sql`
       select s.id as site_id, q.id as quote_id
       from quotes q join sites s on s.id = q.site_id
-      where s.status = 'active' and q.status = 'accepted' and q.site_setup_at is null and q.deleted_at is null
+      where s.status = 'active' and s.archived_at is null and q.status = 'accepted' and q.site_setup_at is null and q.deleted_at is null
       order by (q.id = s.main_quote_id) desc, q.created_at
       limit ${maxSetup}`)
   ).rows;
@@ -52,9 +52,9 @@ export async function processPendingSites(
 
   const [left] = (
     await db.execute<{ n: number }>(sql`
-      select (select count(*) from sites where geo_status = 'pending')
+      select (select count(*) from sites where geo_status = 'pending' and archived_at is null)
            + (select count(*) from quotes q join sites s on s.id = q.site_id
-              where s.status = 'active' and q.status = 'accepted' and q.site_setup_at is null and q.deleted_at is null)
+              where s.status = 'active' and s.archived_at is null and q.status = 'accepted' and q.site_setup_at is null and q.deleted_at is null)
         as n`)
   ).rows;
   return { remaining: Number(left?.n ?? 0) };

@@ -1,7 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowDown, ArrowUp, Check, MessageSquareText, Plus, Sparkles, Trash2 } from "lucide-react";
+import { Check, GripVertical, MessageSquareText, Plus, Sparkles, Trash2 } from "lucide-react";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -11,6 +23,8 @@ import { siteRequest, useSiteMutation, type Phase, type SiteData } from "./site-
 
 // Fasi dei lavori: si spuntano a mano, pesano quanto il loro importo e fanno
 // scattare i SAL collegati. Spunta immediata (l'interfaccia non aspetta la rete).
+// L'ordine si cambia trascinando la maniglia (mouse, dito o tastiera: spazio
+// per prendere, frecce per spostare): le date si ridistribuiscono da sole.
 
 export function PhasesTab({
   data,
@@ -52,6 +66,24 @@ export function PhasesTab({
   const add = useSiteMutation<{ title: string; durationDays?: number }>(siteId, (body) =>
     siteRequest("POST", `/api/sites/${siteId}/phases`, body)
   );
+  const reorder = useSiteMutation<{ id: string; from: number; to: number }>(
+    siteId,
+    ({ id, to }) => siteRequest("PATCH", `/api/sites/${siteId}/phases/${id}`, { toIndex: to }),
+    (d, { from, to }) => ({ ...d, phases: arrayMove(d.phases, from, to) })
+  );
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  function onDragEnd({ active, over }: DragEndEvent) {
+    if (!over || active.id === over.id) return;
+    const from = data.phases.findIndex((p) => p.id === active.id);
+    const to = data.phases.findIndex((p) => p.id === over.id);
+    if (from < 0 || to < 0) return;
+    reorder.mutate({ id: String(active.id), from, to });
+  }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -74,14 +106,18 @@ export function PhasesTab({
         </div>
       )}
 
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+      <SortableContext items={data.phases.map((p) => p.id)} strategy={verticalListSortingStrategy}>
       <ol className="surface divide-y !p-0">
-        {data.phases.map((p: Phase, i) => {
+        {data.phases.map((p: Phase) => {
           const done = !!p.doneAt;
           const late = !done && p.plannedEnd != null && toDay(p.plannedEnd) < today;
           const share = totalWeight > 0 ? (p.weight / totalWeight) * 100 : 0;
           return (
-            <li key={p.id} className="group px-3 py-2.5 md:px-4">
-              <div className="flex items-start gap-3">
+            <SortablePhase key={p.id} id={p.id} enabled={canManage && data.phases.length > 1}>
+              {(handle) => (
+              <div className="flex items-start gap-2 md:gap-3">
+                {handle}
                 <button
                   disabled={!canManage}
                   onClick={() => toggle.mutate({ id: p.id, done: !done })}
@@ -162,16 +198,6 @@ export function PhasesTab({
                     <IconBtn label="Nota e dettagli" onClick={() => setOpenNote(openNote === p.id ? null : p.id)}>
                       <MessageSquareText />
                     </IconBtn>
-                    <IconBtn label="Sposta su" disabled={i === 0} onClick={() => patch.mutate({ id: p.id, body: { move: -1 } })}>
-                      <ArrowUp />
-                    </IconBtn>
-                    <IconBtn
-                      label="Sposta giù"
-                      disabled={i === data.phases.length - 1}
-                      onClick={() => patch.mutate({ id: p.id, body: { move: 1 } })}
-                    >
-                      <ArrowDown />
-                    </IconBtn>
                     <IconBtn
                       label="Elimina fase"
                       danger
@@ -184,7 +210,8 @@ export function PhasesTab({
                   </div>
                 )}
               </div>
-            </li>
+              )}
+            </SortablePhase>
           );
         })}
         {data.phases.length === 0 && (
@@ -195,6 +222,8 @@ export function PhasesTab({
           </li>
         )}
       </ol>
+      </SortableContext>
+      </DndContext>
 
       {canManage && (
         <form onSubmit={submit} className="flex gap-2">
@@ -244,5 +273,40 @@ function IconBtn({
     >
       {children}
     </button>
+  );
+}
+
+/** Riga della fase trascinabile dalla sua maniglia. */
+function SortablePhase({
+  id,
+  enabled,
+  children,
+}: {
+  id: string;
+  enabled: boolean;
+  children: (handle: React.ReactNode) => React.ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id, disabled: !enabled });
+  const handle = enabled ? (
+    <button
+      type="button"
+      ref={setActivatorNodeRef}
+      {...attributes}
+      {...listeners}
+      aria-label="Trascina per cambiare l'ordine"
+      title="Trascina per cambiare l'ordine"
+      className="-ml-1 mt-0.5 flex h-6 w-5 shrink-0 cursor-grab touch-none items-center justify-center rounded text-muted-foreground/60 hover:text-foreground active:cursor-grabbing"
+    >
+      <GripVertical className="h-4 w-4" />
+    </button>
+  ) : null;
+  return (
+    <li
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={cn("group relative bg-card px-3 py-2.5 first:rounded-t-[inherit] last:rounded-b-[inherit] md:px-4", isDragging && "z-10 shadow-lg ring-1 ring-primary/30")}
+    >
+      {children(handle)}
+    </li>
   );
 }

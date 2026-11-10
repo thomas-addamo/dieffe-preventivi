@@ -21,7 +21,7 @@ import {
   HardHat,
 } from "lucide-react";
 import { postToIOSApp } from "@/lib/ios-app";
-import { FEATURES } from "@/lib/features";
+import { sitesEnabledFor } from "@/lib/features";
 import { MobilePage } from "@/components/shared/mobile/MobilePage";
 import { NEW_BADGE_CLASS, isNewPage } from "@/lib/new-pages";
 
@@ -84,7 +84,7 @@ export function AltroClient({ userRole, trashCount }: AltroClientProps) {
   const [helpOpen, setHelpOpen] = useState(false);
 
   const operativita: Item[] = [
-    ...(FEATURES.sites
+    ...(sitesEnabledFor(userRole)
       ? [
           {
             href: "/cantieri",

@@ -7,6 +7,7 @@ import { toPlainText } from "@/lib/rich-text";
 import { generateId } from "@/lib/utils";
 import { schedulePhases } from "./schedule";
 import { recomputeSite } from "./recompute";
+import { parsePaymentTerms, type Trigger, type PlanMilestone } from "./payment-terms";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Preparazione di un preventivo accettato dentro il suo cantiere:
@@ -22,13 +23,12 @@ import { recomputeSite } from "./recompute";
 // Si esegue UNA volta per preventivo (quotes.site_setup_at).
 // ─────────────────────────────────────────────────────────────────────────────
 
-type Trigger = "accept" | "start" | "phase" | "end" | "manual";
 
 type SectionInfo = { code: string; title: string; amount: number; items: string[] };
 
 type Plan = {
   phases: { title: string; sections: string[]; days: number }[];
-  milestones: { label: string; percent: number | null; amount: number | null; trigger: Trigger; phase: number | null }[];
+  milestones: PlanMilestone[];
   dailyCost: number | null;
 };
 
@@ -115,43 +115,6 @@ async function planWithAi(sections: SectionInfo[], paymentTerms: string, net: nu
 }
 
 // ── Riserva a regole (senza IA) ───────────────────────────────────────────────
-
-export function parsePaymentTerms(text: string): Plan["milestones"] {
-  const parts = text
-    .split(/[\n;]|,(?![^(]*\))(?=\s*(?:\d|acconto|saldo|anticipo|sal\b))/i)
-    .map((p) => p.trim())
-    .filter(Boolean);
-  const out: Plan["milestones"] = [];
-  for (const part of parts) {
-    const pct = part.match(/(\d+(?:[.,]\d+)?)\s*%/);
-    const eur = part.match(/(?:€\s*(\d[\d.]*(?:,\d+)?))|(?:(\d[\d.]*(?:,\d+)?)\s*(?:€|euro))/i);
-    if (!pct && !eur) continue;
-    const lower = part.toLowerCase();
-    const trigger: Trigger = /accettazione|firma|contratto|ordine/.test(lower)
-      ? "accept"
-      : /inizio lavori|avvio/.test(lower)
-        ? "start"
-        : /saldo|fine lavori|consegna|collaudo|ultimazione lavori/.test(lower)
-          ? "end"
-          : /fine |ultimazione|termine|metà/.test(lower)
-            ? "phase"
-            : "manual";
-    const label = part
-      .replace(/(\d+(?:[.,]\d+)?)\s*%/, "")
-      .replace(/€\s*\d[\d.,]*|\d[\d.,]*\s*(€|euro)/gi, "")
-      .replace(/^[\s,:\-–a]+(all'|alla|al|a)?\s*/i, "")
-      .trim();
-    const toNum = (s: string) => Number(s.replace(/\./g, "").replace(",", "."));
-    out.push({
-      label: (label.charAt(0).toUpperCase() + label.slice(1)).slice(0, 80) || (pct ? `SAL ${pct[1]}%` : "Acconto"),
-      percent: pct ? toNum(pct[1]) : null,
-      amount: !pct && eur ? toNum(eur[1] ?? eur[2]) : null,
-      trigger,
-      phase: null,
-    });
-  }
-  return out;
-}
 
 function fallbackPlan(sections: SectionInfo[], paymentTerms: string): Plan {
   const phases = sections.map((s) => ({

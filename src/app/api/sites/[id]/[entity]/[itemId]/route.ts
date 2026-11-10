@@ -10,7 +10,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   const auth = await requireSite(id, true);
   if ("error" in auth) return auth.error;
 
-  const res = await updateEntity(id, entity as Entity, itemId, await req.json().catch(() => null));
+  const res = await updateEntity(id, entity as Entity, itemId, await req.json().catch(() => null), auth.session.user);
   return res.ok ? NextResponse.json(res.data ?? { ok: true }) : NextResponse.json({ error: res.error }, { status: res.status });
 }
 

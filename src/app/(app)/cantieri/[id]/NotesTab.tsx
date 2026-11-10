@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { CloudRain, Loader2, RefreshCw, Send, Sparkles, Sun, Trash2 } from "lucide-react";
+import { CloudRain, Loader2, Pencil, RefreshCw, Send, Sparkles, Sun, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatShortDate } from "@/components/sites/site-ui";
@@ -58,7 +58,7 @@ export function InsightsCard({ data, compact }: { data: SiteData; compact?: bool
         <p className="flex items-center gap-1.5 font-semibold">
           <Sparkles className="h-4 w-4 text-primary" /> Consigli per questo cantiere
         </p>
-        {data.site.status === "active" && data.phases.length > 0 && (
+        {data.site.status === "active" && !data.site.archivedAt && data.phases.length > 0 && (
           <button onClick={refresh} disabled={loading} className="rounded-md p-1.5 text-muted-foreground hover:bg-accent" aria-label="Rigenera consigli" title="Rigenera">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
           </button>
@@ -103,19 +103,41 @@ export function InsightsCard({ data, compact }: { data: SiteData; compact?: bool
   );
 }
 
-export function NotesTab({ data, canManage, userName }: { data: SiteData; canManage: boolean; userName: string }) {
+export function NotesTab({
+  data,
+  canManage,
+  userName,
+  userId,
+  isAdmin,
+}: {
+  data: SiteData;
+  canManage: boolean;
+  userName: string;
+  userId: string;
+  isAdmin: boolean;
+}) {
   const siteId = data.site.id;
   const [body, setBody] = useState("");
+  const [editing, setEditing] = useState<string | null>(null);
   const add = useSiteMutation<string>(
     siteId,
     (text) => siteRequest("POST", `/api/sites/${siteId}/notes`, { body: text }),
-    (d, text) => ({ ...d, notes: [{ id: `tmp-${Date.now()}`, body: text, createdAt: new Date().toISOString(), userName }, ...d.notes] })
+    (d, text) => ({
+      ...d,
+      notes: [{ id: `tmp-${Date.now()}`, body: text, createdAt: new Date().toISOString(), updatedAt: null, userId, userName }, ...d.notes],
+    })
+  );
+  const edit = useSiteMutation<{ id: string; body: string }>(
+    siteId,
+    ({ id, body }) => siteRequest("PATCH", `/api/sites/${siteId}/notes/${id}`, { body }),
+    (d, { id, body }) => ({ ...d, notes: d.notes.map((n) => (n.id === id ? { ...n, body, updatedAt: new Date().toISOString() } : n)) })
   );
   const remove = useSiteMutation<string>(
     siteId,
     (id) => siteRequest("DELETE", `/api/sites/${siteId}/notes/${id}`),
     (d, id) => ({ ...d, notes: d.notes.filter((n) => n.id !== id) })
   );
+  const fmt = (iso: string) => new Date(iso).toLocaleString("it-IT", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
   return (
     <div className="grid gap-4 lg:grid-cols-5">
@@ -149,26 +171,70 @@ export function NotesTab({ data, canManage, userName }: { data: SiteData; canMan
         )}
         <div className="surface divide-y !p-0">
           {data.notes.length === 0 && <p className="px-4 py-8 text-center text-sm text-muted-foreground">Nessuna nota.</p>}
-          {data.notes.map((n) => (
-            <div key={n.id} className="group px-4 py-3">
-              <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                <span>
-                  {n.userName ?? "—"} ·{" "}
-                  {new Date(n.createdAt).toLocaleString("it-IT", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
-                </span>
-                {canManage && !n.id.startsWith("tmp-") && (
-                  <button
-                    onClick={() => confirm("Eliminare la nota?") && remove.mutate(n.id)}
-                    className="rounded p-1 hover:bg-red-500/10 hover:text-red-600 md:opacity-0 md:group-hover:opacity-100"
-                    aria-label="Elimina nota"
+          {data.notes.map((n) => {
+            const mine = canManage && !n.id.startsWith("tmp-") && (n.userId === userId || isAdmin);
+            return (
+              <div key={n.id} className="group px-4 py-3">
+                <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                  <span>
+                    {n.userName ?? "—"} · {fmt(n.createdAt)}
+                    {n.updatedAt && <span title={`Modificata il ${fmt(n.updatedAt)}`}> · modificata</span>}
+                  </span>
+                  {mine && editing !== n.id && (
+                    <span className="flex gap-0.5 md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100">
+                      <button onClick={() => setEditing(n.id)} className="rounded p-1 hover:bg-accent hover:text-foreground" aria-label="Modifica nota">
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={() => confirm("Eliminare la nota?") && remove.mutate(n.id)}
+                        className="rounded p-1 hover:bg-red-500/10 hover:text-red-600"
+                        aria-label="Elimina nota"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </span>
+                  )}
+                </div>
+                {editing === n.id ? (
+                  <form
+                    className="mt-2 space-y-2"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const text = String(new FormData(e.currentTarget).get("body") ?? "").trim();
+                      if (text && text !== n.body) edit.mutate({ id: n.id, body: text });
+                      setEditing(null);
+                    }}
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                    <textarea
+                      name="body"
+                      defaultValue={n.body}
+                      autoFocus
+                      onFocus={(e) => {
+                        const end = e.currentTarget.value.length;
+                        e.currentTarget.setSelectionRange(end, end);
+                      }}
+                      rows={Math.min(8, Math.max(3, n.body.split("\n").length + 1))}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) e.currentTarget.form?.requestSubmit();
+                        if (e.key === "Escape") setEditing(null);
+                      }}
+                      className="w-full resize-y rounded-xl border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+                    />
+                    <div className="flex justify-end gap-1.5">
+                      <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(null)}>
+                        Annulla
+                      </Button>
+                      <Button type="submit" size="sm">
+                        Salva
+                      </Button>
+                    </div>
+                  </form>
+                ) : (
+                  <p className="mt-1 whitespace-pre-wrap text-sm">{n.body}</p>
                 )}
               </div>
-              <p className="mt-1 whitespace-pre-wrap text-sm">{n.body}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
       <div className="lg:col-span-2">

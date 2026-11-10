@@ -6,12 +6,12 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { addWorkdays, isoDay, toDay } from "@/lib/sites/metrics";
+import { addWorkdays, isoDay, nextWorkday, toDay } from "@/lib/sites/metrics";
 import { siteKey, siteRequest, type SiteData } from "./site-api";
 
 // Tempi e costi del cantiere: inizio/fine lavori, costo di un giorno di
 // cantiere, penale, margine atteso. Con la sola data di inizio, la fine viene
-// proposta dalla somma delle durate delle fasi (giorni lavorativi).
+// proposta dalla somma delle durate delle fasi (giorni lavorativi, festività escluse).
 
 export function SiteSettingsDialog({ data, open, onOpenChange }: { data: SiteData; open: boolean; onOpenChange: (o: boolean) => void }) {
   const qc = useQueryClient();
@@ -26,7 +26,7 @@ export function SiteSettingsDialog({ data, open, onOpenChange }: { data: SiteDat
     marginPct: s.marginPct.toString(),
   }));
   const totalDays = data.phases.reduce((a, p) => a + (p.durationDays ?? 1), 0);
-  const suggestedEnd = form.startDate && totalDays > 0 ? isoDay(addWorkdays(toDay(form.startDate), totalDays - 1)) : null;
+  const suggestedEnd = form.startDate && totalDays > 0 ? isoDay(addWorkdays(nextWorkday(toDay(form.startDate)), totalDays - 1)) : null;
 
   const num = (v: string) => (v.trim() === "" ? null : Number(v.replace(",", ".")));
 

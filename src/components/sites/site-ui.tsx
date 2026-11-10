@@ -91,3 +91,33 @@ export function siteTitle(name: string) {
   const s = name.replace(/\s+/g, " ").trim();
   return s === s.toUpperCase() ? s.charAt(0) + s.slice(1).toLowerCase() : s;
 }
+
+/** Foto di cantiere ridimensionata da Cloudinary (formato e qualità automatici). */
+export function photoUrl(url: string, width: number, square = false) {
+  const t = square ? `f_auto,q_auto,w_${width},h_${width},c_fill,g_auto` : `f_auto,q_auto,w_${width},c_limit`;
+  return url.includes("/upload/") ? url.replace("/upload/", `/upload/${t}/`) : url;
+}
+
+/**
+ * Prepara una foto per l'invio: lato lungo al massimo 2.000 px, JPEG. Una foto
+ * da telefono (5–12 MB) diventa ~0,5–1 MB: entra nel limite del server e si
+ * carica in fretta anche in cantiere. Se il browser non sa leggerla (es. HEIC
+ * su Chrome) restituisce null.
+ */
+export async function preparePhoto(file: File, maxSide = 2000): Promise<Blob | null> {
+  try {
+    const bmp = await createImageBitmap(file, { imageOrientation: "from-image" });
+    const scale = Math.min(1, maxSide / Math.max(bmp.width, bmp.height));
+    const w = Math.round(bmp.width * scale), h = Math.round(bmp.height * scale);
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    ctx.drawImage(bmp, 0, 0, w, h);
+    bmp.close();
+    return await new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/jpeg", 0.82));
+  } catch {
+    return null;
+  }
+}

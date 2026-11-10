@@ -120,6 +120,13 @@
       "when": 1791981947692,
       "tag": "0016_sites",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1794321953631,
+      "tag": "0017_sites_archive_photos",
+      "breakpoints": true
     }
   ]
 }

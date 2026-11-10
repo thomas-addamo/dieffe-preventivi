@@ -38,6 +38,9 @@ const ACTION_LABELS: Record<string, string> = {
   "quote.reassigned": "Preventivo riassegnato",
   "quote.locked": "Preventivo bloccato",
   "quote.unlocked": "Preventivo sbloccato",
+  site_completed: "Lavori conclusi (cantiere archiviato)",
+  site_reopened: "Cantiere riaperto",
+  site_deleted: "Cantiere eliminato definitivamente",
 };
 
 function fmtAction(action: string) {

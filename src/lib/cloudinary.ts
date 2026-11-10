@@ -13,14 +13,14 @@ export async function uploadToCloudinary(
   buffer: Buffer,
   folder: string,
   publicId: string
-): Promise<{ publicId: string; url: string }> {
+): Promise<{ publicId: string; url: string; width?: number; height?: number }> {
   return new Promise((resolve, reject) => {
     cloudinary.uploader
       .upload_stream(
         { folder, public_id: publicId, resource_type: "image" },
         (err, result) => {
           if (err || !result) return reject(err ?? new Error("Upload fallito"));
-          resolve({ publicId: result.public_id, url: result.secure_url });
+          resolve({ publicId: result.public_id, url: result.secure_url, width: result.width, height: result.height });
         }
       )
       .end(buffer);

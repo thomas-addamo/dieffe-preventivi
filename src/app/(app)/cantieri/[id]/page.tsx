@@ -6,7 +6,7 @@ import { can } from "@/lib/permissions/check";
 import type { UserRole } from "@/lib/permissions/types";
 import { CantiereClient } from "./CantiereClient";
 import type { SiteData } from "./site-api";
-import { FEATURES } from "@/lib/features";
+import { sitesEnabledFor } from "@/lib/features";
 import { SitesMaintenance } from "@/components/sites/SitesMaintenance";
 
 export default async function CantierePage({
@@ -18,11 +18,11 @@ export default async function CantierePage({
 }) {
   const session = await getCurrentUser();
   if (!session) redirect("/login");
-  if (!FEATURES.sites) return <SitesMaintenance />;
+  if (!sitesEnabledFor(session.user.role)) return <SitesMaintenance />;
 
   const [{ id }, { tab }] = await Promise.all([params, searchParams]);
   const detail = await getSiteDetail(id);
-  // Cantiere concluso (eliminato) o mai esistito: si torna alla dashboard.
+  // Cantiere eliminato o mai esistito.
   if (!detail) notFound();
 
   const initial = JSON.parse(JSON.stringify({ ...detail, insightsStale: needsInsights(detail) })) as SiteData;
@@ -32,6 +32,8 @@ export default async function CantierePage({
       initialTab={tab}
       canManage={can.manageSites(session.user.role as UserRole)}
       userName={session.user.name}
+      userId={session.user.id}
+      isAdmin={session.user.role === "admin"}
     />
   );
 }

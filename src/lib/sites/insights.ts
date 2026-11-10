@@ -67,7 +67,7 @@ Regole:
 - Date in italiano (es. "24 set", "7 dic"), importi in euro all'italiana (es. "80.000 €").`;
 
 export function needsInsights(d: SiteDetail, force = false): boolean {
-  if (d.site.status !== "active" || d.phases.length === 0) return false;
+  if (d.site.status !== "active" || d.site.archivedAt || d.phases.length === 0) return false;
   const at = d.site.aiInsightsAt ? new Date(d.site.aiInsightsAt).getTime() : 0;
   if (force) return Date.now() - at > 2 * 60_000;
   return d.site.aiInsightsHash !== fingerprint(d) && Date.now() - at > MIN_INTERVAL;

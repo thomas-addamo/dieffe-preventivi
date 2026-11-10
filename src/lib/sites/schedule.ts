@@ -2,11 +2,12 @@ import "server-only";
 import { eq, asc } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { sites, sitePhases } from "@/lib/db/schema";
-import { addWorkdays, isoDay, toDay } from "./metrics";
+import { addWorkdays, isoDay, nextWorkday, toDay } from "./metrics";
 
 /**
  * Distribuisce le fasi in sequenza dalla data di inizio lavori, in giorni
- * lavorativi, e (se non impostata) propone la data di fine prevista.
+ * lavorativi (festività escluse), e (se non impostata) propone la data di
+ * fine prevista.
  * Un'unica scrittura per fase, solo dove le date cambiano.
  */
 export async function schedulePhases(siteId: string, opts: { setPlannedEnd?: boolean } = {}) {
@@ -23,7 +24,7 @@ export async function schedulePhases(siteId: string, opts: { setPlannedEnd?: boo
     .where(eq(sitePhases.siteId, siteId))
     .orderBy(asc(sitePhases.orderIndex));
 
-  let cursor = toDay(site.startDate);
+  let cursor = nextWorkday(toDay(site.startDate));
   let lastEndDay: number | null = null;
   const updates = [];
   for (const p of phases) {

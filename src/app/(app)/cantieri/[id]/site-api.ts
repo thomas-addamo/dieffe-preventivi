@@ -17,6 +17,7 @@ export type SiteData = Jsonify<SiteDetail> & { insightsStale: boolean };
 export type Phase = SiteData["phases"][number];
 export type Milestone = SiteData["milestones"][number];
 export type SiteEventRow = SiteData["events"][number];
+export type SitePhotoRow = SiteData["photos"][number];
 
 export const siteKey = (id: string) => ["site", id] as const;
 

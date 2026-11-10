@@ -89,15 +89,55 @@ export function isoDay(dayNumber: number): string {
   return `${y}-${m}-${dd}`;
 }
 
-/** Aggiunge giorni lavorativi (lun–ven) a un giorno di calendario. */
+/** Domenica di Pasqua (calendario gregoriano, algoritmo di Meeus/Butcher). */
+function easterDay(year: number): number {
+  const a = year % 19, b = Math.floor(year / 100), c = year % 100;
+  const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4), k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const dayOfMonth = ((h + l - 7 * m + 114) % 31) + 1;
+  return Date.UTC(year, month - 1, dayOfMonth) / DAY;
+}
+
+/** Festività nazionali fisse (mese-giorno). */
+const FIXED_HOLIDAYS = new Set(["01-01", "01-06", "04-25", "05-01", "06-02", "08-15", "11-01", "12-08", "12-25", "12-26"]);
+const holidayCache = new Map<number, number>();
+
+/** Festività nazionale italiana (compreso il Lunedì dell'Angelo)? */
+export function isHoliday(day: number): boolean {
+  const iso = isoDay(day);
+  if (FIXED_HOLIDAYS.has(iso.slice(5))) return true;
+  const year = Number(iso.slice(0, 4));
+  let easter = holidayCache.get(year);
+  if (easter == null) holidayCache.set(year, (easter = easterDay(year)));
+  return day === easter + 1;
+}
+
+/** Giorno lavorativo: dal lunedì al venerdì, festività escluse. */
+export function isWorkday(day: number): boolean {
+  const wd = new Date(day * DAY).getUTCDay();
+  return wd !== 0 && wd !== 6 && !isHoliday(day);
+}
+
+/** Aggiunge giorni lavorativi (lun–ven, festività escluse) a un giorno di calendario. */
 export function addWorkdays(day: number, workdays: number): number {
   let d = day;
   let left = Math.max(0, workdays);
   while (left > 0) {
     d += 1;
-    const wd = new Date(d * 86_400_000).getUTCDay();
-    if (wd !== 0 && wd !== 6) left -= 1;
+    if (isWorkday(d)) left -= 1;
   }
+  return d;
+}
+
+/** Il primo giorno lavorativo da `day` in poi (le fasi non iniziano di sabato o a Natale). */
+export function nextWorkday(day: number): number {
+  let d = day;
+  while (!isWorkday(d)) d += 1;
   return d;
 }
 

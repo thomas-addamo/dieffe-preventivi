@@ -3,8 +3,9 @@ import { requireSite } from "@/lib/sites/guard";
 import { completeSite } from "@/lib/sites/complete";
 
 /**
- * Lavori conclusi: elimina il cantiere con tutti i suoi dati (fasi, SAL,
- * eventi, note). I preventivi restano, segnati come "lavori conclusi".
+ * Lavori conclusi: il cantiere va in archivio con tutti i suoi dati (fasi,
+ * SAL, calendario, diario, foto) e si può riaprire. I preventivi restano,
+ * segnati come "lavori conclusi".
  */
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

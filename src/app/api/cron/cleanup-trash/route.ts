@@ -5,7 +5,8 @@ import { lt, isNotNull, and, eq, sql } from "drizzle-orm";
 import { deleteCloudinaryFolder } from "@/lib/cloudinary";
 import { moveLegacySignatures } from "@/lib/signatures";
 import { runSitesMaintenance } from "@/lib/sites/maintenance";
-import { FEATURES } from "@/lib/features";
+import { SITES_BACKGROUND } from "@/lib/features";
+import { deleteSitePhotosOfQuote } from "@/lib/sites/complete";
 
 export const maxDuration = 60;
 
@@ -30,6 +31,7 @@ export async function GET(req: Request) {
 
   for (const quote of expiredQuotes) {
     await deleteCloudinaryFolder(`dieffe-preventivi/${quote.id}`).catch(() => {});
+    await deleteSitePhotosOfQuote(quote.id).catch(() => {});
     await db.delete(quotes).where(eq(quotes.id, quote.id));
   }
 
@@ -56,8 +58,8 @@ export async function GET(req: Request) {
   const movedSignatures = await moveLegacySignatures().catch(() => 0);
 
   // Gestione cantieri: allineamento, SAL che scattano, promemoria del giorno
-  // dopo, chiusura (= eliminazione) dei cantieri finiti e fatturati.
-  const sitesReport = FEATURES.sites
+  // dopo, archiviazione dei cantieri finiti e fatturati.
+  const sitesReport = SITES_BACKGROUND
     ? await runSitesMaintenance(Date.now() + 40_000).catch((err) => ({
         error: err instanceof Error ? err.message : String(err),
       }))

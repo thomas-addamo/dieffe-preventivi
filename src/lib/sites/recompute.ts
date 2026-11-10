@@ -6,6 +6,7 @@ import { notifyUsers } from "@/lib/notifications";
 import { formatCurrency } from "@/lib/utils";
 import { computeProgress, milestoneAmount, toDay } from "./metrics";
 import { getSiteQuotes } from "./queries";
+import { FEATURES } from "@/lib/features";
 
 /**
  * Ricalcola avanzamento e SAL raggiunti di un cantiere dopo ogni modifica.
@@ -15,15 +16,16 @@ import { getSiteQuotes } from "./queries";
  *    il SAL torna indietro, ma solo finché non è stato fatturato.
  * I SAL appena raggiunti generano la notifica "da fatturare" (campanella +
  * push su tutti i dispositivi) al titolare del preventivo e agli admin.
- * Scrive solo ciò che cambia.
+ * Scrive solo ciò che cambia. Restituisce se tutte le fasi sono completate
+ * (l'interfaccia propone allora di concludere i lavori).
  */
-export async function recomputeSite(siteId: string, opts: { notify?: boolean } = {}) {
+export async function recomputeSite(siteId: string, opts: { notify?: boolean } = {}): Promise<{ allDone: boolean }> {
   const [[site], phases, milestones] = await Promise.all([
     db.select().from(sites).where(eq(sites.id, siteId)).limit(1),
     db.select({ id: sitePhases.id, weight: sitePhases.weight, doneAt: sitePhases.doneAt }).from(sitePhases).where(eq(sitePhases.siteId, siteId)),
     db.select().from(siteMilestones).where(eq(siteMilestones.siteId, siteId)),
   ]);
-  if (!site) return;
+  if (!site) return { allDone: false };
 
   const progress = Math.round(computeProgress(phases) * 10) / 10;
   const doneIds = new Set(phases.filter((p) => p.doneAt).map((p) => p.id));
@@ -36,6 +38,7 @@ export async function recomputeSite(siteId: string, opts: { notify?: boolean } =
     if (m.trigger === "manual") continue;
     const reached =
       site.status === "active" &&
+      !site.archivedAt &&
       (m.trigger === "accept" ||
         (m.trigger === "start" && started) ||
         (m.trigger === "phase" && !!m.phaseId && doneIds.has(m.phaseId)) ||
@@ -53,21 +56,23 @@ export async function recomputeSite(siteId: string, opts: { notify?: boolean } =
   if (writes.length) await db.batch(writes as [(typeof writes)[number], ...typeof writes]);
 
   if (opts.notify !== false && reachedNow.length) {
-    const [owner] = await db.select({ userId: quotes.userId }).from(quotes).where(eq(quotes.id, site.mainQuoteId)).limit(1);
-    const admins = await db
-      .select({ id: users.id })
-      .from(users)
-      .where(and(eq(users.role, "admin"), eq(users.disabled, false)));
-    const siteQuotes = await getSiteQuotes(siteId);
+    const [[owner], admins, siteQuotes] = await Promise.all([
+      db.select({ userId: quotes.userId }).from(quotes).where(eq(quotes.id, site.mainQuoteId)).limit(1),
+      db.select({ id: users.id }).from(users).where(and(eq(users.role, "admin"), eq(users.disabled, false))),
+      getSiteQuotes(siteId),
+    ]);
     const net = new Map(siteQuotes.map((q) => [q.id, q.net]));
     const main = siteQuotes.find((q) => q.id === site.mainQuoteId)?.net ?? 0;
     const items = milestones.filter((m) => reachedNow.includes(m.id));
     const total = items.reduce((s, m) => s + milestoneAmount(m, net, main), 0);
-    await notifyUsers([owner?.userId ?? "", ...admins.map((r) => r.id)], {
+    // Durante la prova riservata agli admin, il titolare non-admin non vedrebbe la pagina.
+    const recipients = FEATURES.sites.web === "all" ? [owner?.userId ?? "", ...admins.map((r) => r.id)] : admins.map((r) => r.id);
+    await notifyUsers(recipients, {
       type: "site",
       title: `SAL da fatturare · ${site.name}`,
       body: `${items.map((m) => m.label).join(", ")}: ${formatCurrency(total)} + IVA`,
       link: `/cantieri/${siteId}?tab=sal`,
     });
   }
+  return { allDone };
 }

@@ -8,6 +8,7 @@ import { getSiteDetail } from "@/lib/sites/queries";
 import { needsInsights } from "@/lib/sites/insights";
 import { schedulePhases } from "@/lib/sites/schedule";
 import { recomputeSite } from "@/lib/sites/recompute";
+import { purgeSite } from "@/lib/sites/complete";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -56,4 +57,16 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
 
   const detail = await getSiteDetail(id);
   return NextResponse.json({ ...detail, insightsStale: detail ? needsInsights(detail) : false });
+}
+
+/** Eliminazione definitiva (solo admin, solo cantieri in archivio). */
+export async function DELETE(_req: NextRequest, { params }: Ctx) {
+  const { id } = await params;
+  const auth = await requireSite(id, true, { allowArchived: true });
+  if ("error" in auth) return auth.error;
+  if (auth.session.user.role !== "admin") {
+    return NextResponse.json({ error: "Solo un amministratore può eliminare un cantiere" }, { status: 403 });
+  }
+  const res = await purgeSite(id, auth.session.user.id);
+  return res.ok ? NextResponse.json({ ok: true }) : NextResponse.json({ error: res.error }, { status: 409 });
 }
