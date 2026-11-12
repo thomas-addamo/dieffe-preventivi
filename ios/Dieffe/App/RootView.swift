@@ -32,7 +32,7 @@ struct RootView: View {
             }
             .badge(model.home.data?.trashCount.flatMap { $0 > 0 && model.canEdit ? $0 : nil } ?? 0)
         }
-        .tabBarMinimizeBehavior(.onScrollDown)
+        .tabBarMinimizeBehavior(.never)
         .sheet(isPresented: $model.showNewQuote, onDismiss: model.openPendingQuote) {
             NewQuoteView()
         }
