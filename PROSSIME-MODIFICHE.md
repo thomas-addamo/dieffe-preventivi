@@ -4,13 +4,30 @@
 > Ogni sessione lo legge **per intero** prima di iniziare e lo aggiorna quando prende in carico o chiude una voce.
 > Schermate di riferimento: `docs/prossime-modifiche/`.
 
+### Quadro d'insieme (aggiornato al 2026-11-21)
+| Voce | Cosa | Stato | Versione |
+|---|---|---|---|
+| A1 | Riepilogo che non scorre | ✅ Fatto, verificato in produzione | 4.6.1 |
+| A2 | Togliere "Riassegna" | ✅ Fatto, verificato in produzione | 4.6.2 |
+| A3 | Tasto "Vai al cantiere" | ✅ Fatto, verificato in produzione | 4.7.0 |
+| A4 | Archivio cantieri su iPhone | ✅ Fatto, verificato sul simulatore | 4.7.0 |
+| A5 | SAL e avanzamenti | ✅ Fatto; collegamento SAL ↔ fase da provare a mano | 4.7.0 + 4.7.1 |
+| A6 | Barra del preventivo compatta | ✅ Fatto, verificato in produzione | 4.7.0 |
+| A7 | SAL per ogni preventivo (anche extra) | 🧪 In test: online, da confermare con l'utente | 4.8.0 |
+| A8 | Stato cantiere "Da avviare" | 🧪 Pronto, **non ancora pubblicato** | 4.8.1 |
+| B1 | Blocco automatico dei preventivi | 🧪 In test: online, verificato in parte | 4.8.0 (+ correzioni in 4.8.1) |
+| B2 | Correzione automatica con IA | 🧪 In test: online, da provare nell'uso reale | 4.8.0 |
+| B3 | Documenti PDF nel cantiere | 🧪 In test: l'apertura dei PDF si corregge in 4.8.1 | 4.8.0 (+ 4.8.1) |
+| C1–C3 | Restyling | 📋 Da fare (prima i mockup) | — |
+| D1 | Sopralluogo con IA vocale | 📋 Da fare (prima lo studio) | — |
+
 ---
 
 ## 0. Regole per tutte le sessioni
 
 ### 0.1 Come si lavora una voce
 1. Leggi tutto il file: cosa è in programma, cosa è già in lavorazione, le decisioni prese (§5).
-2. Prendi **la prima voce `📋 Da fare` della fase più alta** in ordine, salvo diversa indicazione dell'utente.
+2. Prendi **la prima voce `📋 Da fare` della prima fase non ancora completata** (A → B → C → D), salvo diversa indicazione dell'utente.
 3. Segna la voce `🔧 In corso`, con branch e data.
 4. **Fai l'analisi del database del §0.3 prima di progettare** e scrivine il risultato nel campo "Analisi DB" della voce.
 5. Studia il codice indicato in "Dove". Se la voce richiede scelte di design o di prodotto, **proponi all'utente prima di implementare**, includendo l'analisi DB.
@@ -129,6 +146,8 @@ Da fare per prime: sono bug che bloccano il lavoro o modifiche piccole e già ch
 - **Test specifici:** preventivo con cantiere, senza cantiere e in bozza; ritorno indietro corretto su iPhone.
 - **Analisi DB:** 37 preventivi vivi, 23 con `site_id`, 22 cantieri (16 in corso, 6 conclusi). Il tasto legge `quotes.site_id` + `sites` con una join per chiave primaria (indici `quotes_site_id_idx`, pk): costo trascurabile, nessun indice nuovo. Solo se un preventivo inviato/accettato non ha ancora il cantiere si esegue subito `syncSites()` (una transazione).
 - **Esito:** Nuova API `GET /api/quotes/:id/site` (`src/lib/sites/quote-site.ts`), usata da sito e iPhone. Sito/desktop: tasto **Cantiere** nella barra (da tablet in su) e voce **Vai al cantiere** nel menu ⋯ su telefono; senza cantiere il tasto spiega come nasce. Cambiando stato in Inviato/Accettato il tasto si aggiorna da solo. iPhone: voce **Vai al cantiere** in testa al menu Azioni dell'editor; il cantiere si apre in un foglio sopra il preventivo e «Fine» torna all'editor.
+  - **Verifica in produzione (4.7.0):** sito a 1440 px, PREV-2026-007 → tasto Cantiere apre il cantiere giusto; iPhone 18 Pro (simulatore), PREV-2026-006 → «Vai al cantiere» apre il cantiere sopra l'editor e la freccia torna al preventivo. ✅
+  - **Non verificato:** preventivo in bozza senza cantiere (messaggio di spiegazione), utente non admin.
 
 ### A4. iPhone: mostrare i lavori archiviati e finiti  _(#9)_
 - **Stato:** ✅ Fatto in 4.7.0 (2026-11-21, branch `claude/project-changes-documentation-e7b724`)
@@ -138,6 +157,7 @@ Da fare per prime: sono bug che bloccano il lavoro o modifiche piccole e già ch
 - **Test specifici:** gli stessi conteggi su macOS e iPhone; si apre un lavoro archiviato; i filtri restano dopo il riavvio dell'app.
 - **Analisi DB:** Nessun impatto: l'archivio usa già `GET /api/sites/archive` (6 cantieri conclusi, 0 ritirati).
 - **Esito:** Causa: il filtro **Archivio** esisteva ma era il 4° chip, fuori dallo schermo a destra e sotto mappa, KPI e consigli: di fatto invisibile. Ora: tasto **Archivio** fisso in alto a destra nella sezione Cantieri; in archivio si vede subito l'elenco (mappa e panoramica nascoste); il chip selezionato scorre in vista; il filtro scelto resta dopo il riavvio (`UserDefaults sites.filter`). I preventivi archiviati erano già visibili dal chip «Archiviati» della Home.
+  - **Verifica (simulatore iPhone 18 Pro, dati di produzione):** un tocco sul tasto Archivio mostra subito i 6 cantieri conclusi. ✅ Installata sull'iPhone di Thomas.
 
 ### A5. SAL e avanzamenti del cantiere: studio e correzione dei bug  _(#8)_
 - **Stato:** ✅ Fatto in 4.7.0 (2026-11-21, branch `claude/project-changes-documentation-e7b724`)
@@ -157,6 +177,8 @@ Da fare per prime: sono bug che bloccano il lavoro o modifiche piccole e già ch
   4. **SAL «a fine fase» e fase non erano collegati nei due sensi**: ora segnare raggiunto (o fatturare) il SAL completa la fase, annullarlo la riapre.
   5. **Pallini non cliccabili**: ora si cliccano per i SAL a mano e a fine fase (con tooltip); per gli altri il tooltip spiega quando scattano.
   6. Le card dei totali si aggiornano subito, senza aspettare il server.
+  7. **(4.7.1)** I SAL fatturati o incassati con dati vecchi risultavano «non ancora raggiunto»: ora il dettaglio li mostra raggiunti (verificato in produzione sul cantiere Palazzina Nasi). ✅
+  - **Da provare a mano** (non fatto per non modificare dati veri): segnare raggiunto un SAL «a fine fase» e controllare che la fase si completi, poi annullare. Il SAL «Metà lavori» del cantiere Balconi, segnato per errore, torna a posto alla prima modifica di quel cantiere.
 
 ### A6. Barra dei tasti del preventivo che esce dalla pagina  _(#13, aggiunta il 2026-11-21)_
 - **Stato:** ✅ Fatto in 4.7.0 (2026-11-21, branch `claude/project-changes-documentation-e7b724`)
@@ -177,14 +199,16 @@ Da fare per prime: sono bug che bloccano il lavoro o modifiche piccole e già ch
   - nessuno scorrimento orizzontale della pagina.
 - **Analisi DB:** Nessun impatto.
 - **Esito:** Barra da tablet in su: stato, Condividi, Esporta, Cantiere e menu **⋯ Altre azioni** (Lavoro extra, Duplica, Blocca/Sblocca, Elimina). Compattazione automatica misurando lo spazio reale (ResizeObserver con isteresi, non breakpoint): quando non ci sta, i tasti restano solo icone con tooltip. Telefono invariato (menu ⋯). Scorciatoie e menu dell'app desktop (`useMenuParam`) invariati.
-
+  - **Verifica in produzione (4.7.0):** PREV-2026-007 con barra laterale aperta: a 1024 px solo icone (3 etichette nascoste), a 1280 e 1440 px etichette complete; mai scorrimento orizzontale. ✅
+  - **Dalla 4.8.0** il menu ⋯ contiene anche «Riblocca» / «Richiedi sblocco» (vedi B1).
+  - **Non verificato:** 1920 px, utente con pochi permessi, app desktop Electron.
 
 ### A7. iPhone: aggiungere i SAL (stato avanzamento lavori) per ogni preventivo  _(#14, aggiunta il 2026-11-21)_
-- **Stato:** 🧪 In test — 4.8.0 (2026-11-21, branch `claude/project-changes-documentation-e7b724`): da verificare in produzione
-- **Piattaforme:** iPhone (allineare al sito)
+- **Stato:** 🧪 In test — online dalla 4.8.0 (2026-11-21, branch `claude/project-changes-documentation-e7b724`): **confermare con l'utente** che era questo il problema
+- **Piattaforme:** sito · desktop · iPhone
 - **Cosa:** su iPhone non si riesce ad aggiungere lo stato avanzamento lavori per ciascun preventivo. Da verificare con l'utente cosa manca esattamente; ipotesi emerse dal codice:
   - oggi né sito né iPhone permettono di scegliere **a quale preventivo** (principale o lavoro extra) appartiene un SAL aggiunto a mano: la percentuale si calcola sempre sul principale (`createEntity` in `src/lib/sites/entities.ts` non riceve `quoteId`);
-  - sui cantieri "in attesa" (preventivo inviato) l'iPhone non mostra la sezione SAL finché il preventivo non è accettato;
+  - ~~sui cantieri "in attesa" l'iPhone non mostra la sezione SAL~~ — verificato: la sezione c'è (ipotesi scartata);
   - dall'editor del preventivo su iPhone non c'è un accesso diretto ai suoi SAL (ora c'è "Vai al cantiere", A3).
 - **Dove:** `ios/Dieffe/Native/Sites/SiteSections.swift` (`MilestoneAddSheet`), `SiteDetailView.swift`, `src/lib/sites/entities.ts` (campo `quoteId` nella creazione), `MilestonesTab.tsx`.
 - **Test specifici:** SAL a percentuale su un lavoro extra (importo calcolato sull'extra, non sul principale); SAL aggiunto da iPhone visibile sul sito e viceversa; cantiere in attesa.
@@ -192,12 +216,14 @@ Da fare per prime: sono bug che bloccano il lavoro o modifiche piccole e già ch
 - **Esito:** Aggiungendo un SAL si sceglie il preventivo (principale o lavoro extra) su cui calcolare la percentuale: sito (tendina, che compare solo con più preventivi) e iPhone (selettore nel foglio «Nuovo SAL», ora anche a tutta altezza). Il server verifica che il preventivo appartenga al cantiere. Sul sito i SAL di un extra mostrano il suo numero.
 
 ### A8. Stato del cantiere che resta "Da avviare"  _(#15, aggiunta il 2026-11-21, priorità alta)_
-- **Stato:** 🧪 In test — 4.8.1 (2026-11-21, branch `claude/project-changes-documentation-e7b724`)
+- **Stato:** 🧪 Pronto in 4.8.1 — **non ancora pubblicato** (2026-11-21, branch `claude/project-changes-documentation-e7b724`)
 - **Piattaforme:** sito · desktop · iPhone (lo stato lo calcola il server)
 - **Cosa:** ogni cantiere, anche avviato e avanzato, dice "Da avviare". Lo stato deve aggiornarsi da solo.
 - **Causa:** `computeSiteMetrics` (`src/lib/sites/metrics.ts`) dà "Da avviare" a ogni cantiere senza **data di inizio lavori**, che si inseriva solo a mano in «Tempi e costi»: in produzione nessun cantiere ce l'ha (es. "Ristrutturazione alloggio" al 91% risultava da avviare).
 - **Analisi DB:** 13 cantieri attivi, 0 con `start_date`; 2 aperti con fasi già completate (91,2% e 18,7%). Correzione: una scrittura per cantiere, solo quando cambia.
 - **Esito:** `recomputeSite` imposta da solo la data di inizio (giorno della prima fase completata) se manca, poi mette in calendario le fasi e la fine prevista: lo stato passa a In corso / In ritardo e scattano i SAL «a inizio lavori». In più `computeSiteMetrics`: avanzamento > 0 senza data → «In corso» (mai più «Da avviare» con lavoro fatto; test aggiunto). I cantieri già avviati si sistemano alla prima apertura (`healSiteStart`, sito e API dell'iPhone). La data si può sempre cambiare a mano da «Tempi e costi».
+  - **Non ancora pubblicata** (commit pronto nel branch). Dopo la pubblicazione: aprire "Ristrutturazione alloggio" e "Palazzina Nasi" e controllare che risultino «In corso» o «In ritardo» con la data di inizio impostata.
+
 ---
 
 ## 2. Fase B — Medio termine: nuove funzioni
@@ -211,11 +237,16 @@ Da fare per prime: sono bug che bloccano il lavoro o modifiche piccole e già ch
   | Accettato **e** lavori conclusi | automatico, solo lettura | **solo admin**; gli utenti possono **richiedere lo sblocco** |
   | Rifiutato | automatico, solo lettura | solo admin, su richiesta |
   | Inviato | automatico, solo lettura | **l'utente stesso**, in autonomia |
-- **Note:** esistono già `isLocked`, `lockedBy`, `lockedAt` e le notifiche `quote_locked`/`quote_unlocked` (`src/lib/db/schema.ts`): partire da lì. Serve un flusso "Richiedi sblocco" → notifica all'admin → approva/rifiuta. Da definire con l'utente: cosa vuol dire esattamente "lavori conclusi" (cantiere chiuso? tutte le fasi completate?).
+- **Note:** esistono già `isLocked`, `lockedBy`, `lockedAt` e le notifiche `quote_locked`/`quote_unlocked` (`src/lib/db/schema.ts`): partire da lì. Serve un flusso "Richiedi sblocco" → notifica all'admin → approva/rifiuta. ~~Da definire cosa vuol dire "lavori conclusi"~~ → deciso il 2026-11-21: cantiere chiuso con «Concludi lavori» (vedi §5).
 - **Dove:** `schema.ts`, `src/lib/permissions/`, `src/lib/notifications.ts`, dashboard, `QuoteEditor.tsx`, editor iPhone.
 - **Test specifici:** tutti i passaggi di stato; un utente non può modificare via API un preventivo bloccato (test lato server, non solo interfaccia); richiesta → notifica → sblocco; icona lucchetto visibile in elenco e nell'editor.
 - **Analisi DB:** 37 preventivi vivi: con il blocco automatico 25 diventano sola lettura (9 inviati, 9 rifiutati, 7 accettati con lavori conclusi). Il blocco NON si salva per riga: si calcola da `status`, `works_completed_at`, `is_locked` e dal nuovo `lock_override_at` (4 colonne nuove in `quotes`, nessun indice: si leggono sempre per chiave primaria). Migrazione `0018` provata su un ramo Neon di prova.
 - **Esito:** "Lavori conclusi" = cantiere chiuso con «Concludi lavori» (`works_completed_at`). Regole in `src/lib/quote-lock.ts` (6 test): inviato → lo sblocca chi può modificarlo; rifiutato, lavori conclusi e blocco manuale → solo admin, gli altri usano **Richiedi sblocco** (notifica agli admin, che approvano sbloccando o rifiutano). Lo sblocco vale finché non cambia lo stato o si concludono i lavori, poi si riblocca da solo; c'è anche «Riblocca». Il server rifiuta le modifiche dei non-admin (423); un inviato bloccato può comunque passare ad accettato/rifiutato. Sito: banner con i tasti, lucchetto accanto al codice, editor tutto in sola lettura tramite `QuoteReadOnlyContext`. iPhone: stesso banner e menu (`lock` in GET /api/quotes/:id).
+  - **Verifica in produzione (4.8.0, admin):** sito, PREV-2026-006 (inviato): banner «Preventivo inviato» con Sblocca, lucchetto accanto al codice, titolo, note e descrizioni in sola lettura. ✅ iPhone (simulatore): banner con Sblocca; **Sblocca** rende il preventivo modificabile (`lock_override_at` impostato nel DB) e **Riblocca** dal menu lo riporta bloccato (DB tornato com'era). ✅
+  - **Problemi trovati e corretti in 4.8.1 (non ancora pubblicata):**
+    1. sbloccare e ribloccare un «inviato» mandava una notifica al titolare (2 notifiche di prova arrivate a Riccardo Addamo il 21/11): ora si notificano solo i blocchi e gli sblocchi decisi dall'admin;
+    2. su iPhone il tasto Sblocca non mostrava l'icona del lucchetto (restava uno spazio vuoto): corretto anche per «Richiedi sblocco».
+  - **Non verificato:** il rifiuto lato server (423) per un utente non admin e il flusso «Richiedi sblocco» → notifica → approva/rifiuta: serve un account non admin.
 
 ### B2. Correzione automatica con IA di titoli, note e descrizioni  _(#3)_
 - **Stato:** 🧪 In test — 4.8.0 (2026-11-21, branch `claude/project-changes-documentation-e7b724`): da verificare in produzione
@@ -230,6 +261,7 @@ Da fare per prime: sono bug che bloccano il lavoro o modifiche piccole e già ch
 - **Test specifici:** tempo 1, 3 e 10 s; interruttori spenti → nessuna chiamata; il cursore non salta durante la correzione; numero di chiamate IA per preventivo.
 - **Analisi DB:** Nessun impatto sul DB: le preferenze stanno sul dispositivo; le chiamate IA passano da `/api/ai/proofread` (già esistente) con cache per testo, e solo per testi di almeno 3 parole modificati dall'utente (i testi già salvati non si toccano all'apertura).
 - **Esito:** Correzioni locali sicure (`src/lib/autocorrect-text.ts`, 6 test: maiuscola iniziale anche negli elenchi, spazi doppi, spazi prima/dopo la punteggiatura; cifre, a capo e marcatori intatti) + IA per refusi e grammatica. Il server scarta la correzione se l'IA cambia cifre o marcatori. Si annulla dalla notifica («Annulla») e il testo annullato non viene più ricorretto. Cursore: nei campi semplici resta al suo posto, nelle descrizioni (editor ricco) la correzione si applica uscendo dal campo. Impostazioni → Assistenza alla scrittura: tre interruttori (titolo, descrizioni, note) e attesa 1–10 s (predefinita 3); sostituisce il vecchio interruttore «Miglioramento automatico» che non era collegato a nulla. iPhone: stessi campi e impostazioni in Profilo.
+  - **Non ancora provata nell'uso reale:** scrivere un titolo o una nota, aspettare 3 s e controllare correzione, «Annulla» e numero di chiamate IA (scheda Rete).
 
 ### B3. Allegati PDF nel cantiere  _(#11)_
 - **Stato:** 🧪 In test — 4.8.0 (2026-11-21, branch `claude/project-changes-documentation-e7b724`): da verificare in produzione
@@ -238,7 +270,7 @@ Da fare per prime: sono bug che bloccano il lavoro o modifiche piccole e già ch
 - **Dove:** nuova scheda accanto a `PhotosTab.tsx`; storage come per le foto (`src/lib/cloudinary.ts` o alternativa); `ios/Dieffe/Native/Sites/`.
 - **Test specifici:** PDF grande (20 MB), nome lungo, eliminazione, permessi, apertura offline su iPhone se prevista.
 - **Analisi DB:** Nuova tabella `site_documents` (solo riferimenti, ~200 byte a riga) con indice `(site_id, created_at)`: lettura del dettaglio cantiere 0,03 ms (EXPLAIN ANALYZE sul ramo di prova). I file stanno su Cloudinary (tipo raw), non nel DB.
-- **Esito:** Scheda **Documenti** (sito, desktop, iPhone): PDF fino a 25 MB caricati direttamente su Cloudinary con firma del server (niente limite dei 4,5 MB delle funzioni Vercel), poi registrati dopo una verifica lato server di esistenza e peso. Anteprima nell'app (sito: finestra con il PDF; iPhone: Quick Look, il file resta in cache e si riapre offline), rinomina (sito), eliminazione (autore o admin), trascinamento dei file sul sito. API: `POST /api/sites/:id/documents/sign`, `POST /api/sites/:id/documents`, `PATCH|DELETE /api/sites/:id/documents/:docId`; `documents` nel dettaglio del cantiere. Verifica in produzione (4.8.0): caricamento, registrazione, rifiuto di file di altre cartelle (400) ed eliminazione OK; l'apertura dall'indirizzo pubblico dava 401 («deny or ACL failure»: l'account Cloudinary blocca la consegna dei PDF). Dalla 4.8.1 i PDF si aprono da `GET /api/sites/:id/documents/:docId/file` (link di download firmato, 15 minuti; `?json=1` per l'iPhone). Da verificare: limite reale del piano Cloudinary per i file raw (il gratuito si ferma a 10 MB).
+- **Esito:** Scheda **Documenti** (sito, desktop, iPhone): PDF fino a 25 MB caricati direttamente su Cloudinary con firma del server (niente limite dei 4,5 MB delle funzioni Vercel), poi registrati dopo una verifica lato server di esistenza e peso. Anteprima nell'app (sito: finestra con il PDF; iPhone: Quick Look, il file resta in cache e si riapre offline), rinomina (sito), eliminazione (autore o admin), trascinamento dei file sul sito. API: `POST /api/sites/:id/documents/sign`, `POST /api/sites/:id/documents`, `PATCH|DELETE /api/sites/:id/documents/:docId`; `documents` nel dettaglio del cantiere. Verifica in produzione (4.8.0): caricamento, registrazione, rifiuto di file di altre cartelle (400) ed eliminazione OK; l'apertura dall'indirizzo pubblico dava 401 («deny or ACL failure»: l'account Cloudinary blocca la consegna dei PDF). Dalla 4.8.1 i PDF si aprono da `GET /api/sites/:id/documents/:docId/file` (link di download firmato, 15 minuti; `?json=1` per l'iPhone). La correzione è **pronta ma non ancora pubblicata**. Da verificare dopo la 4.8.1: apertura dell'anteprima su sito e iPhone; limite reale del piano Cloudinary per i file raw (il gratuito si ferma a 10 MB); PDF da 20 MB.
 
 ---
 
@@ -306,6 +338,19 @@ _(scelte condivise che valgono per tutte le modifiche — aggiungere con data)_
 - 2026-11-21 — Ordine di lavoro: Fase A → B → C → D. Dentro ogni fase, nell'ordine scritto.
 - 2026-11-21 — Ogni voce va chiusa solo dopo i test funzionali, grafici, di efficienza e del database del §0.2.
 - 2026-11-21 — Ogni voce parte con l'analisi del database del §0.3, fatta prima della progettazione e mostrata all'utente.
+- 2026-11-21 — "Lavori conclusi" (B1) = cantiere chiuso con «Concludi lavori» (`quotes.works_completed_at`).
+- 2026-11-21 — Il blocco dei preventivi si calcola (stato + lavori conclusi + sblocco manuale), non si salva per riga. Bloccato = sola lettura per tutti; l'admin sblocca con un tocco.
+- 2026-11-21 — Notifiche di blocco/sblocco al titolare solo per le decisioni dell'admin, non per lo sblocco di routine di un «inviato».
+- 2026-11-21 — Inizio lavori automatico (A8): se non è impostato a mano, è il giorno della prima fase completata.
+- 2026-11-21 — I PDF del cantiere si aprono solo con link firmati e a tempo (l'account Cloudinary blocca la consegna pubblica dei PDF: non cambiarla).
+- 2026-11-21 — La 4.8.0 è segnata `important: true`: il blocco automatico cambia il comportamento per tutti.
+
+## 5b. In sospeso (da controllare)
+- **Pubblicazione 4.8.1** (A8, apertura PDF, notifiche di blocco, icona Sblocca su iPhone): commit pronto, serve l'ok dell'utente.
+- **iPhone 17 Pro:** la 4.8.0 non è installata (telefono non raggiungibile alle 14:46); il servizio sul Mac (`agent.sh`) riprova da solo.
+- **Ramo Neon `test-fase-b-migrazione`** (`br-purple-sky-alkvpi0h`): creato per provare la migrazione 0018, da eliminare con l'ok dell'utente.
+- **Account non admin:** serve per provare B1 (rifiuto 423, Richiedi sblocco) e A3 da utente normale.
+- **Due notifiche di prova** («PREV-2026-006 sbloccato/bloccato») arrivate a Riccardo Addamo il 21/11 durante i test di B1.
 
 ## 6. Fatte
 _(spostare qui le voci completate, con versione ed esito)_

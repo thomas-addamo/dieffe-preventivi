@@ -261,8 +261,15 @@ struct QuoteEditorView: View {
                     }
                     HStack(spacing: 10) {
                         if lock.canUnlock {
-                            Button(lock.requestedAt != nil && editor.role == "admin" ? "Approva e sblocca" : "Sblocca", systemImage: "lock.open") {
+                            Button {
                                 Task { await editor.setLocked(false) }
+                            } label: {
+                                // Icona e testo espliciti: con Label lo stile "glass" non mostrava il lucchetto.
+                                HStack(spacing: 6) {
+                                    Image(systemName: "lock.open.fill")
+                                    Text(lock.requestedAt != nil && editor.role == "admin" ? "Approva e sblocca" : "Sblocca")
+                                }
+                                .foregroundStyle(.white)
                             }
                             .buttonStyle(.glassProminent)
                         }
@@ -272,8 +279,14 @@ struct QuoteEditorView: View {
                             }
                             .buttonStyle(.glass)
                         } else if lock.canRequest {
-                            Button("Richiedi sblocco", systemImage: "paperplane") {
+                            Button {
                                 Task { _ = await editor.requestUnlock() }
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "paperplane.fill")
+                                    Text("Richiedi sblocco")
+                                }
+                                .foregroundStyle(.white)
                             }
                             .buttonStyle(.glassProminent)
                         }

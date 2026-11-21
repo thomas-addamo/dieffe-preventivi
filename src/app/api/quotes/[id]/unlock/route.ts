@@ -41,7 +41,9 @@ export async function PATCH(
     )
     .where(eq(quotes.id, id));
 
-  await notifyQuoteLockChanged({
+  // Al titolare si dice solo ciò che non poteva fare da sé: sbloccare un
+  // "inviato" è un gesto di routine e non merita una notifica.
+  if (reason !== "sent") await notifyQuoteLockChanged({
     quoteId: id,
     quoteCode: quote.code,
     ownerUserId: quote.userId,

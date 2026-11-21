@@ -34,7 +34,9 @@ export async function PATCH(
     .set(relock ? { lockOverrideAt: null, lockOverrideBy: null } : { isLocked: true, lockedBy: session.user.id, lockedAt: new Date() })
     .where(eq(quotes.id, id));
 
-  await notifyQuoteLockChanged({
+  // "Riblocca" rimette il blocco automatico: nessuna notifica (solo il blocco
+  // manuale dell'admin si comunica al titolare).
+  if (!relock) await notifyQuoteLockChanged({
     quoteId: id,
     quoteCode: quote.code,
     ownerUserId: quote.userId,
