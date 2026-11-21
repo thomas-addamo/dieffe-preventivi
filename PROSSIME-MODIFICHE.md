@@ -21,6 +21,7 @@
 | B3 | Documenti PDF nel cantiere | 🧪 In test: caricamento e apertura verificati; manca il PDF grande | 4.8.0 → 4.8.2 |
 | C1–C3 | Restyling | 📋 Da fare (prima i mockup) | — |
 | D1 | Sopralluogo con IA vocale | 📋 Da fare (prima lo studio) | — |
+| D2 | iPhone: menu laterale al posto di "Altro" | 📋 Da fare (prima il mockup) | — |
 
 ---
 
@@ -347,6 +348,25 @@ Da fare insieme, per avere un linguaggio visivo coerente. **Proporre all'utente 
 - **Analisi DB:** — _(da fare prima della progettazione, §0.3)_
 - **Esito:** —
 
+
+### D2. iPhone: menu laterale al posto della scheda "Altro"  _(#17, aggiunta il 2026-11-21)_
+- **Stato:** 📋 Da fare — progetto grande: **proporre all'utente un mockup prima di scrivere codice**
+- **Piattaforme:** iPhone (il sito e l'app desktop hanno già la barra laterale)
+- **Cosa:** un menu laterale che si apre **scorrendo dal bordo sinistro** dell'app, come nell'app Claude per iPhone (schermata di riferimento).
+  1. Dentro il menu va **tutto il contenuto della scheda "Altro"**, che va **tolta dalla barra in basso**. Oggi "Altro" (`ios/Dieffe/Native/More/AltroView.swift`) contiene: Profilo (nome, sicurezza, aspetto), Notifiche, Aiuto, App iPhone (Face ID, versione, cache), Gestione Cantieri; sezione Operatività: Lavori extra, Statistiche, Comunicazioni, Cestino; sezione Amministrazione (solo admin): Invia notifica, Utenti, Impostazioni azienda.
+  2. In alto il **logo Dieffe**, al posto del titolo "Claude" dell'esempio.
+  3. Il **tasto del profilo** va in basso a sinistra, come il cerchio "D" dell'esempio; accanto può stare un'azione principale, come "+ Nuova sessione" nell'esempio (da decidere: "+ Nuovo preventivo"?).
+  4. **Vibrazione** (feedback aptico) all'apertura del menu, e alla chiusura se ha senso.
+- **Schermata:** `docs/prossime-modifiche/07-menu-laterale-iphone.webp` (app Claude per iPhone).
+- **Da decidere con l'utente:**
+  - cosa resta nella barra in basso tolto "Altro" (oggi: Home, Clienti, Cantieri, Listino, Altro);
+  - se il menu si apre anche con un tasto (es. icona ☰ in alto a sinistra) oltre al gesto, per chi non conosce lo scorrimento;
+  - come convivono il gesto dal bordo sinistro e il gesto "indietro" di iOS nelle schermate interne (proposta: menu solo dalle schermate principali delle schede);
+  - cosa mostrare nella parte "Recenti" (es. ultimi preventivi e cantieri aperti).
+- **Dove:** `ios/Dieffe/App/RootView.swift` (tab bar e presentazioni), `ios/Dieffe/App/AppModel.swift` (`AppTab`, `altroPath`, `open(_ route:)` che oggi manda alla scheda Altro, `showProfile`), `ios/Dieffe/Native/More/AltroView.swift` (contenuto da spostare), `ios/Dieffe/Native/Home/HomeView.swift` (tasto profilo attuale), collegamenti e notifiche che aprono pagine di "Altro" (`NativeDestination`, `AltroRoute`).
+- **Test specifici:** apertura e chiusura con il gesto e con il tasto; vibrazione; tutte le voci di "Altro" raggiungibili (admin e non admin); collegamenti dalle notifiche e dai link (es. Cestino, Statistiche) che oggi aprono la scheda Altro; gesto "indietro" ancora funzionante; VoiceOver; tema chiaro e scuro; iPhone piccolo e grande.
+- **Analisi DB:** nessun impatto previsto (solo interfaccia iPhone); da confermare se "Recenti" richiede dati nuovi dal server.
+- **Esito:** —
 ---
 
 ## 5. Decisioni prese
@@ -394,3 +414,4 @@ _(spostare qui le voci completate, con versione ed esito)_
 | — | — | 14 | A7 |
 | — | — | 15 | A8 |
 | — | — | 16 | A9 |
+| — | — | 17 | D2 |
