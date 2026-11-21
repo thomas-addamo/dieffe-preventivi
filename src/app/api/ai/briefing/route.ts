@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, desc, eq, gte, isNull, lt } from "drizzle-orm";
+import { and, desc, eq, gte, isNotNull, isNull, lt } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db/client";
 import { clients, notifications, quotes } from "@/lib/db/schema";
@@ -43,7 +43,8 @@ export async function GET(req: NextRequest) {
   const weekAgo = new Date(Date.now() - 7 * DAY).toISOString();
   const base = { id: quotes.id, code: quotes.code, title: quotes.title, clientName: clients.name, updatedAt: quotes.updatedAt, sentAt: quotes.sentAt };
 
-  const [drafts, waiting, signed, unread] = await Promise.all([
+  const today = new Date().toISOString().slice(0, 10);
+  const [drafts, waiting, signed, unread, expired] = await Promise.all([
     // Bozze toccate nell'ultimo mese: "dove eri rimasto".
     db.select(base).from(quotes).leftJoin(clients, eq(quotes.clientId, clients.id))
       .where(and(eq(quotes.userId, user.id), eq(quotes.status, "draft"), isNull(quotes.deletedAt), gte(quotes.updatedAt, since)))
@@ -58,6 +59,9 @@ export async function GET(req: NextRequest) {
       .orderBy(desc(quotes.updatedAt)).limit(2),
     db.select({ id: notifications.id }).from(notifications)
       .where(and(eq(notifications.userId, user.id), isNull(notifications.readAt))).limit(50),
+    // Scaduti ma ancora "inviati" (C1): il dato più utile della dashboard.
+    db.select({ id: quotes.id }).from(quotes)
+      .where(and(eq(quotes.status, "sent"), isNull(quotes.deletedAt), isNotNull(quotes.validUntil), lt(quotes.validUntil, today))),
   ]);
 
   const pending: BriefingItem[] = [
@@ -79,6 +83,7 @@ export async function GET(req: NextRequest) {
       waiting.length ? `Preventivi inviati senza risposta da oltre 7 giorni: ${waiting.map((w) => `"${w.title}"${w.clientName ? ` per ${w.clientName}` : ""}`).join("; ")}.` : "Nessun preventivo da sollecitare.",
       signed.length ? `Accettati questa settimana: ${signed.map((s) => `"${s.title}"`).join("; ")}.` : "",
       unread.length ? `Notifiche non lette: ${unread.length}.` : "",
+      expired.length ? `Preventivi dell'impresa scaduti ma ancora in attesa di risposta: ${expired.length}.` : "",
     ].filter(Boolean).join("\n");
     const system = `Sei l'assistente di Dieffe Preventivi, l'app con cui l'impresa edile Dieffe Ristrutturazioni (Torino) prepara i preventivi.
 Scrivi per la dashboard dell'utente un breve messaggio di benvenuto in italiano, caldo ma professionale, adatto al momento della giornata e al lavoro in un'impresa edile (cantieri, clienti, preventivi). Non ripetere il saluto ("Buongiorno, X" è già mostrato).

@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { ChevronRight, Clock, FileText, PartyPopper, Send, Sparkles } from "lucide-react";
-import type { BriefingItem, BriefingResponse } from "@/app/api/ai/briefing/route";
+import { Sparkles } from "lucide-react";
+import type { BriefingResponse } from "@/app/api/ai/briefing/route";
 import { cn } from "@/lib/utils";
 
 // Benvenuto personalizzato in cima alla dashboard: saluto in base all'ora,
@@ -26,24 +25,6 @@ function greeting(hour: number): string {
   if (hour < 18) return "Buon pomeriggio";
   return "Buonasera";
 }
-
-const REASON: Record<BriefingItem["reason"], { label: (d: number) => string; icon: typeof FileText; cls: string }> = {
-  draft: {
-    label: (d) => (d === 0 ? "Bozza modificata oggi" : `Bozza ferma da ${d} giorn${d === 1 ? "o" : "i"}`),
-    icon: FileText,
-    cls: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
-  },
-  followup: {
-    label: (d) => `Inviato ${d} giorni fa, senza risposta`,
-    icon: Send,
-    cls: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
-  },
-  signed: {
-    label: () => "Accettato questa settimana",
-    icon: PartyPopper,
-    cls: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
-  },
-};
 
 function readCache(key: string): BriefingResponse["ai"] {
   try {
@@ -99,74 +80,33 @@ export function WelcomeBriefing({
   const firstName = userName.trim().split(/\s+/)[0] || userName;
   const pending = data?.pending ?? [];
 
+  const today = new Intl.DateTimeFormat("it-IT", { weekday: "long", day: "numeric", month: "long" }).format(new Date());
+
   return (
     <section className="mb-5 md:mb-6">
       <div className="flex items-end justify-between gap-3">
-        <h1 className="min-w-0 text-[26px] font-bold leading-tight tracking-tight">
-          {hour === null ? "Ciao" : greeting(hour)}, {firstName}
-        </h1>
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground" suppressHydrationWarning>
+            {today}
+          </p>
+          <h1 className="mt-1 min-w-0 text-[26px] font-bold leading-tight tracking-tight md:text-[30px]">
+            {hour === null ? "Ciao" : greeting(hour)}, {firstName}
+          </h1>
+        </div>
         {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
       </div>
-      <p className={cn("mt-1 min-h-5 max-w-3xl text-sm text-muted-foreground", !data && "animate-pulse")}>
-        {data
-          ? data.ai?.message ??
-            (pending.length
-              ? "Ecco cosa ti aspetta oggi: riprendi da dove eri rimasto."
-              : "Tutto in ordine: è un buon momento per preparare nuovi preventivi.")
-          : "Preparo il tuo riepilogo…"}
+      {/* Un solo messaggio dell'IA, al posto dei riquadri (C1). */}
+      <p className={cn("mt-1.5 flex min-h-5 max-w-3xl items-start gap-2 text-sm text-muted-foreground md:text-[15px]", !data && "animate-pulse")}>
+        <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-violet-600 dark:text-violet-400" aria-hidden />
+        <span>
+          {data
+            ? data.ai?.message ??
+              (pending.length
+                ? "Ecco cosa ti aspetta oggi: riprendi da dove eri rimasto."
+                : "Tutto in ordine: è un buon momento per preparare nuovi preventivi.")
+            : "Preparo il tuo riepilogo…"}
+        </span>
       </p>
-
-      {data && (pending.length > 0 || (data.ai?.tips.length ?? 0) > 0) && (
-        <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-          {pending.length > 0 && (
-            <div className="surface p-0">
-              <p className="px-4 pb-1 pt-3.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                In sospeso
-              </p>
-              <div className="divide-y">
-                {pending.map((p) => {
-                  const r = REASON[p.reason];
-                  const Icon = r.icon;
-                  return (
-                    <Link
-                      key={`${p.reason}-${p.id}`}
-                      href={`/preventivi/${p.id}`}
-                      className="flex items-center gap-3 px-4 py-2.5 transition-colors last:rounded-b-card hover:bg-accent/50"
-                    >
-                      <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", r.cls)}>
-                        <Icon className="h-4 w-4" />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium">{p.title}</span>
-                        <span className="block truncate text-xs text-muted-foreground">
-                          {r.label(p.days)}
-                          {p.clientName ? ` · ${p.clientName}` : ""}
-                        </span>
-                      </span>
-                      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/50" />
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-          {!!data.ai?.tips.length && (
-            <div className="surface border-violet-200 bg-violet-50/60 dark:border-violet-900 dark:bg-violet-950/20">
-              <p className="mb-2 flex items-center gap-1.5 px-1 text-xs font-medium uppercase tracking-wider text-violet-700 dark:text-violet-300">
-                <Sparkles className="h-3.5 w-3.5" /> Consigli per te
-              </p>
-              <ul className="space-y-2">
-                {data.ai.tips.map((t, i) => (
-                  <li key={i} className="flex gap-2 px-1 text-sm">
-                    <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-violet-500" />
-                    <span>{t}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      )}
     </section>
   );
 }

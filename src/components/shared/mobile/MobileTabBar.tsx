@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, Users, Plus, User, LayoutGrid } from "lucide-react";
+import { Home, Users, Plus, FileText, LayoutGrid } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { hasNewPage } from "@/lib/new-pages";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -26,17 +26,19 @@ const TABS: TabItem[] = [
     icon: Home,
     match: (p) => p === "/dashboard" || p.startsWith("/dashboard"),
   },
+  // L'elenco dei preventivi sta solo in Preventivi (C1); il profilo si apre
+  // dalle iniziali in alto.
+  {
+    href: "/preventivi",
+    label: "Preventivi",
+    icon: FileText,
+    match: (p) => p.startsWith("/preventivi"),
+  },
   {
     href: "/clienti",
     label: "Clienti",
     icon: Users,
     match: (p) => p.startsWith("/clienti"),
-  },
-  {
-    href: "/profilo",
-    label: "Profilo",
-    icon: User,
-    match: (p) => p.startsWith("/profilo"),
   },
   {
     href: "/altro",

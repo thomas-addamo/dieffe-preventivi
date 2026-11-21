@@ -28,6 +28,9 @@ export async function PATCH(
 
   const extra: Record<string, string | null> = {};
   if (parsed.data.status === "sent") extra.sentAt = new Date().toISOString();
+  // Data di accettazione (C1): si segna entrando in "accettato", si toglie uscendone.
+  if (parsed.data.status === "accepted" && guard.quote.status !== "accepted") extra.acceptedAt = new Date().toISOString();
+  if (parsed.data.status !== "accepted" && guard.quote.status === "accepted") extra.acceptedAt = null;
 
   // Cambiando stato lo sblocco manuale di un blocco automatico decade (B1):
   // es. sbloccato da inviato per correggerlo → rimesso inviato → di nuovo bloccato.

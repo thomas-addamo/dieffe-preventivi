@@ -1,5 +1,6 @@
 "use client";
 
+import { usePageCrumb } from "@/lib/stores/page-crumb";
 import { useMenuParam } from "@/hooks/use-menu-param";
 import { useState, useCallback, useRef, useEffect, useLayoutEffect } from "react";
 import Link from "next/link";
@@ -261,6 +262,7 @@ export function QuoteEditor({ initialQuote, clients, related, site: initialSite 
   const router = useRouter();
   const { isViewer: roleViewer, isAdmin, role, can: perms } = usePermissions();
   const [quote, setQuote] = useState<QuoteWithRelations>(initialQuote);
+  usePageCrumb(quote.code, quote.status);
   // Blocco (B1): manuale o automatico (inviato, rifiutato, lavori conclusi).
   // Bloccato = sola lettura per tutti, admin compresi (che sbloccano con un clic).
   const lock = lockInfo(quote, role);
@@ -724,7 +726,7 @@ export function QuoteEditor({ initialQuote, clients, related, site: initialSite 
     const res = await fetch(`/api/quotes/${quote.id}`, { method: "DELETE" });
     if (res.ok) {
       toast.success("Preventivo spostato nel cestino");
-      router.push("/dashboard");
+      router.push("/preventivi");
     }
   }
 
@@ -1046,12 +1048,12 @@ export function QuoteEditor({ initialQuote, clients, related, site: initialSite 
         <Button
           variant="ghost"
           size="sm"
-          aria-label="Torna alla dashboard"
+          aria-label="Torna ai preventivi"
           className="gap-1.5 text-muted-foreground px-2 shrink-0"
-          onClick={() => router.push("/dashboard")}
+          onClick={() => router.push("/preventivi")}
         >
           <ArrowLeft className="w-5 h-5 md:w-4 md:h-4" />
-          <span className="hidden sm:inline">Dashboard</span>
+          <span className="hidden sm:inline">Preventivi</span>
         </Button>
 
         <div className="hidden md:block w-px h-4 bg-border" />

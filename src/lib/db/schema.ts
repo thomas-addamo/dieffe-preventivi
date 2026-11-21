@@ -147,6 +147,9 @@ export const quotes = pgTable(
       .notNull()
       .defaultNow(),
     sentAt: timestamp("sent_at", { withTimezone: true, mode: "string" }),
+    /** Ultima accettazione (C1): da qui si contano gli accettati del mese.
+     *  Si azzera se il preventivo esce da "accettato". */
+    acceptedAt: timestamp("accepted_at", { withTimezone: true, mode: "string" }),
     publicToken: text("public_token").unique(),
     publicTokenExpiresAt: timestamp("public_token_expires_at", { withTimezone: true }),
     publicTokenDays: integer("public_token_days").default(30),

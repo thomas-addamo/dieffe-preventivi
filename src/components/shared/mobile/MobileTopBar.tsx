@@ -9,6 +9,7 @@ import { NotificationBell } from "@/components/shared/NotificationBell";
 /** Titolo contestuale derivato dalla rotta corrente */
 function titleFor(path: string): string {
   if (path.startsWith("/dashboard")) return "Dieffe";
+  if (path.startsWith("/preventivi")) return "Preventivi";
   if (path.startsWith("/clienti")) return "Clienti";
   if (path.startsWith("/profilo")) return "Profilo";
   if (path.startsWith("/altro")) return "Altro";

@@ -1,72 +1,25 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { db } from "@/lib/db/client";
-import { quotes, clients, users } from "@/lib/db/schema";
-import { eq, desc, count, and, gte, lte, isNull } from "drizzle-orm";
+import { getDashboardData } from "@/lib/dashboard";
+import { sitesEnabledFor } from "@/lib/features";
 import { DashboardClient } from "./DashboardClient";
-import { getQuoteNetTotals } from "@/lib/db/quote-totals";
-import { startOfMonth, endOfMonth, format } from "date-fns";
 
+// Dashboard (C1): cosa fare adesso, i numeri del mese, i cantieri in corso.
+// L'elenco dei preventivi è nella pagina Preventivi.
 export default async function DashboardPage() {
   const session = await getCurrentUser();
   if (!session) redirect("/login");
 
-  const now = new Date();
-  const monthStart = format(startOfMonth(now), "yyyy-MM-dd");
-  const monthEnd = format(endOfMonth(now), "yyyy-MM-dd");
-
-  const [totalCount] = await db.select({ value: count() }).from(quotes).where(isNull(quotes.deletedAt));
-
-  const allQuotes = await db
-    .select({
-      id: quotes.id,
-      code: quotes.code,
-      title: quotes.title,
-      status: quotes.status,
-      vatRate: quotes.vatRate,
-      createdAt: quotes.createdAt,
-      updatedAt: quotes.updatedAt,
-      clientName: clients.name,
-      authorName: users.name,
-      publicToken: quotes.publicToken,
-      publicTokenExpiresAt: quotes.publicTokenExpiresAt,
-      kind: quotes.kind,
-      parentQuoteId: quotes.parentQuoteId,
-    })
-    .from(quotes)
-    .leftJoin(clients, eq(quotes.clientId, clients.id))
-    .innerJoin(users, eq(quotes.userId, users.id))
-    .where(isNull(quotes.deletedAt))
-    .orderBy(desc(quotes.createdAt));
-
-  const acceptedThisMonth = allQuotes.filter(
-    (q) =>
-      q.status === "accepted" &&
-      q.updatedAt >= monthStart &&
-      q.updatedAt <= monthEnd + "T23:59:59"
-  ).length;
-
-  const pendingCount = allQuotes.filter(
-    (q) => q.status === "sent"
-  ).length;
-
-  const totals = await getQuoteNetTotals();
-
-  const allClients = await db
-    .select({ id: clients.id, name: clients.name })
-    .from(clients)
-    .orderBy(clients.name);
+  const data = await getDashboardData({
+    isAdmin: session.user.role === "admin",
+    showSites: sitesEnabledFor(session.user.role),
+  });
 
   return (
     <DashboardClient
-      initialQuotes={allQuotes.map((q) => ({ ...q, total: totals.get(q.id) ?? 0 }))}
-      clients={allClients}
+      data={data}
       currentUser={{ id: session.user.id, name: session.user.name }}
-      stats={{
-        total: totalCount.value,
-        acceptedThisMonth,
-        pending: pendingCount,
-      }}
+      canCreate={session.user.role !== "viewer"}
     />
   );
 }

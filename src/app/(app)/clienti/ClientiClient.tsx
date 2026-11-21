@@ -182,6 +182,11 @@ export function ClientiClient({
   const [detail, setDetail] = useState<ClientWithQuotes | null>(null);
   const { can: perms } = usePermissions();
   useMenuParam("nuovo", () => perms.manageClients && openNew());
+  // Scheda di un cliente aperta da un collegamento (ricerca ⌘K, preventivo).
+  useMenuParam("apri", (id) => {
+    const c = clients.find((x) => x.id === id);
+    if (c) setDetail(c);
+  });
 
   const {
     register,

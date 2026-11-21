@@ -1,5 +1,6 @@
 "use client";
 
+import { usePageCrumb } from "@/lib/stores/page-crumb";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -87,6 +88,7 @@ export function CantiereClient({
     // Finché l'IA prepara fasi e SAL, ricontrolla ogni pochi secondi.
     refetchInterval: (q) => (q.state.data?.setupPending ? 4000 : false),
   });
+  usePageCrumb(data.site.name.trim());
 
   const apple = useAppleDevice();
   const [tab, setTab] = useState<TabId>(TABS.some((t) => t.id === initialTab) ? (initialTab as TabId) : "avanzamento");

@@ -123,7 +123,7 @@ export function buildAppMenu(getWindow: GetWindow) {
       { label: 'Nuovo cliente', click: goWith('/clienti', 'nuovo') },
       { label: 'Nuova voce di listino', click: goWith('/listino', 'nuovo') },
       { type: 'separator' },
-      { label: 'Importa preventivo da file…', accelerator: 'CmdOrCtrl+O', click: goWith('/dashboard', 'importa') },
+      { label: 'Importa preventivo da file…', accelerator: 'CmdOrCtrl+O', click: goWith('/preventivi', 'importa') },
       { type: 'separator' },
       { label: 'Anteprima PDF del preventivo', accelerator: 'CmdOrCtrl+E', click: onQuote('pdf', 'anteprima') },
       { label: 'Scarica PDF del preventivo', accelerator: 'Shift+CmdOrCtrl+E', click: onQuote('pdf', 'scarica') },
@@ -204,7 +204,7 @@ export function buildAppMenu(getWindow: GetWindow) {
         click: () => getWindow()?.webContents.navigationHistory.goForward(),
       },
       { type: 'separator' },
-      { label: 'Cerca un preventivo…', accelerator: 'CmdOrCtrl+K', click: goWith('/dashboard', 'cerca') },
+      { label: 'Cerca…', accelerator: 'CmdOrCtrl+K', click: here('ricerca') },
       { type: 'separator' },
       ...GO_TO.map(
         ({ label, path, key }) =>

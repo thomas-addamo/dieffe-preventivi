@@ -3,11 +3,13 @@
 import { Suspense } from "react";
 import { useTheme } from "@/components/shared/ThemeProvider";
 import { MENU_EVENTS, useMenuParam } from "@/hooks/use-menu-param";
+import { openGlobalSearch } from "@/components/shared/GlobalSearch";
 
 // Comandi globali dei menu nativi (valgono su qualsiasi pagina):
 //   ?aiuto=assistente|admin   apre la finestra Aiuto
 //   ?barra=1                  mostra/nasconde la barra laterale
 //   ?tema=chiaro|scuro|sistema
+//   ?ricerca=1                apre la ricerca globale (⌘K, C2)
 //   ?novita=1                 rimostra il riquadro "Novità" della versione
 
 function Handlers() {
@@ -15,6 +17,7 @@ function Handlers() {
   useMenuParam("aiuto", (v) =>
     window.dispatchEvent(new CustomEvent(MENU_EVENTS.help, { detail: v === "admin" ? "admin" : "ai" }))
   );
+  useMenuParam("ricerca", () => openGlobalSearch());
   useMenuParam("barra", () => window.dispatchEvent(new Event(MENU_EVENTS.toggleSidebar)));
   useMenuParam("tema", (v) => setTheme(v === "scuro" ? "dark" : v === "chiaro" ? "light" : "system"));
   useMenuParam("novita", () => {

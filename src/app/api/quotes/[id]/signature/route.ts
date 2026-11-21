@@ -36,6 +36,7 @@ export async function DELETE(
     .update(quotes)
     .set({
       status: "sent",
+      acceptedAt: null,
       publicToken: null,
       publicTokenExpiresAt: null,
       updatedAt: new Date().toISOString(),

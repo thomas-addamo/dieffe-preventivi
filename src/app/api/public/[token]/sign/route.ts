@@ -118,6 +118,7 @@ export async function POST(
     .set({
       status: action,
       publicTokenExpiresAt: new Date(), // expire immediately after signing
+      ...(action === "accepted" ? { acceptedAt: new Date().toISOString() } : {}),
       lockOverrideAt: null, // cambio di stato: torna il blocco automatico (B1)
       lockOverrideBy: null,
     })

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { X, FileText, LayoutDashboard } from "lucide-react";
+import { X, FileText } from "lucide-react";
 import { useQuoteTabs } from "@/lib/stores/quote-tabs";
 import { cn } from "@/lib/utils";
 
@@ -33,18 +33,18 @@ export function QuoteTabsBar() {
     closeTab(id);
     if (id === activeId) {
       const next = tabs[idx + 1] ?? tabs[idx - 1];
-      router.push(next ? `/preventivi/${next.id}` : "/dashboard");
+      router.push(next ? `/preventivi/${next.id}` : "/preventivi");
     }
   }
 
   return (
     <div className={cn("sticky top-0 z-20 hidden lg:flex items-stretch border-b bg-muted", BAR_H)}>
       <button
-        onClick={() => router.push("/dashboard")}
-        title="Torna alla Dashboard"
+        onClick={() => router.push("/preventivi")}
+        title="Torna ai preventivi"
         className="flex shrink-0 items-center justify-center border-r px-3 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
       >
-        <LayoutDashboard className="h-4 w-4" />
+        <FileText className="h-4 w-4" />
       </button>
       <div className="flex flex-1 items-stretch overflow-x-auto">
         {tabs.map((t) => {
