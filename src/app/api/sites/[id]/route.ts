@@ -1,3 +1,4 @@
+import { healSiteStart } from "@/lib/sites/recompute";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
@@ -16,8 +17,9 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
   const { id } = await params;
   const auth = await requireSite(id);
   if ("error" in auth) return auth.error;
-  const detail = await getSiteDetail(id);
+  let detail = await getSiteDetail(id);
   if (!detail) return NextResponse.json({ error: "Cantiere non trovato" }, { status: 404 });
+  if (await healSiteStart(detail)) detail = (await getSiteDetail(id)) ?? detail;
   return NextResponse.json({ ...detail, insightsStale: needsInsights(detail) });
 }
 

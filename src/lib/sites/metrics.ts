@@ -223,7 +223,9 @@ export function computeSiteMetrics(input: {
   let health: SiteHealth;
   if (site.status === "pending") health = "pending";
   else if (progress >= 100) health = "done";
-  else if (start == null || today < start) health = "not_started";
+  // Senza data di inizio ma con lavoro già fatto (A8): in corso, non "da avviare".
+  else if (start == null) health = progress > 0 ? "on_track" : "not_started";
+  else if (today < start) health = "not_started";
   // Qualche giorno di scarto è fisiologico: "in ritardo" da 5 giorni in su.
   else if (delayDays >= 5) health = "late";
   else if (delayDays > 0) health = "at_risk";

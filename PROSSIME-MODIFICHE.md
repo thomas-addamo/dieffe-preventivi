@@ -190,6 +190,14 @@ Da fare per prime: sono bug che bloccano il lavoro o modifiche piccole e già ch
 - **Test specifici:** SAL a percentuale su un lavoro extra (importo calcolato sull'extra, non sul principale); SAL aggiunto da iPhone visibile sul sito e viceversa; cantiere in attesa.
 - **Analisi DB:** Nessuna colonna nuova: `site_milestones.quote_id` esisteva già ma non si poteva impostare. 1 preventivo extra su 37.
 - **Esito:** Aggiungendo un SAL si sceglie il preventivo (principale o lavoro extra) su cui calcolare la percentuale: sito (tendina, che compare solo con più preventivi) e iPhone (selettore nel foglio «Nuovo SAL», ora anche a tutta altezza). Il server verifica che il preventivo appartenga al cantiere. Sul sito i SAL di un extra mostrano il suo numero.
+
+### A8. Stato del cantiere che resta "Da avviare"  _(#15, aggiunta il 2026-11-21, priorità alta)_
+- **Stato:** 🧪 In test — 4.8.1 (2026-11-21, branch `claude/project-changes-documentation-e7b724`)
+- **Piattaforme:** sito · desktop · iPhone (lo stato lo calcola il server)
+- **Cosa:** ogni cantiere, anche avviato e avanzato, dice "Da avviare". Lo stato deve aggiornarsi da solo.
+- **Causa:** `computeSiteMetrics` (`src/lib/sites/metrics.ts`) dà "Da avviare" a ogni cantiere senza **data di inizio lavori**, che si inseriva solo a mano in «Tempi e costi»: in produzione nessun cantiere ce l'ha (es. "Ristrutturazione alloggio" al 91% risultava da avviare).
+- **Analisi DB:** 13 cantieri attivi, 0 con `start_date`; 2 aperti con fasi già completate (91,2% e 18,7%). Correzione: una scrittura per cantiere, solo quando cambia.
+- **Esito:** `recomputeSite` imposta da solo la data di inizio (giorno della prima fase completata) se manca, poi mette in calendario le fasi e la fine prevista: lo stato passa a In corso / In ritardo e scattano i SAL «a inizio lavori». In più `computeSiteMetrics`: avanzamento > 0 senza data → «In corso» (mai più «Da avviare» con lavoro fatto; test aggiunto). I cantieri già avviati si sistemano alla prima apertura (`healSiteStart`, sito e API dell'iPhone). La data si può sempre cambiare a mano da «Tempi e costi».
 ---
 
 ## 2. Fase B — Medio termine: nuove funzioni
@@ -230,7 +238,7 @@ Da fare per prime: sono bug che bloccano il lavoro o modifiche piccole e già ch
 - **Dove:** nuova scheda accanto a `PhotosTab.tsx`; storage come per le foto (`src/lib/cloudinary.ts` o alternativa); `ios/Dieffe/Native/Sites/`.
 - **Test specifici:** PDF grande (20 MB), nome lungo, eliminazione, permessi, apertura offline su iPhone se prevista.
 - **Analisi DB:** Nuova tabella `site_documents` (solo riferimenti, ~200 byte a riga) con indice `(site_id, created_at)`: lettura del dettaglio cantiere 0,03 ms (EXPLAIN ANALYZE sul ramo di prova). I file stanno su Cloudinary (tipo raw), non nel DB.
-- **Esito:** Scheda **Documenti** (sito, desktop, iPhone): PDF fino a 25 MB caricati direttamente su Cloudinary con firma del server (niente limite dei 4,5 MB delle funzioni Vercel), poi registrati dopo una verifica lato server di esistenza e peso. Anteprima nell'app (sito: finestra con il PDF; iPhone: Quick Look, il file resta in cache e si riapre offline), rinomina (sito), eliminazione (autore o admin), trascinamento dei file sul sito. API: `POST /api/sites/:id/documents/sign`, `POST /api/sites/:id/documents`, `PATCH|DELETE /api/sites/:id/documents/:docId`; `documents` nel dettaglio del cantiere. Da verificare in produzione: limite reale del piano Cloudinary per i file raw (il piano gratuito si ferma a 10 MB).
+- **Esito:** Scheda **Documenti** (sito, desktop, iPhone): PDF fino a 25 MB caricati direttamente su Cloudinary con firma del server (niente limite dei 4,5 MB delle funzioni Vercel), poi registrati dopo una verifica lato server di esistenza e peso. Anteprima nell'app (sito: finestra con il PDF; iPhone: Quick Look, il file resta in cache e si riapre offline), rinomina (sito), eliminazione (autore o admin), trascinamento dei file sul sito. API: `POST /api/sites/:id/documents/sign`, `POST /api/sites/:id/documents`, `PATCH|DELETE /api/sites/:id/documents/:docId`; `documents` nel dettaglio del cantiere. Verifica in produzione (4.8.0): caricamento, registrazione, rifiuto di file di altre cartelle (400) ed eliminazione OK; l'apertura dall'indirizzo pubblico dava 401 («deny or ACL failure»: l'account Cloudinary blocca la consegna dei PDF). Dalla 4.8.1 i PDF si aprono da `GET /api/sites/:id/documents/:docId/file` (link di download firmato, 15 minuti; `?json=1` per l'iPhone). Da verificare: limite reale del piano Cloudinary per i file raw (il gratuito si ferma a 10 MB).
 
 ---
 
@@ -322,3 +330,4 @@ _(spostare qui le voci completate, con versione ed esito)_
 | 6 | C3 | 12 | A3 |
 | — | — | 13 | A6 |
 | — | — | 14 | A7 |
+| — | — | 15 | A8 |

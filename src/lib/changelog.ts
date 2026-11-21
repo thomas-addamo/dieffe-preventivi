@@ -43,6 +43,23 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "4.8.1",
+    date: "2026-11-21",
+    headline: "Lo stato del cantiere si aggiorna da solo.",
+    highlights: [
+      {
+        icon: "site",
+        title: "Cantieri avviati in automatico",
+        description: "Quando completi la prima fase il cantiere prende da solo la data di inizio e passa da «Da avviare» a «In corso», con il programma delle fasi.",
+      },
+      {
+        icon: "zap",
+        title: "Documenti sempre apribili",
+        description: "I PDF del cantiere si aprono con un link sicuro e a tempo, su sito e iPhone.",
+      },
+    ],
+  },
+  {
     version: "4.8.0",
     date: "2026-11-21",
     headline: "Preventivi protetti, testi corretti da soli e documenti nel cantiere.",

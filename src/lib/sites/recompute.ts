@@ -4,7 +4,8 @@ import { db } from "@/lib/db/client";
 import { sites, sitePhases, siteMilestones, quotes, users } from "@/lib/db/schema";
 import { notifyUsers } from "@/lib/notifications";
 import { formatCurrency } from "@/lib/utils";
-import { computeProgress, milestoneAmount, toDay } from "./metrics";
+import { computeProgress, isoDay, milestoneAmount, toDay } from "./metrics";
+import { schedulePhases } from "./schedule";
 import { getSiteQuotes } from "./queries";
 import { FEATURES } from "@/lib/features";
 
@@ -30,7 +31,14 @@ export async function recomputeSite(siteId: string, opts: { notify?: boolean } =
   const progress = Math.round(computeProgress(phases) * 10) / 10;
   const doneIds = new Set(phases.filter((p) => p.doneAt).map((p) => p.id));
   const allDone = phases.length > 0 && doneIds.size === phases.length;
-  const started = !!site.startDate && toDay(site.startDate) <= toDay(new Date());
+  // A8: inizio lavori automatico. Se nessuno l'ha impostato a mano, i lavori
+  // sono iniziati il giorno in cui si è completata la prima fase: lo stato
+  // passa da "Da avviare" a "In corso" (o in ritardo) senza fare nulla.
+  const firstDone = phases.reduce<Date | null>((min, p) => (p.doneAt && (!min || p.doneAt < min) ? p.doneAt : min), null);
+  const autoStart =
+    !site.startDate && firstDone && site.status === "active" && !site.archivedAt ? isoDay(toDay(firstDone)) : null;
+  const startDate = site.startDate ?? autoStart;
+  const started = !!startDate && toDay(startDate) <= toDay(new Date());
 
   const reachedNow: string[] = [];
   const unreached: string[] = [];
@@ -53,14 +61,21 @@ export async function recomputeSite(siteId: string, opts: { notify?: boolean } =
   }
 
   const writes = [];
-  if (Math.abs(site.progress - progress) > 0.05) {
-    writes.push(db.update(sites).set({ progress, updatedAt: new Date() }).where(eq(sites.id, siteId)));
+  if (Math.abs(site.progress - progress) > 0.05 || autoStart) {
+    writes.push(
+      db
+        .update(sites)
+        .set({ progress, updatedAt: new Date(), ...(autoStart ? { startDate: autoStart } : {}) })
+        .where(eq(sites.id, siteId))
+    );
   }
   if (reachedNow.length) writes.push(db.update(siteMilestones).set({ reachedAt: new Date() }).where(inArray(siteMilestones.id, reachedNow)));
   if (healInvoiced.length) writes.push(db.update(siteMilestones).set({ invoicedAt: sql`${siteMilestones.paidAt}` as never }).where(inArray(siteMilestones.id, healInvoiced)));
   if (healReached.length) writes.push(db.update(siteMilestones).set({ reachedAt: sql`coalesce(${siteMilestones.invoicedAt}, ${siteMilestones.paidAt})` as never }).where(inArray(siteMilestones.id, healReached)));
   if (unreached.length) writes.push(db.update(siteMilestones).set({ reachedAt: null }).where(inArray(siteMilestones.id, unreached)));
   if (writes.length) await db.batch(writes as [(typeof writes)[number], ...typeof writes]);
+  // Con l'inizio dei lavori le fasi si mettono in calendario (e la fine prevista, se manca).
+  if (autoStart) await schedulePhases(siteId, { setPlannedEnd: !site.plannedEndDate });
 
   if (opts.notify !== false && reachedNow.length) {
     const [[owner], admins, siteQuotes] = await Promise.all([
@@ -82,4 +97,19 @@ export async function recomputeSite(siteId: string, opts: { notify?: boolean } =
     });
   }
   return { allDone };
+}
+
+/**
+ * A8: cantieri avviati prima della 4.8.1 (fasi già spuntate ma senza data di
+ * inizio). Alla prima apertura si ricalcolano una volta: prendono la data di
+ * inizio e il programma delle fasi. Restituisce true se ha scritto qualcosa.
+ */
+export async function healSiteStart(detail: {
+  site: { id: string; status: string; startDate: string | null; archivedAt: Date | string | null };
+  phases: { doneAt: Date | string | null }[];
+}): Promise<boolean> {
+  const s = detail.site;
+  if (s.startDate || s.archivedAt || s.status !== "active" || !detail.phases.some((p) => p.doneAt)) return false;
+  await recomputeSite(s.id);
+  return true;
 }

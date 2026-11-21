@@ -71,7 +71,9 @@ test("metriche: cantiere in attesa e completato", () => {
   const base = { startDate: null, plannedEndDate: null, dailyCost: null, penaltyPerDay: null, marginPct: 20 };
   assert.equal(computeSiteMetrics({ site: { ...base, status: "pending", progress: 0 }, quotes: [], milestones: [] }).health, "pending");
   assert.equal(computeSiteMetrics({ site: { ...base, status: "active", progress: 100 }, quotes: [], milestones: [] }).health, "done");
-  assert.equal(computeSiteMetrics({ site: { ...base, status: "active", progress: 10 }, quotes: [], milestones: [] }).health, "not_started");
+  assert.equal(computeSiteMetrics({ site: { ...base, status: "active", progress: 0 }, quotes: [], milestones: [] }).health, "not_started");
+  // A8: lavoro già fatto senza data di inizio → in corso, non "da avviare".
+  assert.equal(computeSiteMetrics({ site: { ...base, status: "active", progress: 10 }, quotes: [], milestones: [] }).health, "on_track");
 });
 
 test("condizioni di pagamento lette a regole", () => {

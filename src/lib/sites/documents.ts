@@ -99,3 +99,13 @@ export async function deleteSiteDocument(siteId: string, docId: string, user: { 
   await deleteCloudinaryAsset(doc.publicId, "raw").catch(() => {});
   return { ok: true };
 }
+
+/** Link firmato e a tempo (15 min) per aprire o scaricare il PDF. */
+export function signedDocumentUrl(publicId: string, download = false) {
+  return cloudinary.utils.private_download_url(publicId, undefined as unknown as string, {
+    resource_type: "raw",
+    type: "upload",
+    attachment: download,
+    expires_at: Math.round(Date.now() / 1000) + 15 * 60,
+  });
+}

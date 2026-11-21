@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getSiteDetail } from "@/lib/sites/queries";
+import { healSiteStart } from "@/lib/sites/recompute";
 import { needsInsights } from "@/lib/sites/insights";
 import { can } from "@/lib/permissions/check";
 import type { UserRole } from "@/lib/permissions/types";
@@ -21,9 +22,11 @@ export default async function CantierePage({
   if (!sitesEnabledFor(session.user.role)) return <SitesMaintenance />;
 
   const [{ id }, { tab }] = await Promise.all([params, searchParams]);
-  const detail = await getSiteDetail(id);
+  let detail = await getSiteDetail(id);
   // Cantiere eliminato o mai esistito.
   if (!detail) notFound();
+  // A8: avviato prima della 4.8.1 senza data di inizio → si sistema ora.
+  if (await healSiteStart(detail)) detail = (await getSiteDetail(id)) ?? detail;
 
   const initial = JSON.parse(JSON.stringify({ ...detail, insightsStale: needsInsights(detail) })) as SiteData;
   return (

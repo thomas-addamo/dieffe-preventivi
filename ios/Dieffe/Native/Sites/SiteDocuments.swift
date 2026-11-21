@@ -58,7 +58,7 @@ struct SiteDocumentsSection: View {
                     }
                 }
                 .contextMenu {
-                    if let url = URL(string: doc.url) { ShareLink(item: url) { Label("Condividi link", systemImage: "square.and.arrow.up") } }
+                    Button("Apri", systemImage: "doc.viewfinder") { open(doc) }
                 }
             }
             if editable {
@@ -89,7 +89,7 @@ struct SiteDocumentsSection: View {
         opening = doc.id
         Task {
             defer { opening = nil }
-            do { previewURL = try await SiteDocumentFile.local(doc) } catch { self.error = "Impossibile aprire il documento: \(error.localizedDescription)" }
+            do { previewURL = try await SiteDocumentFile.local(doc, siteID: detail.site.id) } catch { self.error = "Impossibile aprire il documento: \(error.localizedDescription)" }
         }
     }
 
@@ -158,10 +158,14 @@ enum SiteDocumentFile {
     }
 
     /// File sul telefono (scaricato la prima volta, poi dalla cache: anche offline).
-    static func local(_ doc: SiteDetail.Document) async throws -> URL {
+    private struct Signed: Decodable { let url: String }
+
+    static func local(_ doc: SiteDetail.Document, siteID: String) async throws -> URL {
         let dest = fileURL(doc)
         if FileManager.default.fileExists(atPath: dest.path) { return dest }
-        guard let remote = URL(string: doc.url) else { throw SiteDocumentError("Indirizzo non valido") }
+        // Link firmato e a tempo: l'account non consegna i PDF dall'indirizzo pubblico.
+        let signed: Signed = try await APIClient.shared.get("/api/sites/\(siteID)/documents/\(doc.id)/file?json=1")
+        guard let remote = URL(string: signed.url) else { throw SiteDocumentError("Indirizzo non valido") }
         let (tmp, response) = try await URLSession.shared.download(from: remote)
         guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw SiteDocumentError("Download non riuscito") }
         try? FileManager.default.removeItem(at: dest)

@@ -51,6 +51,8 @@ export function DocumentsTab({
 }) {
   const siteId = data.site.id;
   const docs: Doc[] = data.documents ?? [];
+  // Il file si apre da un link firmato e a tempo rilasciato dal server.
+  const fileUrl = (d: Doc, download = false) => `/api/sites/${siteId}/documents/${d.id}/file${download ? "?download=1" : ""}`;
   const qc = useQueryClient();
   const input = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState<{ name: string; progress: number; index: number; total: number } | null>(null);
@@ -172,7 +174,7 @@ export function DocumentsTab({
                   </span>
                 </button>
                 <a
-                  href={d.url}
+                  href={fileUrl(d)}
                   target="_blank"
                   rel="noreferrer"
                   className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -217,13 +219,13 @@ export function DocumentsTab({
             <DialogDescription className="sr-only">Anteprima del documento</DialogDescription>
             {preview && (
               <Button asChild size="sm" variant="outline">
-                <a href={preview.url} target="_blank" rel="noreferrer" download={preview.name}>
+                <a href={fileUrl(preview, true)} target="_blank" rel="noreferrer">
                   <Download /> Scarica
                 </a>
               </Button>
             )}
           </div>
-          {preview && <iframe src={preview.url} title={preview.name} className="min-h-0 flex-1 rounded-lg border bg-muted" />}
+          {preview && <iframe src={fileUrl(preview)} title={preview.name} className="min-h-0 flex-1 rounded-lg border bg-muted" />}
         </DialogContent>
       </Dialog>
     </div>
