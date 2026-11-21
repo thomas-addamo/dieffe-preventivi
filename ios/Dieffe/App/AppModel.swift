@@ -105,7 +105,7 @@ final class AppModel {
         editor = EditorSession(quoteID: id, page: nil)
     }
 
-    /// L'editor del sito, per le funzioni non ancora native (chat AI, riassegna…).
+    /// L'editor del sito, per le funzioni non ancora native (chat AI…).
     func openWebEditor(_ id: String) {
         editor = EditorSession(quoteID: id, page: WebPageModel(path: "/preventivi/\(id)", role: .editor, app: self))
     }

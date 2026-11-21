@@ -24,7 +24,7 @@ EDITOR PREVENTIVO
 - Pannello Riepilogo: sconto generale, IVA, condizioni di pagamento (con modelli pronti), totale.
 - Esporta: PDF (anteprima o scarica), Excel, CSV, backup JSON. Da telefono il PDF si condivide o si salva su File.
 - Condividi: link pubblico per il cliente (con PIN facoltativo e scadenza); il cliente può accettare e firmare online, e tu ricevi una notifica.
-- Salvataggio automatico. L'amministratore può bloccare un preventivo o riassegnarlo a un altro utente.
+- Salvataggio automatico. L'amministratore può bloccare un preventivo.
 - Assistente edilizia (pulsante viola in basso a destra nell'editor): domande tecniche e sui prezzi dei tuoi preventivi.
 
 DUPLICARE UN PREVENTIVO

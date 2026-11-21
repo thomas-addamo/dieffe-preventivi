@@ -87,7 +87,7 @@ Analisi DB (data):
 Da fare per prime: sono bug che bloccano il lavoro o modifiche piccole e già chiare.
 
 ### A1. Riepilogo del preventivo che non scorre fino in fondo  _(rif. utente: #7)_
-- **Stato:** ✅ Fatto (4.6.1, 2026-11-21); da riverificare in produzione dopo il deploy — branch `claude/project-changes-documentation-e7b724`
+- **Stato:** ✅ Fatto (4.6.1, 2026-11-21), verificato in produzione — branch `claude/project-changes-documentation-e7b724`
 - **Causa trovata:** l'altezza massima del pannello era `100dvh - barra strumenti`, ma su desktop (≥1024px) a scorrere è il `<main>` sotto l'intestazione dell'app e gli eventuali banner. Il pannello quindi superava lo schermo di circa l'altezza dell'intestazione e la parte finale (Condizioni di pagamento) restava irraggiungibile. In più, il pulsante della chat IA copriva l'ultima riga.
 - **Correzione:** altezza calcolata sul contenitore che scorre davvero (ricalcolata quando cambiano finestra, breakpoint o banner) e spazio in fondo (`pb-24`) per il pulsante della chat. File: `src/components/quote-editor/QuoteEditor.tsx`.
 - **Piattaforme:** sito · desktop (verificare anche iPhone)
@@ -101,16 +101,21 @@ Da fare per prime: sono bug che bloccano il lavoro o modifiche piccole e già ch
   - 1280×700: ultima riga a 598 su 700;
   - 900×700 (tablet, scorre la finestra): invariato e corretto.
 
-  `tsc` e lint ok. **Non fatti:** `next build` completo (lancia le migrazioni sul DB), tema scuro (nessun colore cambiato), app desktop Electron, verifica sul codice pubblicato dopo il deploy.
+  `tsc` e lint ok. **Non fatti:** `next build` locale (lancia le migrazioni sul DB; la build su Vercel è riuscita), tema scuro (nessun colore cambiato), app desktop Electron.
+  - **Verifica in produzione (deploy `c526422`):** su PREV-2026-007 a 1440×820 l'altezza calcolata è 669px, il pannello finisce a 820 e l'ultima riga (724) è sopra la chat (748). ✅
 
 ### A2. Rimuovere completamente il tasto "Riassegna"  _(#4)_
-- **Stato:** 📋 Da fare
+- **Stato:** ✅ Fatto (4.6.2, 2026-11-21) — branch `claude/project-changes-documentation-e7b724`
 - **Piattaforme:** sito · desktop · iPhone
 - **Cosa:** togliere il tasto "Riassegna" da ogni preventivo: la barra in alto, il menu e l'eventuale equivalente su iPhone. Rimuovere anche il codice rimasto inutilizzato (dialog, API), senza toccare lo storico dell'audit log.
 - **Dove:** `src/components/quote-editor/QuoteEditor.tsx` (righe ~1104 e ~1180), `src/lib/help-guide.ts`, `src/lib/notifications.ts`, `ios/Dieffe/App/AppModel.swift`.
 - **Test specifici:** l'audit log con vecchie riassegnazioni si apre ancora; la guida non cita più il tasto.
-- **Analisi DB:** — _(da fare prima della progettazione, §0.3)_
-- **Esito:** —
+- **Analisi DB (2026-11-21):** `users` 4 righe (48 kB); `audit_log` 159 righe, di cui **0** `quote.reassigned`; **0** notifiche `quote_assigned`: la funzione non è mai stata usata. Ottimizzazione: tolta la query `SELECT id, name FROM users ORDER BY name` che partiva a ogni apertura dell'editor da parte di un admin e serviva solo alla finestra Riassegna (una query in meno per apertura). Nessuna migrazione: il valore `quote_assigned` resta nell'enum delle notifiche e l'etichetta resta nell'audit log, per eventuali righe storiche, senza costi.
+- **Esito:**
+  - **Tolti:** il tasto nella barra, la voce nel menu ⋯, la finestra di scelta utente, l'API `PATCH /api/quotes/[id]/reassign`, `notifyQuoteAssigned`, la prop `users` dell'editor e la sua query. Testi aggiornati in guida, README iOS e commento in `AppModel.swift`.
+  - **Su iPhone** non c'era un tasto nativo: rimandava al sito.
+  - **Controlli:** `tsc` ok; lint senza nuovi avvisi (tolto anche l'import inutilizzato `DialogDescription`).
+  - **Da verificare dopo il deploy:** l'editor in produzione senza il tasto (admin e utente normale). Build Xcode non necessaria: in Swift è cambiato solo un commento.
 
 ### A3. Tasto "Vai al cantiere" su ogni preventivo  _(#12)_
 - **Stato:** 📋 Da fare
@@ -276,6 +281,7 @@ _(scelte condivise che valgono per tutte le modifiche — aggiungere con data)_
 _(spostare qui le voci completate, con versione ed esito)_
 
 - **A1** Riepilogo che non scorre fino in fondo: 4.6.1, 2026-11-21 (dettagli nella voce A1).
+- **A2** Tolto il tasto "Riassegna": 4.6.2, 2026-11-21 (dettagli nella voce A2).
 
 ---
 

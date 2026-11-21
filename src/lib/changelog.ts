@@ -43,6 +43,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "4.6.2",
+    date: "2026-11-21",
+    headline: "Barra del preventivo più snella.",
+    highlights: [
+      {
+        icon: "layout",
+        title: "Tolto il tasto Riassegna",
+        description: "Il tasto Riassegna non c'è più, né nella barra del preventivo né nel menu. L'editor si apre anche un po' più in fretta.",
+      },
+    ],
+  },
+  {
     version: "4.6.1",
     date: "2026-11-21",
     headline: "Il riepilogo del preventivo si scorre fino in fondo.",

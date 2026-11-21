@@ -14,7 +14,6 @@ import {
   MoreVertical,
   Lock,
   Unlock,
-  UserCog,
   FilePlus2,
   Copy,
   Plus,
@@ -30,7 +29,6 @@ import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -233,7 +231,6 @@ function SignatureSection({
 interface QuoteEditorProps {
   initialQuote: QuoteWithRelations;
   clients: { id: string; name: string }[];
-  users?: { id: string; name: string }[];
   /** Preventivo principale (se questo è un lavoro extra) e lavori extra collegati. */
   related?: {
     parent: { id: string; code: string; title: string } | null;
@@ -252,7 +249,7 @@ function findScrollParent(el: HTMLElement): HTMLElement | null {
   return null;
 }
 
-export function QuoteEditor({ initialQuote, clients, users = [], related }: QuoteEditorProps) {
+export function QuoteEditor({ initialQuote, clients, related }: QuoteEditorProps) {
   const router = useRouter();
   const { isViewer, isAdmin, can: perms } = usePermissions();
   const [quote, setQuote] = useState<QuoteWithRelations>(initialQuote);
@@ -802,9 +799,6 @@ export function QuoteEditor({ initialQuote, clients, users = [], related }: Quot
     a.click();
   }
 
-  const [showReassignModal, setShowReassignModal] = useState(false);
-  const [reassignUserId, setReassignUserId] = useState("");
-  const [reassigning, setReassigning] = useState(false);
   const [locking, setLocking] = useState(false);
 
   async function toggleLock() {
@@ -817,23 +811,6 @@ export function QuoteEditor({ initialQuote, clients, users = [], related }: Quot
       toast.success(isCurrentlyLocked ? "Preventivo sbloccato." : "Preventivo bloccato.");
     } else {
       toast.error("Errore durante l'operazione.");
-    }
-  }
-
-  async function doReassign() {
-    if (!reassignUserId) return;
-    setReassigning(true);
-    const res = await fetch(`/api/quotes/${quote.id}/reassign`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: reassignUserId }),
-    });
-    setReassigning(false);
-    if (res.ok) {
-      setShowReassignModal(false);
-      toast.success("Preventivo riassegnato.");
-    } else {
-      toast.error("Errore durante la riassegnazione.");
     }
   }
 
@@ -1120,16 +1097,6 @@ export function QuoteEditor({ initialQuote, clients, users = [], related }: Quot
                 {quote.isLocked ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
                 <span className="hidden lg:inline">{quote.isLocked ? "Sblocca" : "Blocca"}</span>
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5 h-8"
-                onClick={() => setShowReassignModal(true)}
-                title="Riassegna preventivo"
-              >
-                <UserCog className="w-3.5 h-3.5" />
-                <span className="hidden lg:inline">Riassegna</span>
-              </Button>
             </>
           )}
         </div>
@@ -1199,9 +1166,6 @@ export function QuoteEditor({ initialQuote, clients, users = [], related }: Quot
                     <Lock className="w-4 h-4 mr-2" />
                   )}
                   {quote.isLocked ? "Sblocca modifiche" : "Blocca modifiche"}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setShowReassignModal(true)}>
-                  <UserCog className="w-4 h-4 mr-2" /> Riassegna
                 </DropdownMenuItem>
               </>
             )}
@@ -1347,49 +1311,8 @@ export function QuoteEditor({ initialQuote, clients, users = [], related }: Quot
         </button>
       </div>
 
-      {/* Reassign modal */}
       {/* AI Chat Assistant */}
       {!isViewer && <AiChatAssistant />}
-
-      <Dialog
-        open={showReassignModal}
-        onOpenChange={(o) => { if (!o) { setShowReassignModal(false); setReassignUserId(""); } }}
-      >
-        <DialogContent className="sm:max-w-sm">
-            <DialogHeader>
-              <DialogTitle>Riassegna preventivo</DialogTitle>
-              <DialogDescription>Assegna questo preventivo a un altro utente.</DialogDescription>
-            </DialogHeader>
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Utente attuale</p>
-              <p className="text-sm font-medium">{quote.author.name}</p>
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground block mb-1">Nuovo utente</label>
-              <select
-                className="flex h-11 md:h-10 w-full rounded-lg border border-input bg-card px-3 text-base md:text-sm shadow-2xs"
-                value={reassignUserId}
-                onChange={(e) => setReassignUserId(e.target.value)}
-              >
-                <option value="">Seleziona utente...</option>
-                {users.filter((u) => u.id !== quote.userId).map((u) => (
-                  <option key={u.id} value={u.id}>{u.name}</option>
-                ))}
-              </select>
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => { setShowReassignModal(false); setReassignUserId(""); }}
-              >
-                Annulla
-              </Button>
-              <Button onClick={doReassign} disabled={!reassignUserId || reassigning}>
-                {reassigning ? "..." : "Riassegna"}
-              </Button>
-            </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {pdfSheetOpen && (
         <PdfExportSheet

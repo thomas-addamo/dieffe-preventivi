@@ -156,24 +156,6 @@ export async function notifyQuoteStatusChanged(opts: {
   });
 }
 
-/** Preventivo riassegnato a un nuovo titolare. */
-export async function notifyQuoteAssigned(opts: {
-  quoteId: string;
-  quoteCode: string;
-  quoteTitle: string;
-  newOwnerUserId: string;
-  actorUserId: string;
-  actorName: string;
-}) {
-  if (opts.newOwnerUserId === opts.actorUserId) return;
-  await notifyUser(opts.newOwnerUserId, {
-    type: "quote_assigned",
-    title: `Ti è stato assegnato il preventivo ${opts.quoteCode}`,
-    body: `${opts.actorName} ti ha assegnato "${opts.quoteTitle}".`,
-    link: `/preventivi/${opts.quoteId}`,
-  });
-}
-
 /** Lock/unlock di un preventivo da parte di un admin. */
 export async function notifyQuoteLockChanged(opts: {
   quoteId: string;

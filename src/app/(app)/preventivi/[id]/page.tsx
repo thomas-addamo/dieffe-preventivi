@@ -2,7 +2,7 @@ import { redirect, notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getQuoteWithRelations } from "@/lib/db/quotes";
 import { db } from "@/lib/db/client";
-import { clients, quotes, users } from "@/lib/db/schema";
+import { clients, quotes } from "@/lib/db/schema";
 import { QuoteEditor } from "@/components/quote-editor/QuoteEditor";
 import { and, asc, eq, isNull } from "drizzle-orm";
 
@@ -22,10 +22,6 @@ export default async function QuotePage({ params }: Props) {
     .select({ id: clients.id, name: clients.name })
     .from(clients)
     .orderBy(clients.name);
-
-  const allUsers = session.user.role === "admin"
-    ? await db.select({ id: users.id, name: users.name }).from(users).orderBy(asc(users.name))
-    : [];
 
   // Lavori extra: il preventivo principale (se questo è un extra) e gli extra collegati.
   const rootId = quote.kind === "extra" ? quote.parentQuoteId : quote.id;
@@ -51,7 +47,6 @@ export default async function QuotePage({ params }: Props) {
     <QuoteEditor
       initialQuote={quote}
       clients={allClients}
-      users={allUsers}
       related={{ parent, extras }}
     />
   );

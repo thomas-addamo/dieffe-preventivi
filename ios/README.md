@@ -21,7 +21,7 @@ gratuito. Non serve l'Apple Developer Program e l'app non passa dall'App Store.
     note e foto; aggiunta dal listino, suggerimenti AI (testo e prezzo),
     duplica, riordina, elimina; totali con sconto e IVA; stato, PDF, Excel,
     CSV, link per il cliente con PIN, lavori extra, blocco (admin), cestino.
-    Salvataggio automatico. "Apri nel sito" per chat AI e riassegnazione.
+    Salvataggio automatico. "Apri nel sito" per la chat AI.
   - **Gestione Cantieri** (in Altro): mappa di Apple con i cantieri e
     l'avanzamento, panoramica (da fatturare, lavori in corso, ritardi),
     prossimi eventi e consigli IA; pagina del cantiere con fasi da spuntare,
