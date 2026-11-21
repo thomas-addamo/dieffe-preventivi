@@ -87,14 +87,21 @@ Analisi DB (data):
 Da fare per prime: sono bug che bloccano il lavoro o modifiche piccole e già chiare.
 
 ### A1. Riepilogo del preventivo che non scorre fino in fondo  _(rif. utente: #7)_
-- **Stato:** 📋 Da fare
+- **Stato:** ✅ Fatto (4.6.1, 2026-11-21); da riverificare in produzione dopo il deploy — branch `claude/project-changes-documentation-e7b724`
+- **Causa trovata:** l'altezza massima del pannello era `100dvh - barra strumenti`, ma su desktop (≥1024px) a scorrere è il `<main>` sotto l'intestazione dell'app e gli eventuali banner. Il pannello quindi superava lo schermo di circa l'altezza dell'intestazione e la parte finale (Condizioni di pagamento) restava irraggiungibile. In più, il pulsante della chat IA copriva l'ultima riga.
+- **Correzione:** altezza calcolata sul contenitore che scorre davvero (ricalcolata quando cambiano finestra, breakpoint o banner) e spazio in fondo (`pb-24`) per il pulsante della chat. File: `src/components/quote-editor/QuoteEditor.tsx`.
 - **Piattaforme:** sito · desktop (verificare anche iPhone)
 - **Cosa:** in alcuni preventivi, quelli con molte sezioni o con sezioni opzionali, il pannello "Riepilogo" a destra resta bloccato. Non si arriva a "Condizioni di pagamento" e ai campi sotto il totale.
 - **Schermata:** `docs/prossime-modifiche/04-riepilogo-bloccato.png`
 - **Dove:** `src/components/quote-editor/TotalsPanel.tsx`, `QuoteEditor.tsx` (altezza e overflow del pannello sticky).
 - **Test specifici:** preventivo con oltre 10 sezioni e una opzionale; finestra bassa (altezza 700px); il bottone chat viola non deve coprire l'ultima riga.
-- **Analisi DB:** — _(da fare prima della progettazione, §0.3)_
-- **Esito:** —
+- **Analisi DB (2026-11-21):** nessun impatto. La correzione è solo di layout e non aggiunge query: il riepilogo usa i dati già caricati con il preventivo. Caso di prova trovato con una query in sola lettura: **PREV-2026-007** (11 sezioni, 1 opzionale, 69 voci; è quello della schermata). Seguono PREV-2026-011 (8 sezioni) e PREV-2026-024 (7). Prima/dopo: invariato.
+- **Esito:** bug riprodotto in produzione su PREV-2026-007 a 1440×820: pannello fino a 913px su 820, ultima riga a 897px, irraggiungibile. Con la formula nuova, applicata in pagina:
+  - 1440×820: il pannello finisce a 820 e l'ultima riga (724) sta sopra la chat (748);
+  - 1280×700: ultima riga a 598 su 700;
+  - 900×700 (tablet, scorre la finestra): invariato e corretto.
+
+  `tsc` e lint ok. **Non fatti:** `next build` completo (lancia le migrazioni sul DB), tema scuro (nessun colore cambiato), app desktop Electron, verifica sul codice pubblicato dopo il deploy.
 
 ### A2. Rimuovere completamente il tasto "Riassegna"  _(#4)_
 - **Stato:** 📋 Da fare
@@ -134,6 +141,26 @@ Da fare per prime: sono bug che bloccano il lavoro o modifiche piccole e già ch
 - **Dove:** `src/app/(app)/cantieri/[id]/MilestonesTab.tsx`, `PhasesTab.tsx`, `site-api.ts`, `src/lib/sites/`, `ios/Dieffe/Native/Sites/SiteSections.swift`.
 - **Test specifici:** completare o annullare una fase e controllare l'aggiornamento del SAL; segnare e togliere Fatturato e Incassato e controllare card e barre; IVA corretta; stessi valori su sito e iPhone; aggiornamento senza ricaricare la pagina.
 - **Analisi DB:** — _(da fare prima della progettazione, §0.3)_
+- **Esito:** —
+
+### A6. Barra dei tasti del preventivo che esce dalla pagina  _(#13, aggiunta il 2026-11-21)_
+- **Stato:** 📋 Da fare
+- **Piattaforme:** sito · desktop (controllare anche iPhone e tablet)
+- **Cosa:** quando i tasti sono tanti (stato, Condividi, Esporta, Lavoro extra, Duplica, Elimina, Blocca, Riassegna…) la barra degli strumenti dell'editor esce dalla pagina, a destra oltre il riepilogo. Bisogna ripensare e **compattare** la barra:
+  - le azioni principali restano visibili (stato, Condividi, Esporta);
+  - le secondarie (Lavoro extra, Duplica, Blocca, Elimina…) passano in un menu "Altro" (⋯);
+  - sotto una certa larghezza, solo icone con tooltip;
+  - la barra non deve **mai** superare la larghezza disponibile: prevedere un passaggio automatico al menu in base allo spazio, non solo a breakpoint fissi.
+- **Dipendenze:** farla **dopo A2** (toglie "Riassegna") e **insieme ad A3** (aggiunge "Vai al cantiere"), così si progetta la barra con l'elenco definitivo dei tasti. Proporre all'utente la disposizione prima di implementare.
+- **Schermata:** `docs/prossime-modifiche/06-barra-tasti-preventivo.webp`
+- **Dove:** `src/components/quote-editor/QuoteEditor.tsx` (barra `toolbarRef`, righe ~920–1210, menu `DropdownMenu` già presente).
+- **Test specifici:**
+  - larghezze 1024, 1280, 1440 e 1920, con barra laterale aperta e chiusa;
+  - preventivo con tutti i tasti possibili (admin, lavoro extra, bloccato, accettato);
+  - utente con pochi permessi;
+  - scorciatoie da tastiera e menu dell'app desktop ancora funzionanti;
+  - nessuno scorrimento orizzontale della pagina.
+- **Analisi DB:** — _(da fare prima della progettazione, §0.3; prevedibilmente nessun impatto)_
 - **Esito:** —
 
 ---
@@ -248,6 +275,8 @@ _(scelte condivise che valgono per tutte le modifiche — aggiungere con data)_
 ## 6. Fatte
 _(spostare qui le voci completate, con versione ed esito)_
 
+- **A1** Riepilogo che non scorre fino in fondo: 4.6.1, 2026-11-21 (dettagli nella voce A1).
+
 ---
 
 ### Corrispondenza con la lista originale dell'utente
@@ -259,3 +288,4 @@ _(spostare qui le voci completate, con versione ed esito)_
 | 4 | A2 | 10 | D1 |
 | 5 | C2 | 11 | B3 |
 | 6 | C3 | 12 | A3 |
+| — | — | 13 | A6 |

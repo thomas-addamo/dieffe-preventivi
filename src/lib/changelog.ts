@@ -43,6 +43,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "4.6.1",
+    date: "2026-11-21",
+    headline: "Il riepilogo del preventivo si scorre fino in fondo.",
+    highlights: [
+      {
+        icon: "layout",
+        title: "Riepilogo sempre raggiungibile",
+        description: "Nei preventivi con molte sezioni il riepilogo a destra arriva fino alle Condizioni di pagamento, e il pulsante della chat non copre più l'ultima riga.",
+      },
+    ],
+  },
+  {
     version: "4.6.0",
     date: "2026-11-10",
     headline: "Torna la Gestione Cantieri, per tutti e su ogni dispositivo.",

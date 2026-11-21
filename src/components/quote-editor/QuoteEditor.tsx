@@ -243,6 +243,15 @@ interface QuoteEditorProps {
 
 const SECTION_CODES = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
+/** Primo antenato che scorre verticalmente (null = scorre la finestra). */
+function findScrollParent(el: HTMLElement): HTMLElement | null {
+  for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+    const oy = getComputedStyle(p).overflowY;
+    if (oy === "auto" || oy === "scroll") return p;
+  }
+  return null;
+}
+
 export function QuoteEditor({ initialQuote, clients, users = [], related }: QuoteEditorProps) {
   const router = useRouter();
   const { isViewer, isAdmin, can: perms } = usePermissions();
@@ -727,15 +736,30 @@ export function QuoteEditor({ initialQuote, clients, users = [], related }: Quot
   // Riepilogo laterale fisso durante lo scorrimento, subito sotto la barra
   // degli strumenti (anch'essa fissa): ne misuriamo posizione e altezza dal
   // vivo, perché cambiano tra sito, app Mac (barra del titolo) e Windows.
+  // L'altezza massima va calcolata sul contenitore che scorre davvero: su
+  // desktop è il <main> sotto l'intestazione dell'app (e gli eventuali banner),
+  // non l'intera finestra; altrimenti la parte bassa del riepilogo resta
+  // fuori schermo e non si raggiunge.
   const toolbarRef = useRef<HTMLDivElement>(null);
   const [summaryTop, setSummaryTop] = useState(0);
+  const [summaryMaxH, setSummaryMaxH] = useState<number | null>(null);
   useEffect(() => {
     const el = toolbarRef.current;
     if (!el) return;
-    const measure = () => setSummaryTop((parseFloat(getComputedStyle(el).top) || 0) + el.offsetHeight);
+    const measure = () => {
+      // Ricalcolato ogni volta: sopra/sotto i 1024px cambia chi scorre.
+      const scroller = findScrollParent(el);
+      const top = (parseFloat(getComputedStyle(el).top) || 0) + el.offsetHeight;
+      const visibleH = scroller ? scroller.clientHeight : window.innerHeight;
+      setSummaryTop(top);
+      setSummaryMaxH(Math.max(160, visibleH - top));
+    };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
+    // Il <main> si accorcia/allunga quando compaiono o si chiudono i banner.
+    const main = el.closest("main");
+    if (main) ro.observe(main);
     window.addEventListener("resize", measure);
     return () => {
       ro.disconnect();
@@ -1242,11 +1266,14 @@ export function QuoteEditor({ initialQuote, clients, users = [], related }: Quot
           </div>
         </div>
 
-        {/* Desktop totals panel */}
+        {/* Desktop totals panel (pb-24: l'ultima riga resta sopra il pulsante fisso della chat IA) */}
         <div className="hidden md:block w-72 shrink-0 border-l">
           <div
-            className="sticky overflow-y-auto overscroll-contain p-4"
-            style={{ top: summaryTop, maxHeight: `calc(100dvh - ${summaryTop}px)` }}
+            className="sticky overflow-y-auto overscroll-contain px-4 pt-4 pb-24"
+            style={{
+              top: summaryTop,
+              maxHeight: summaryMaxH != null ? summaryMaxH : `calc(100dvh - ${summaryTop}px)`,
+            }}
           >
             <TotalsPanel
               sections={quote.sections}
