@@ -115,7 +115,11 @@ Da fare per prime: sono bug che bloccano il lavoro o modifiche piccole e già ch
   - **Tolti:** il tasto nella barra, la voce nel menu ⋯, la finestra di scelta utente, l'API `PATCH /api/quotes/[id]/reassign`, `notifyQuoteAssigned`, la prop `users` dell'editor e la sua query. Testi aggiornati in guida, README iOS e commento in `AppModel.swift`.
   - **Su iPhone** non c'era un tasto nativo: rimandava al sito.
   - **Controlli:** `tsc` ok; lint senza nuovi avvisi (tolto anche l'import inutilizzato `DialogDescription`).
-  - **Da verificare dopo il deploy:** l'editor in produzione senza il tasto (admin e utente normale). Build Xcode non necessaria: in Swift è cambiato solo un commento.
+  - **Verifica in produzione (deploy `c569313`, admin):**
+    - 1440×820: barra con Condividi, Esporta, Lavoro extra, Duplica, Blocca, senza Riassegna e senza scorrimento orizzontale;
+    - 390×844: il menu ⋯ non contiene più Riassegna;
+    - `/api/quotes/[id]/reassign` risponde 404. ✅
+  - **Non verificato:** vista da utente normale, che però non aveva mai avuto il tasto (era solo per admin). Build Xcode non necessaria: in Swift è cambiato solo un commento.
 
 ### A3. Tasto "Vai al cantiere" su ogni preventivo  _(#12)_
 - **Stato:** 📋 Da fare
