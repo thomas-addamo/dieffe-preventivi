@@ -19,7 +19,7 @@
 | B1 | Blocco automatico dei preventivi | 🧪 In test: verificato da admin ed editor; manca il 423 via API | 4.8.0 + 4.8.1 |
 | B2 | Correzione automatica con IA | 🧪 In test: online, da provare nell'uso reale | 4.8.0 |
 | B3 | Documenti PDF nel cantiere | 🧪 In test: caricamento e apertura verificati; manca il PDF grande | 4.8.0 → 4.8.2 |
-| C1–C3 | Restyling | 📋 Da fare (prima i mockup) | — |
+| C1–C3 | Restyling | 🎨 Mockup proposti il 21/11, in attesa delle scelte dell'utente | — |
 | D1 | Sopralluogo con IA vocale | 📋 Da fare (prima lo studio) | — |
 | D2 | iPhone: menu laterale al posto di "Altro" | 📋 Da fare (prima il mockup) | — |
 
@@ -297,15 +297,24 @@ Da fare per prime: sono bug che bloccano il lavoro o modifiche piccole e già ch
 Da fare insieme, per avere un linguaggio visivo coerente. **Proporre all'utente bozze o mockup prima di implementare.**
 
 ### C1. Nuova sezione introduttiva della dashboard  _(#2)_
-- **Stato:** 📋 Da fare
+- **Stato:** 🎨 Mockup proposto, in attesa di scelte
 - **Cosa:** ridisegnare "Buongiorno, Admin" + "Consigli per te" + le 4 card numeriche: più bella e soprattutto **più utile e dinamica**. Mostrare le cose importanti del momento: preventivi in scadenza, clienti da richiamare, SAL da fatturare, cantieri attivi oggi, richieste di sblocco (B1). Card cliccabili che portano alla lista filtrata, andamento rispetto al mese prima.
 - **Schermata:** `docs/prossime-modifiche/01-dashboard-intro.webp`
 - **Dove:** `src/app/(app)/dashboard/WelcomeBriefing.tsx`, `src/app/api/ai/briefing/route.ts`; Home iPhone `ios/Dieffe/Native/Home/`.
-- **Analisi DB:** — _(da fare prima della progettazione, §0.3)_
+- **Mockup:** https://claude.ai/artifact/6VQ77oSy2MuAXPxJiMqc4v (tavole «C1 · Dashboard» e «C1 · Home iPhone»), proposti il 2026-11-21.
+- **Analisi DB (2026-11-21, sola lettura in produzione):** tutti i dati ci sono già, **nessuna tabella nuova**.
+  - Inviati in attesa: 9, tutti inviati da più di 7 giorni; 3 da oltre 90 giorni.
+  - **Scaduti ma ancora «inviati»: 3** (`valid_until` passata): oggi non si vedono da nessuna parte. È il dato più utile da mostrare.
+  - In scadenza nei prossimi 14 giorni: 1. Solo 5 inviati su 9 hanno una validità impostata (vedi C3).
+  - SAL raggiunti da fatturare: 10 (`reached_at` sì, `invoiced_at` no); da incassare: 0. Quasi tutti a percentuale: l'importo va calcolato dal totale del preventivo come già fa la scheda cantiere.
+  - Cantieri aperti: 16 (7 `active`, 9 `pending`). Richieste di sblocco aperte: 0 (`quotes.unlock_requested_at`).
+  - Bozze: 5. Accettati a novembre 5, a ottobre 6.
+  - ⚠️ **Manca la data di accettazione**: oggi «accettati questo mese» si conta da `updated_at`, che cambia a ogni modifica successiva. Proposta: colonna `quotes.accepted_at` (migrazione + riempimento da `quote_signatures.signed_at` e, dove manca, da `updated_at`), aggiornata dalla rotta di stato e dalla firma pubblica.
+  - Query: poche `count(*)` filtrate su `quotes` e `site_milestones`, tabelle piccole: nessun indice nuovo necessario.
 - **Esito:** —
 
 ### C2. Barra in alto dell'app (intestazione)  _(#5)_
-- **Stato:** 📋 Da fare
+- **Stato:** 🎨 Mockup proposto, in attesa di scelte
 - **Cosa:** togliere la scritta "Dieffe Ristrutturazioni" a sinistra e mettere qualcosa di utile. Proposte da valutare con l'utente:
   - ricerca globale (preventivi, clienti, cantieri) con scorciatoia ⌘K;
   - percorso della pagina (es. Preventivi › PREV-2026-062);
@@ -313,15 +322,17 @@ Da fare insieme, per avere un linguaggio visivo coerente. **Proporre all'utente 
   Rifinire anche campanella, icona desktop e menu utente.
 - **Schermata:** `docs/prossime-modifiche/02-intestazione-app.webp`
 - **Dove:** `src/components/shared/Header.tsx`, `Sidebar.tsx`.
-- **Analisi DB:** — _(da fare prima della progettazione, §0.3)_
+- **Mockup:** https://claude.ai/artifact/6VQ77oSy2MuAXPxJiMqc4v (tavola «C2 · Barra in alto»): percorso della pagina a sinistra, ricerca ⌘K al centro, «+ Nuovo», campanella con numero, menu utente con iniziali (il tema passa dentro al menu utente).
+- **Analisi DB (2026-11-21):** la ricerca globale legge `quotes` (codice, titolo), `clients` (nome), `sites` (nome, indirizzo): tabelle piccole, basta `ilike` con un limite di 5 risultati per gruppo. Nessuna tabella o indice nuovo.
 - **Esito:** —
 
 ### C3. Intestazione del preventivo  _(#6)_
-- **Stato:** 📋 Da fare
+- **Stato:** 🎨 Mockup proposto, in attesa di scelte
 - **Cosa:** ridisegnare il blocco "Intestazione preventivo" (titolo, codice, cliente, indirizzo cantiere, validità, IVA, note generali): gerarchia più chiara, titolo in evidenza, cliente e indirizzo con icone e collegamenti (scheda cliente, mappa), layout più compatto.
 - **Schermata:** `docs/prossime-modifiche/03-intestazione-preventivo.png`
 - **Dove:** `src/components/quote-editor/QuoteHeaderForm.tsx`; equivalente iPhone in `ios/Dieffe/Native/Editor/`.
-- **Analisi DB:** — _(da fare prima della progettazione, §0.3)_
+- **Mockup:** https://claude.ai/artifact/6VQ77oSy2MuAXPxJiMqc4v (tavola «C3 · Intestazione preventivo»): titolo grande, codice e stato in alto, quattro riquadri (cliente, cantiere con mappa, validità con scelte rapide, IVA), note sotto con avviso se citano un'IVA diversa da quella scelta.
+- **Analisi DB (2026-11-21):** nessuna colonna nuova. Solo 5 inviati su 9 hanno `valid_until`: le scelte rapide «30/60 giorni» servono a riempirla. Il riquadro cantiere usa `quotes.project_address`; «Apri nella mappa» può usare `sites.lat/lng` quando il preventivo ha un cantiere.
 - **Esito:** —
 
 ---
