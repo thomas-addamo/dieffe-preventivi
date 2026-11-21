@@ -122,25 +122,25 @@ Da fare per prime: sono bug che bloccano il lavoro o modifiche piccole e già ch
   - **Non verificato:** vista da utente normale, che però non aveva mai avuto il tasto (era solo per admin). Build Xcode non necessaria: in Swift è cambiato solo un commento.
 
 ### A3. Tasto "Vai al cantiere" su ogni preventivo  _(#12)_
-- **Stato:** 📋 Da fare
+- **Stato:** ✅ Fatto in 4.7.0 (2026-11-21, branch `claude/project-changes-documentation-e7b724`)
 - **Piattaforme:** sito · desktop · iPhone
 - **Cosa:** ogni preventivo ha un tasto che apre la scheda cantiere collegata. Se il cantiere non esiste ancora, il tasto spiega come crearlo, oppure lo crea se il preventivo è accettato.
 - **Dove:** `QuoteEditor.tsx` (barra azioni), `src/lib/sites/`, `ios/Dieffe/Native/Editor/QuoteEditorView.swift` → `Sites/SiteDetailView.swift`.
 - **Test specifici:** preventivo con cantiere, senza cantiere e in bozza; ritorno indietro corretto su iPhone.
-- **Analisi DB:** — _(da fare prima della progettazione, §0.3)_
-- **Esito:** —
+- **Analisi DB:** 37 preventivi vivi, 23 con `site_id`, 22 cantieri (16 in corso, 6 conclusi). Il tasto legge `quotes.site_id` + `sites` con una join per chiave primaria (indici `quotes_site_id_idx`, pk): costo trascurabile, nessun indice nuovo. Solo se un preventivo inviato/accettato non ha ancora il cantiere si esegue subito `syncSites()` (una transazione).
+- **Esito:** Nuova API `GET /api/quotes/:id/site` (`src/lib/sites/quote-site.ts`), usata da sito e iPhone. Sito/desktop: tasto **Cantiere** nella barra (da tablet in su) e voce **Vai al cantiere** nel menu ⋯ su telefono; senza cantiere il tasto spiega come nasce. Cambiando stato in Inviato/Accettato il tasto si aggiorna da solo. iPhone: voce **Vai al cantiere** in testa al menu Azioni dell'editor; il cantiere si apre in un foglio sopra il preventivo e «Fine» torna all'editor.
 
 ### A4. iPhone: mostrare i lavori archiviati e finiti  _(#9)_
-- **Stato:** 📋 Da fare
+- **Stato:** ✅ Fatto in 4.7.0 (2026-11-21, branch `claude/project-changes-documentation-e7b724`)
 - **Piattaforme:** iPhone (allineare a macOS)
 - **Cosa:** su iPhone non si vedono in nessun modo i lavori archiviati e conclusi, che invece su macOS si vedono. Aggiungere un filtro o una sezione "Archiviati / Conclusi" con gli stessi criteri del sito.
 - **Dove:** `ios/Dieffe/Native/Sites/SitesView.swift`, `ios/Dieffe/Native/Quotes/`, `ios/Dieffe/Data/Models.swift`; confrontare con il filtro web in `src/app/(app)/cantieri/` e `preventivi/`.
 - **Test specifici:** gli stessi conteggi su macOS e iPhone; si apre un lavoro archiviato; i filtri restano dopo il riavvio dell'app.
-- **Analisi DB:** — _(da fare prima della progettazione, §0.3)_
-- **Esito:** —
+- **Analisi DB:** Nessun impatto: l'archivio usa già `GET /api/sites/archive` (6 cantieri conclusi, 0 ritirati).
+- **Esito:** Causa: il filtro **Archivio** esisteva ma era il 4° chip, fuori dallo schermo a destra e sotto mappa, KPI e consigli: di fatto invisibile. Ora: tasto **Archivio** fisso in alto a destra nella sezione Cantieri; in archivio si vede subito l'elenco (mappa e panoramica nascoste); il chip selezionato scorre in vista; il filtro scelto resta dopo il riavvio (`UserDefaults sites.filter`). I preventivi archiviati erano già visibili dal chip «Archiviati» della Home.
 
 ### A5. SAL e avanzamenti del cantiere: studio e correzione dei bug  _(#8)_
-- **Stato:** 📋 Da fare
+- **Stato:** ✅ Fatto in 4.7.0 (2026-11-21, branch `claude/project-changes-documentation-e7b724`)
 - **Piattaforme:** sito · desktop · iPhone
 - **Cosa:** in ogni cantiere SAL e avanzamenti hanno bug seri. A volte non sono cliccabili e non sono collegati tra loro: per esempio un SAL "a fine Demolizioni" deve risultare raggiunto quando la fase Demolizioni è completata, e viceversa.
   1. **Studio di funzionalità:** mappare il flusso attuale (fasi → milestone SAL → fatturato → incassato) e scrivere in questa voce come funziona oggi e come deve funzionare.
@@ -149,11 +149,17 @@ Da fare per prime: sono bug che bloccano il lavoro o modifiche piccole e già ch
 - **Schermata:** `docs/prossime-modifiche/05-sal-fatture.webp`. Esempio da verificare: due SAL segnati come "Fatturato" ma la card Fatturato mostra 0,00 €.
 - **Dove:** `src/app/(app)/cantieri/[id]/MilestonesTab.tsx`, `PhasesTab.tsx`, `site-api.ts`, `src/lib/sites/`, `ios/Dieffe/Native/Sites/SiteSections.swift`.
 - **Test specifici:** completare o annullare una fase e controllare l'aggiornamento del SAL; segnare e togliere Fatturato e Incassato e controllare card e barre; IVA corretta; stessi valori su sito e iPhone; aggiornamento senza ricaricare la pagina.
-- **Analisi DB:** — _(da fare prima della progettazione, §0.3)_
-- **Esito:** —
+- **Analisi DB:** 27 SAL, 43 fasi, 7 SAL «a fine fase» (tutti con `phase_id`). Anomalie trovate nei dati: (a) 2 SAL fatturati+incassati ma non raggiunti (Palazzina Nasi, Capannone); (b) «Metà lavori» del cantiere Balconi raggiunto il 21/11 con la fase Demolizioni aperta e **non** fatturato. Ogni modifica di un SAL ora rilancia `recomputeSite` (3 letture per `site_id` indicizzato + scritture solo se cambia qualcosa): impatto trascurabile.
+- **Esito:** Studio del flusso: fasi (peso = importo) → avanzamento; SAL con momento (accettazione, inizio lavori, fine fase, fine lavori, a mano) → raggiunto → fatturato → incassato; totali calcolati dalle righe (`metrics.ts`). Bug trovati e corretti:
+  1. **La pillola arancione «Fatturato» voleva dire «da fatturare»** (è il caso della schermata: card Fatturato 0 € corretta, nessun SAL era fatturato). Ora l'etichetta dice «Da fatturare» / «Da incassare» quando manca il passo, e «Fatturato ✓» / «Incassato ✓» quando è fatto (sito e iPhone).
+  2. **Togliere «Fatturato» lasciava il SAL raggiunto** anche se la fase non era finita (origine dell'anomalia Balconi). Ora ogni modifica ricalcola il cantiere.
+  3. **«Incassato» senza «Fatturato» non segnava il SAL raggiunto.** Corretto; i dati vecchi incoerenti si sistemano da soli al primo ricalcolo.
+  4. **SAL «a fine fase» e fase non erano collegati nei due sensi**: ora segnare raggiunto (o fatturare) il SAL completa la fase, annullarlo la riapre.
+  5. **Pallini non cliccabili**: ora si cliccano per i SAL a mano e a fine fase (con tooltip); per gli altri il tooltip spiega quando scattano.
+  6. Le card dei totali si aggiornano subito, senza aspettare il server.
 
 ### A6. Barra dei tasti del preventivo che esce dalla pagina  _(#13, aggiunta il 2026-11-21)_
-- **Stato:** 📋 Da fare
+- **Stato:** ✅ Fatto in 4.7.0 (2026-11-21, branch `claude/project-changes-documentation-e7b724`)
 - **Piattaforme:** sito · desktop (controllare anche iPhone e tablet)
 - **Cosa:** quando i tasti sono tanti (stato, Condividi, Esporta, Lavoro extra, Duplica, Elimina, Blocca, Riassegna…) la barra degli strumenti dell'editor esce dalla pagina, a destra oltre il riepilogo. Bisogna ripensare e **compattare** la barra:
   - le azioni principali restano visibili (stato, Condividi, Esporta);
@@ -169,8 +175,8 @@ Da fare per prime: sono bug che bloccano il lavoro o modifiche piccole e già ch
   - utente con pochi permessi;
   - scorciatoie da tastiera e menu dell'app desktop ancora funzionanti;
   - nessuno scorrimento orizzontale della pagina.
-- **Analisi DB:** — _(da fare prima della progettazione, §0.3; prevedibilmente nessun impatto)_
-- **Esito:** —
+- **Analisi DB:** Nessun impatto.
+- **Esito:** Barra da tablet in su: stato, Condividi, Esporta, Cantiere e menu **⋯ Altre azioni** (Lavoro extra, Duplica, Blocca/Sblocca, Elimina). Compattazione automatica misurando lo spazio reale (ResizeObserver con isteresi, non breakpoint): quando non ci sta, i tasti restano solo icone con tooltip. Telefono invariato (menu ⋯). Scorciatoie e menu dell'app desktop (`useMenuParam`) invariati.
 
 ---
 
@@ -286,6 +292,10 @@ _(spostare qui le voci completate, con versione ed esito)_
 
 - **A1** Riepilogo che non scorre fino in fondo: 4.6.1, 2026-11-21 (dettagli nella voce A1).
 - **A2** Tolto il tasto "Riassegna": 4.6.2, 2026-11-21 (dettagli nella voce A2).
+- **A3** Tasto "Vai al cantiere" (sito, desktop, iPhone): 4.7.0, 2026-11-21.
+- **A4** Archivio cantieri raggiungibile su iPhone: 4.7.0, 2026-11-21.
+- **A5** SAL e fasi: studio e 6 bug corretti: 4.7.0, 2026-11-21.
+- **A6** Barra del preventivo compatta e adattiva: 4.7.0, 2026-11-21.
 
 ---
 

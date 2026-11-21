@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, Circle, Plus, Trash2 } from "lucide-react";
+import { Check, CheckCircle2, Circle, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -13,7 +13,19 @@ import { TRIGGER_LABELS, siteRequest, useSiteMutation, type Milestone, type Site
 
 export function MilestonesTab({ data, canManage }: { data: SiteData; canManage: boolean }) {
   const siteId = data.site.id;
-  const m = data.metrics;
+  // Totali ricalcolati dalle righe: si aggiornano subito a ogni spunta, senza
+  // aspettare la risposta del server (stessa formula di metrics.ts).
+  const m = data.milestones.reduce(
+    (t, x) => {
+      t.milestonesTotal += x.value;
+      if (x.invoicedAt) t.invoiced += x.value;
+      if (x.paidAt) t.paid += x.value;
+      if (x.reachedAt && !x.invoicedAt) t.toInvoice += x.value;
+      return t;
+    },
+    { milestonesTotal: 0, invoiced: 0, paid: 0, toInvoice: 0 }
+  );
+  const toCollect = Math.max(0, m.invoiced - m.paid);
   const vatOf = new Map(data.quotes.map((q) => [q.id, q.vatRate]));
   const phaseTitle = new Map(data.phases.map((p) => [p.id, p.title]));
   const percentSum = data.milestones.filter((x) => x.amount == null).reduce((s, x) => s + (x.percent ?? 0), 0);
@@ -24,8 +36,22 @@ export function MilestonesTab({ data, canManage }: { data: SiteData; canManage: 
     ({ id, body }) => siteRequest("PATCH", `/api/sites/${siteId}/milestones/${id}`, body),
     (d, { id, body }) => {
       const now = new Date().toISOString();
+      const target = d.milestones.find((x) => x.id === id);
+      // SAL "a fine fase": raggiungerlo completa la fase, annullarlo la riapre.
+      const phaseDone =
+        target?.trigger === "phase" && target.phaseId
+          ? body.reached === true || body.invoiced === true || body.paid === true
+            ? true
+            : body.reached === false
+              ? false
+              : undefined
+          : undefined;
       return {
         ...d,
+        phases:
+          phaseDone === undefined
+            ? d.phases
+            : d.phases.map((p) => (p.id === target?.phaseId ? { ...p, doneAt: phaseDone ? (p.doneAt ?? now) : null } : p)),
         milestones: d.milestones.map((x) => {
           if (x.id !== id) return x;
           const next = { ...x };
@@ -36,7 +62,10 @@ export function MilestonesTab({ data, canManage }: { data: SiteData; canManage: 
           }
           if ("paid" in body) {
             next.paidAt = body.paid ? now : null;
-            if (body.paid) next.invoicedAt = x.invoicedAt ?? now;
+            if (body.paid) {
+              next.invoicedAt = x.invoicedAt ?? now;
+              next.reachedAt = x.reachedAt ?? now;
+            }
           }
           if ("reached" in body) next.reachedAt = body.reached ? now : null;
           if ("invoiceNumber" in body) next.invoiceNumber = body.invoiceNumber as string | null;
@@ -61,7 +90,7 @@ export function MilestonesTab({ data, canManage }: { data: SiteData; canManage: 
         <Stat label="Totale SAL" value={formatCurrency(m.milestonesTotal)} />
         <Stat label="Da fatturare" value={formatCurrency(m.toInvoice)} tone={m.toInvoice > 0 ? "amber" : undefined} />
         <Stat label="Fatturato" value={formatCurrency(m.invoiced)} />
-        <Stat label="Da incassare" value={formatCurrency(m.toCollect)} tone={m.toCollect > 0 ? "amber" : undefined} />
+        <Stat label="Da incassare" value={formatCurrency(toCollect)} tone={toCollect > 0 ? "amber" : undefined} />
       </div>
       {m.milestonesTotal > 0 && (
         <div className="surface space-y-1.5 text-xs text-muted-foreground">
@@ -87,13 +116,43 @@ export function MilestonesTab({ data, canManage }: { data: SiteData; canManage: 
         {data.milestones.map((x) => {
           const vat = (x.quoteId ? vatOf.get(x.quoteId) : undefined) ?? 22;
           const reached = !!x.reachedAt;
+          // Il pallino si clicca per i SAL "a mano" e "a fine fase" (che
+          // completa o riapre la fase); gli altri scattano da soli.
+          const canToggle = canManage && !x.invoicedAt && (x.trigger === "manual" || (x.trigger === "phase" && !!x.phaseId));
+          const toggleTitle = canToggle
+            ? x.trigger === "phase"
+              ? reached
+                ? `Annulla: riapre la fase "${phaseTitle.get(x.phaseId!) ?? ""}"`
+                : `Segna raggiunto: completa la fase "${phaseTitle.get(x.phaseId!) ?? ""}"`
+              : reached
+                ? "Annulla raggiunto"
+                : "Segna raggiunto"
+            : x.invoicedAt
+              ? "Già fatturato: togli prima la spunta Fatturato"
+              : `Scatta da solo: ${triggerText(x).toLowerCase()}`;
+          const icon = reached ? (
+            <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+          ) : (
+            <Circle className="h-5 w-5 text-foreground/25" />
+          );
           return (
             <div key={x.id} className="group flex flex-col gap-3 px-3 py-3 md:flex-row md:items-center md:px-4">
               <div className="flex min-w-0 flex-1 items-start gap-3">
-                {reached ? (
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" />
+                {canToggle ? (
+                  <button
+                    type="button"
+                    onClick={() => patch.mutate({ id: x.id, body: { reached: !reached } })}
+                    title={toggleTitle}
+                    aria-label={toggleTitle}
+                    aria-pressed={reached}
+                    className="-m-1 mt-[-2px] shrink-0 rounded-full p-1 hover:bg-accent"
+                  >
+                    {icon}
+                  </button>
                 ) : (
-                  <Circle className="mt-0.5 h-5 w-5 shrink-0 text-foreground/25" />
+                  <span title={toggleTitle} className="mt-0.5 shrink-0">
+                    {icon}
+                  </span>
                 )}
                 <div className="min-w-0">
                   <p className="font-medium">
@@ -107,9 +166,10 @@ export function MilestonesTab({ data, canManage }: { data: SiteData; canManage: 
                     ) : (
                       "non ancora raggiunto"
                     )}
-                    {x.trigger === "manual" && canManage && !x.invoicedAt && (
+                    {canToggle && (
                       <button
                         onClick={() => patch.mutate({ id: x.id, body: { reached: !reached } })}
+                        title={toggleTitle}
                         className="ml-1.5 font-medium text-primary hover:underline"
                       >
                         {reached ? "annulla" : "segna raggiunto"}
@@ -126,16 +186,17 @@ export function MilestonesTab({ data, canManage }: { data: SiteData; canManage: 
 
               <div className="flex flex-wrap items-center gap-2 md:w-[300px] md:justify-end">
                 <Toggle
-                  label="Fatturato"
+                  label={reached && !x.invoicedAt ? "Da fatturare" : "Fatturato"}
                   on={!!x.invoicedAt}
                   disabled={!canManage}
                   attention={reached && !x.invoicedAt}
                   onClick={() => patch.mutate({ id: x.id, body: { invoiced: !x.invoicedAt } })}
                 />
                 <Toggle
-                  label="Incassato"
+                  label={x.invoicedAt && !x.paidAt ? "Da incassare" : "Incassato"}
                   on={!!x.paidAt}
                   disabled={!canManage}
+                  attention={!!x.invoicedAt && !x.paidAt}
                   onClick={() => patch.mutate({ id: x.id, body: { paid: !x.paidAt } })}
                 />
                 {x.invoicedAt && (
@@ -240,6 +301,7 @@ function Toggle({
       disabled={disabled}
       onClick={onClick}
       aria-pressed={on}
+      title={on ? "Clic per togliere la spunta" : "Clic per segnare"}
       className={cn(
         "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors disabled:cursor-default",
         on
@@ -249,7 +311,11 @@ function Toggle({
             : "text-muted-foreground hover:bg-accent"
       )}
     >
-      <span className={cn("h-2 w-2 rounded-full", on ? "bg-emerald-500" : attention ? "bg-amber-500" : "bg-foreground/20")} />
+      {on ? (
+        <Check className="h-3.5 w-3.5" />
+      ) : (
+        <span className={cn("h-2 w-2 rounded-full", attention ? "bg-amber-500" : "bg-foreground/20")} />
+      )}
       {label}
     </button>
   );

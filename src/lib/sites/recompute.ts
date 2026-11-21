@@ -1,5 +1,5 @@
 import "server-only";
-import { eq, inArray, and } from "drizzle-orm";
+import { eq, inArray, and, sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { sites, sitePhases, siteMilestones, quotes, users } from "@/lib/db/schema";
 import { notifyUsers } from "@/lib/notifications";
@@ -34,8 +34,13 @@ export async function recomputeSite(siteId: string, opts: { notify?: boolean } =
 
   const reachedNow: string[] = [];
   const unreached: string[] = [];
+  // Dati incoerenti lasciati dalle versioni precedenti: incassato senza
+  // fatturato, fatturato senza raggiunto. Si sistemano qui, una volta sola.
+  const healInvoiced = milestones.filter((m) => m.paidAt && !m.invoicedAt).map((m) => m.id);
+  const healReached = milestones.filter((m) => (m.invoicedAt || m.paidAt) && !m.reachedAt).map((m) => m.id);
   for (const m of milestones) {
     if (m.trigger === "manual") continue;
+    if (healReached.includes(m.id)) continue;
     const reached =
       site.status === "active" &&
       !site.archivedAt &&
@@ -52,6 +57,8 @@ export async function recomputeSite(siteId: string, opts: { notify?: boolean } =
     writes.push(db.update(sites).set({ progress, updatedAt: new Date() }).where(eq(sites.id, siteId)));
   }
   if (reachedNow.length) writes.push(db.update(siteMilestones).set({ reachedAt: new Date() }).where(inArray(siteMilestones.id, reachedNow)));
+  if (healInvoiced.length) writes.push(db.update(siteMilestones).set({ invoicedAt: sql`${siteMilestones.paidAt}` as never }).where(inArray(siteMilestones.id, healInvoiced)));
+  if (healReached.length) writes.push(db.update(siteMilestones).set({ reachedAt: sql`coalesce(${siteMilestones.invoicedAt}, ${siteMilestones.paidAt})` as never }).where(inArray(siteMilestones.id, healReached)));
   if (unreached.length) writes.push(db.update(siteMilestones).set({ reachedAt: null }).where(inArray(siteMilestones.id, unreached)));
   if (writes.length) await db.batch(writes as [(typeof writes)[number], ...typeof writes]);
 

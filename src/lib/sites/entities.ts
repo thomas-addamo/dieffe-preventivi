@@ -155,6 +155,13 @@ export async function updateEntity(
       const p = milestonePatch.safeParse(body);
       if (!p.success) return bad();
       const { reached, invoiced, paid, ...fields } = p.data;
+      const where = and(eq(siteMilestones.id, itemId), eq(siteMilestones.siteId, siteId));
+      const [cur] = await db
+        .select({ trigger: siteMilestones.trigger, phaseId: siteMilestones.phaseId, invoicedAt: siteMilestones.invoicedAt })
+        .from(siteMilestones)
+        .where(where)
+        .limit(1);
+      if (!cur) return { ok: false, status: 404, error: "SAL non trovato" };
       const set: Partial<typeof siteMilestones.$inferInsert> = { ...fields };
       if (fields.phaseId !== undefined && fields.trigger === undefined) set.trigger = fields.phaseId ? "phase" : "manual";
       if (reached !== undefined) set.reachedAt = reached ? new Date() : null;
@@ -166,10 +173,28 @@ export async function updateEntity(
       if (paid !== undefined) {
         set.paidAt = paid ? new Date() : null;
         if (paid && invoiced === undefined) set.invoicedAt = sql`coalesce(${siteMilestones.invoicedAt}, now())` as never;
+        // Incassato implica fatturato e quindi raggiunto.
+        if (paid && reached === undefined) set.reachedAt = sql`coalesce(${siteMilestones.reachedAt}, now())` as never;
       }
-      await db.update(siteMilestones).set(set).where(and(eq(siteMilestones.id, itemId), eq(siteMilestones.siteId, siteId)));
-      if (fields.trigger !== undefined || fields.phaseId !== undefined) await recomputeSite(siteId);
-      return { ok: true };
+
+      // SAL "a fine fase" e fase sono la stessa cosa vista da due lati:
+      // segnare raggiunto (o fatturare) il SAL completa la fase, annullarlo la riapre.
+      const trigger = set.trigger ?? cur.trigger;
+      const phaseId = fields.phaseId !== undefined ? fields.phaseId : cur.phaseId;
+      const writes = [db.update(siteMilestones).set(set).where(where)];
+      if (trigger === "phase" && phaseId) {
+        const phaseWhere = and(eq(sitePhases.id, phaseId), eq(sitePhases.siteId, siteId));
+        if (reached === true || invoiced === true || paid === true) {
+          writes.push(db.update(sitePhases).set({ doneAt: sql`coalesce(${sitePhases.doneAt}, now())` as never }).where(phaseWhere) as never);
+        } else if (reached === false && !cur.invoicedAt) {
+          writes.push(db.update(sitePhases).set({ doneAt: null }).where(phaseWhere) as never);
+        }
+      }
+      await db.batch(writes as [(typeof writes)[number], ...typeof writes]);
+      // Sempre: avanzamento, SAL raggiunti e totali restano coerenti (anche
+      // togliendo "Fatturato", che prima lasciava il SAL raggiunto).
+      const { allDone } = await recomputeSite(siteId);
+      return { ok: true, data: { allDone } };
     }
     case "events": {
       const p = eventPatch.safeParse(body);

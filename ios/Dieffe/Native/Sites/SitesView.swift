@@ -15,8 +15,12 @@ struct SitesView: View {
 
     enum Filter: String, CaseIterable { case active, pending, all, archive }
 
-    init(initialFilter: Filter = .active) {
-        _filter = State(initialValue: initialFilter)
+    private static let filterKey = "sites.filter"
+
+    /// Senza filtro esplicito riparte dall'ultimo scelto (resta dopo il riavvio).
+    init(initialFilter: Filter? = nil) {
+        let saved = UserDefaults.standard.string(forKey: Self.filterKey).flatMap(Filter.init(rawValue:))
+        _filter = State(initialValue: initialFilter ?? saved ?? .active)
     }
 
     private var store: SitesStore { model.sites }
@@ -37,10 +41,22 @@ struct SitesView: View {
         }
         .task(id: model.dataVersion) { await store.load() }
         .task(id: filter) {
+            UserDefaults.standard.set(filter.rawValue, forKey: Self.filterKey)
             if filter == .archive, store.archive == nil { await store.loadArchive() }
         }
         .onDisappear { store.stopWatching() }
         .toolbar {
+            // Archivio sempre a portata di dito: prima il filtro restava
+            // fuori schermo, sotto mappa e panoramica.
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    withAnimation { filter = filter == .archive ? .active : .archive }
+                    UISelectionFeedbackGenerator().selectionChanged()
+                } label: {
+                    Label("Archivio", systemImage: filter == .archive ? "archivebox.fill" : "archivebox")
+                }
+                .accessibilityHint(filter == .archive ? "Torna ai cantieri attivi" : "Cantieri conclusi e ritirati")
+            }
             if store.preparing {
                 ToolbarItem(placement: .topBarTrailing) {
                     HStack(spacing: 6) {
@@ -71,7 +87,9 @@ struct SitesView: View {
             }
 
         return List {
-            if needle.isEmpty {
+            // In archivio servono solo l'elenco e i filtri: mappa e panoramica
+            // riguardano i cantieri in corso.
+            if needle.isEmpty, !archived {
                 Section {
                     SitesMap(sites: data.sites, selection: $selection, camera: $camera)
                         .frame(height: 300)
@@ -510,6 +528,7 @@ struct SiteFilterBar<Value: Hashable>: View {
     let items: [Item]
 
     var body: some View {
+        ScrollViewReader { proxy in
         ScrollView(.horizontal) {
             HStack(spacing: 8) {
                 ForEach(items, id: \.value) { item in
@@ -539,12 +558,17 @@ struct SiteFilterBar<Value: Hashable>: View {
                     .buttonStyle(.plain)
                     .accessibilityLabel(count.map { "\(title), \($0)" } ?? title)
                     .accessibilityAddTraits(selected ? .isSelected : [])
+                    .id(value)
                 }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 2)
         }
         .scrollIndicators(.hidden)
+        // Il filtro scelto resta sempre visibile (anche l'ultimo, Archivio).
+        .onAppear { proxy.scrollTo(selection, anchor: .center) }
+        .onChange(of: selection) { _, v in withAnimation { proxy.scrollTo(v, anchor: .center) } }
+        }
     }
 }
 

@@ -11,6 +11,9 @@ struct QuoteEditorView: View {
     @State private var addingFromList: String?
     @State private var showHeader = false
     @State private var showLink = false
+    /// Cantiere collegato, aperto in un foglio sopra l'editor ("Fine" torna qui).
+    @State private var siteSheet: LinkedSite?
+    @State private var siteMessage: String?
     @State private var showEmail = false
     @State private var confirmTrash = false
     @State private var pendingDeleteSection: QuoteSection?
@@ -110,6 +113,22 @@ struct QuoteEditorView: View {
         }
         .sheet(isPresented: $showLink) {
             PublicLinkView(editor: editor)
+        }
+        .sheet(item: $siteSheet) { site in
+            NavigationStack {
+                SiteRouteView(route: .site(site.id, tab: nil))
+                    .navigationDestination(for: AltroRoute.self) { SiteRouteView(route: $0) }
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Fine", systemImage: "chevron.down") { siteSheet = nil }
+                        }
+                    }
+            }
+        }
+        .alert("Nessun cantiere", isPresented: Binding(get: { siteMessage != nil }, set: { if !$0 { siteMessage = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(siteMessage ?? "")
         }
         .sheet(isPresented: $orderingSections) {
             SectionsOrderView(editor: editor)
@@ -362,6 +381,9 @@ struct QuoteEditorView: View {
             }
             ToolbarItem(placement: .primaryAction) {
                 Menu {
+                    if model.sitesEnabled {
+                        Button("Vai al cantiere", systemImage: "hammer") { goToSite(status: quote.status) }
+                    }
                     Section("Condividi") {
                         if editor.canEdit {
                             Button("Invia per email", systemImage: "envelope") { showEmail = true }
@@ -451,6 +473,28 @@ struct QuoteEditorView: View {
         Task {
             await editor.flush()
             model.openQuote(id)
+        }
+    }
+
+    /// Apre il cantiere del preventivo; se non c'è ancora spiega come nasce.
+    /// Il server lo crea subito se il preventivo è inviato o accettato.
+    private func goToSite(status: QuoteStatus) {
+        working = true
+        Task {
+            defer { working = false }
+            await editor.flush()
+            do {
+                let response: LinkedSiteResponse = try await APIClient.shared.get("/api/quotes/\(editor.quoteID)/site")
+                if let site = response.site {
+                    siteSheet = site
+                } else {
+                    siteMessage = status == .draft
+                        ? "Il cantiere si crea da solo quando il preventivo viene inviato al cliente (stato «Inviato») e parte quando è «Accettato»."
+                        : "Il preventivo non è più inviato né accettato: il cantiere torna disponibile se rimetti lo stato su «Inviato» o «Accettato»."
+                }
+            } catch {
+                model.lastError = error.localizedDescription
+            }
         }
     }
 
@@ -754,4 +798,16 @@ private struct TotalBar: View {
                 .frame(maxWidth: 170, alignment: .trailing)
         }
     }
+}
+
+/// Cantiere collegato a un preventivo (GET /api/quotes/:id/site).
+struct LinkedSite: Decodable, Identifiable {
+    let id: String
+    let name: String
+    let status: String?
+    let archivedAt: String?
+}
+
+struct LinkedSiteResponse: Decodable {
+    let site: LinkedSite?
 }

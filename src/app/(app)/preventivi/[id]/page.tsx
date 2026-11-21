@@ -5,6 +5,8 @@ import { db } from "@/lib/db/client";
 import { clients, quotes } from "@/lib/db/schema";
 import { QuoteEditor } from "@/components/quote-editor/QuoteEditor";
 import { and, asc, eq, isNull } from "drizzle-orm";
+import { sitesEnabledFor } from "@/lib/features";
+import { getQuoteSite } from "@/lib/sites/quote-site";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -25,7 +27,7 @@ export default async function QuotePage({ params }: Props) {
 
   // Lavori extra: il preventivo principale (se questo è un extra) e gli extra collegati.
   const rootId = quote.kind === "extra" ? quote.parentQuoteId : quote.id;
-  const [parent, extras] = await Promise.all([
+  const [parent, extras, site] = await Promise.all([
     quote.kind === "extra" && quote.parentQuoteId
       ? db
           .select({ id: quotes.id, code: quotes.code, title: quotes.title })
@@ -41,6 +43,8 @@ export default async function QuotePage({ params }: Props) {
           .where(and(eq(quotes.parentQuoteId, rootId), isNull(quotes.deletedAt)))
           .orderBy(asc(quotes.createdAt))
       : Promise.resolve([]),
+    // Cantiere collegato: una lettura per chiave primaria (solo se la funzione è attiva).
+    sitesEnabledFor(session.user.role) ? getQuoteSite(id).then((r) => r.site) : Promise.resolve(undefined),
   ]);
 
   return (
@@ -48,6 +52,7 @@ export default async function QuotePage({ params }: Props) {
       initialQuote={quote}
       clients={allClients}
       related={{ parent, extras }}
+      site={site}
     />
   );
 }

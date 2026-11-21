@@ -63,22 +63,27 @@ struct SiteMilestonesSection: View {
                         }
                     }
                     HStack(spacing: 8) {
-                        toggle("Fatturato", on: x.invoicedAt != nil, attention: x.reachedAt != nil && x.invoicedAt == nil) {
+                        toggle(x.reachedAt != nil && x.invoicedAt == nil ? "Da fatturare" : "Fatturato",
+                               on: x.invoicedAt != nil, attention: x.reachedAt != nil && x.invoicedAt == nil) {
                             if x.invoicedAt == nil {
                                 present(.invoice(x))
                             } else {
                                 patch(x, ["invoiced": false])
                             }
                         }
-                        toggle("Incassato", on: x.paidAt != nil, attention: false) {
+                        toggle(x.invoicedAt != nil && x.paidAt == nil ? "Da incassare" : "Incassato",
+                               on: x.paidAt != nil, attention: x.invoicedAt != nil && x.paidAt == nil) {
                             patch(x, ["paid": x.paidAt == nil])
                         }
                         if let n = x.invoiceNumber, x.invoicedAt != nil {
                             Text("Fatt. \(n)").font(.caption).foregroundStyle(.secondary)
                         }
                         Spacer()
-                        if x.trigger == "manual", x.invoicedAt == nil, canEdit {
-                            Button(x.reachedAt == nil ? "Segna raggiunto" : "Annulla") {
+                        // SAL a mano o "a fine fase" (che completa o riapre la fase).
+                        if x.trigger == "manual" || (x.trigger == "phase" && x.phaseId != nil), x.invoicedAt == nil, canEdit {
+                            Button(x.reachedAt == nil
+                                   ? (x.trigger == "phase" ? "Completa fase" : "Segna raggiunto")
+                                   : (x.trigger == "phase" ? "Riapri fase" : "Annulla")) {
                                 patch(x, ["reached": x.reachedAt == nil])
                             }
                             .font(.caption.weight(.semibold))

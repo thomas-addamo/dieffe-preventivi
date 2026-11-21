@@ -20,6 +20,8 @@ interface SharePopoverProps {
   onTokenChange: (token: string | null, expiresAt: string | null) => void;
   /** Apre la finestra "Invia per email". */
   onSendEmail?: () => void;
+  /** Barra stretta: solo icona (il nome resta nel tooltip). */
+  compact?: boolean;
 }
 
 export function SharePopover({
@@ -29,6 +31,7 @@ export function SharePopover({
   publicTokenExpiresAt,
   onTokenChange,
   onSendEmail,
+  compact = false,
 }: SharePopoverProps) {
   const [days, setDays] = useState(30);
   const [loading, setLoading] = useState(false);
@@ -104,9 +107,9 @@ export function SharePopover({
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
+        <Button variant="outline" size="sm" className="gap-2" title="Condividi" aria-label="Condividi">
           <Share2 className="w-4 h-4" />
-          <span className="hidden sm:inline">Condividi</span>
+          <span className={compact ? "sr-only" : "hidden sm:inline"}>Condividi</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 p-4">

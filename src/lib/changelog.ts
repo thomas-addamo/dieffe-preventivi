@@ -43,6 +43,33 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "4.7.0",
+    date: "2026-11-21",
+    headline: "Dal preventivo al cantiere con un tocco, SAL più chiari.",
+    highlights: [
+      {
+        icon: "site",
+        title: "Vai al cantiere",
+        description: "Ogni preventivo ha il tasto Cantiere (sito, app desktop e iPhone). Se il cantiere non esiste ancora spiega come nasce.",
+      },
+      {
+        icon: "layout",
+        title: "Barra del preventivo compatta",
+        description: "Le azioni secondarie stanno nel menu ⋯ e, quando lo spazio manca, i tasti restano solo icone: la barra non esce più dalla pagina.",
+      },
+      {
+        icon: "zap",
+        title: "SAL e fasi collegati",
+        description: "Segnare raggiunto un SAL «a fine fase» completa la fase e viceversa; «Da fatturare» e «Da incassare» si distinguono da «Fatturato» e «Incassato»; i totali si aggiornano subito.",
+      },
+      {
+        icon: "site",
+        title: "Archivio cantieri su iPhone",
+        description: "Tasto Archivio sempre visibile in alto nella sezione Cantieri; il filtro scelto resta anche dopo il riavvio.",
+      },
+    ],
+  },
+  {
     version: "4.6.2",
     date: "2026-11-21",
     headline: "Barra del preventivo più snella.",

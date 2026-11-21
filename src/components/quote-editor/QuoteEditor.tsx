@@ -1,7 +1,8 @@
 "use client";
 
 import { useMenuParam } from "@/hooks/use-menu-param";
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useLayoutEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
@@ -19,6 +20,8 @@ import {
   Plus,
   Loader2,
   Mail,
+  MoreHorizontal,
+  HardHat,
 } from "lucide-react";
 import { SharePopover } from "./SharePopover";
 import { DuplicateQuoteDialog } from "./DuplicateQuoteDialog";
@@ -45,6 +48,7 @@ import { PdfExportSheet, prefersPdfSheet } from "@/components/shared/PdfExportSh
 import { toPlainText } from "@/lib/rich-text";
 import { QuoteHeaderForm } from "./QuoteHeaderForm";
 import type { QuoteWithRelations, SectionWithItems, ItemWithImages } from "@/types";
+import type { QuoteSite } from "@/lib/sites/quote-site";
 import type { PriceListItem } from "@/lib/db/schema";
 import { QUOTE_STATUS_LABELS, QUOTE_STATUS_COLORS, generateId, formatCurrency, formatDate } from "@/lib/utils";
 import { calcQuoteTotals } from "@/lib/calculations";
@@ -236,6 +240,8 @@ interface QuoteEditorProps {
     parent: { id: string; code: string; title: string } | null;
     extras: { id: string; code: string; title: string; status: string }[];
   };
+  /** Cantiere collegato (tasto "Vai al cantiere"); undefined = Gestione Cantieri non disponibile. */
+  site?: QuoteSite;
 }
 
 const SECTION_CODES = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
@@ -249,7 +255,7 @@ function findScrollParent(el: HTMLElement): HTMLElement | null {
   return null;
 }
 
-export function QuoteEditor({ initialQuote, clients, related }: QuoteEditorProps) {
+export function QuoteEditor({ initialQuote, clients, related, site: initialSite }: QuoteEditorProps) {
   const router = useRouter();
   const { isViewer, isAdmin, can: perms } = usePermissions();
   const [quote, setQuote] = useState<QuoteWithRelations>(initialQuote);
@@ -700,6 +706,7 @@ export function QuoteEditor({ initialQuote, clients, related }: QuoteEditorProps
     if (res.ok) {
       setQuote((prev) => ({ ...prev, status: status as never }));
       toast.success("Stato aggiornato");
+      void refreshSite();
     } else {
       toast.error("Errore durante l'aggiornamento dello stato");
     }
@@ -763,6 +770,62 @@ export function QuoteEditor({ initialQuote, clients, related }: QuoteEditorProps
       window.removeEventListener("resize", measure);
     };
   }, []);
+
+  // ─── Cantiere collegato (A3) ─────────────────────────────────────────────
+  const sitesEnabled = initialSite !== undefined;
+  const [site, setSite] = useState<QuoteSite>(initialSite ?? null);
+  async function refreshSite() {
+    if (!sitesEnabled) return;
+    const res = await fetch(`/api/quotes/${quote.id}/site`).catch(() => null);
+    if (res?.ok) setSite(((await res.json()) as { site: QuoteSite }).site);
+  }
+  function explainNoSite() {
+    const msg =
+      quote.status === "draft"
+        ? "Il cantiere si crea da solo quando il preventivo viene inviato al cliente (stato «Inviato») e parte quando è «Accettato»."
+        : "Il preventivo non è più inviato né accettato: il cantiere torna disponibile se rimetti lo stato su «Inviato» o «Accettato».";
+    toast.info("Nessun cantiere per questo preventivo", { description: msg });
+  }
+  const siteHint = site
+    ? site.archivedAt
+      ? `Apri il cantiere (in archivio${site.archiveReason === "completed" ? ": lavori conclusi" : ""})`
+      : site.status === "active"
+        ? "Apri il cantiere: avanzamento, SAL, calendario e foto"
+        : "Apri il cantiere (in attesa di accettazione)"
+    : "Come si crea il cantiere";
+
+  // ─── Barra compatta (A6) ────────────────────────────────────────────────
+  // Le etichette dei tasti spariscono (restano icona e tooltip) quando la
+  // barra non ci sta più, misurando lo spazio reale e non la larghezza della
+  // finestra: con la barra laterale aperta, i pannelli o più tasti il
+  // passaggio avviene da solo. `need` = larghezza necessaria con le etichette,
+  // misurata solo quando sono visibili (isteresi: niente sfarfallio).
+  const titleRef = useRef<HTMLDivElement>(null);
+  const actionsKey = [quote.status, quote.isLocked, quote.kind, !!site, sitesEnabled, isViewer, isAdmin].join("|");
+  // Compatta solo per l'insieme di tasti misurato: se i tasti cambiano si
+  // torna alle etichette e si rimisura.
+  const [compactFor, setCompactFor] = useState<string | null>(null);
+  const compact = compactFor === actionsKey;
+  const needRef = useRef(0);
+  useLayoutEffect(() => {
+    const bar = toolbarRef.current;
+    const title = titleRef.current;
+    if (!bar || !title) return;
+    const MIN_TITLE = 140;
+    const check = () => {
+      if (!compact) {
+        needRef.current = bar.scrollWidth - title.offsetWidth + MIN_TITLE;
+        if (bar.clientWidth < needRef.current) setCompactFor(actionsKey);
+      } else if (bar.clientWidth >= needRef.current) {
+        setCompactFor(null);
+      }
+    };
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(bar);
+    return () => ro.disconnect();
+  }, [compact, actionsKey]);
+  const label = compact ? "sr-only" : "";
 
   // Comandi dalla barra dei menu dell'app desktop (File).
   useMenuParam("pdf", (v) => void exportQuote(v === "scarica" ? "pdf-download" : "pdf"));
@@ -927,7 +990,7 @@ export function QuoteEditor({ initialQuote, clients, related }: QuoteEditorProps
 
         {/* Codice + titolo: su mobile è l'unico punto in cui si capisce
             quale preventivo si sta modificando. */}
-        <div className="flex-1 min-w-0">
+        <div ref={titleRef} className="flex-1 min-w-0">
           <h1 className="flex items-center gap-1.5 font-semibold text-sm leading-tight">
             <span className="truncate">{quote.code}</span>
             {quote.kind === "extra" && (
@@ -943,7 +1006,7 @@ export function QuoteEditor({ initialQuote, clients, related }: QuoteEditorProps
 
         {!isViewer && (
           <>
-            <span className="hidden sm:block text-xs text-muted-foreground shrink-0">
+            <span className={`hidden ${compact ? "" : "sm:block"} text-xs text-muted-foreground shrink-0`}>
               {saveState === "saving"
                 ? "Salvataggio..."
                 : saveState === "saved"
@@ -967,7 +1030,7 @@ export function QuoteEditor({ initialQuote, clients, related }: QuoteEditorProps
                   ? "Salvato"
                   : "Non salvato"
               }
-              className={`sm:hidden h-2 w-2 shrink-0 rounded-full ${
+              className={`${compact ? "" : "sm:hidden"} h-2 w-2 shrink-0 rounded-full ${
                 saveState === "saving"
                   ? "bg-amber-400 animate-pulse"
                   : saveState === "saved"
@@ -1008,9 +1071,12 @@ export function QuoteEditor({ initialQuote, clients, related }: QuoteEditorProps
           </Badge>
         )}
 
-        <div className="hidden md:flex items-center gap-2">
+        {/* Azioni (da tablet in su): principali sempre visibili, le altre
+            nel menu "Altro". In barra stretta restano solo le icone. */}
+        <div className="hidden md:flex items-center gap-2 shrink-0">
           {perms.editQuote && (
             <SharePopover
+              compact={compact}
               quoteId={quote.id}
               quoteStatus={quote.status}
               publicToken={quote.publicToken ?? null}
@@ -1028,9 +1094,9 @@ export function QuoteEditor({ initialQuote, clients, related }: QuoteEditorProps
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2">
-                <Download className="w-4 h-4" /> Esporta
-                <ChevronDown className="w-3.5 h-3.5" />
+              <Button variant="outline" size="sm" className="gap-2" title="Esporta" aria-label="Esporta">
+                <Download className="w-4 h-4" /> <span className={label}>Esporta</span>
+                {!compact && <ChevronDown className="w-3.5 h-3.5" />}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -1046,58 +1112,63 @@ export function QuoteEditor({ initialQuote, clients, related }: QuoteEditorProps
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {perms.createQuote && quote.kind !== "extra" && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5 h-8"
-              onClick={createExtra}
-              disabled={creatingExtra}
-              title="Crea un preventivo di sole lavorazioni extra collegato a questo"
-            >
-              {creatingExtra ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FilePlus2 className="w-3.5 h-3.5" />}
-              <span className="hidden lg:inline">Lavoro extra</span>
-            </Button>
-          )}
-
-          {perms.createQuote && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5 h-8"
-              onClick={() => setDuplicateOpen(true)}
-              title="Crea una copia di questo preventivo, per lo stesso cliente o per un altro"
-            >
-              <Copy className="w-3.5 h-3.5" />
-              <span className="hidden lg:inline">Duplica</span>
-            </Button>
-          )}
-
-          {perms.deleteQuote && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-destructive hover:text-destructive"
-              onClick={deleteQuote}
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          )}
-
-          {isAdmin && (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5 h-8"
-                onClick={toggleLock}
-                disabled={locking}
-                title={quote.isLocked ? "Sblocca modifiche" : "Blocca modifiche"}
-              >
-                {quote.isLocked ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
-                <span className="hidden lg:inline">{quote.isLocked ? "Sblocca" : "Blocca"}</span>
+          {sitesEnabled &&
+            (site ? (
+              <Button asChild variant="outline" size="sm" className="gap-1.5 h-8" title={siteHint}>
+                <Link href={`/cantieri/${site.id}`} aria-label={siteHint}>
+                  <HardHat className="w-3.5 h-3.5" />
+                  <span className={label}>Cantiere</span>
+                </Link>
               </Button>
-            </>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 h-8 text-muted-foreground"
+                onClick={explainNoSite}
+                title={siteHint}
+                aria-label={siteHint}
+              >
+                <HardHat className="w-3.5 h-3.5" />
+                <span className={label}>Cantiere</span>
+              </Button>
+            ))}
+
+          {(perms.createQuote || perms.deleteQuote || isAdmin) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="h-8 w-8" title="Altre azioni" aria-label="Altre azioni">
+                  <MoreHorizontal className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-60">
+                {perms.createQuote && quote.kind !== "extra" && (
+                  <DropdownMenuItem onClick={createExtra} disabled={creatingExtra}>
+                    {creatingExtra ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FilePlus2 className="w-4 h-4 mr-2" />}
+                    Nuovo lavoro extra
+                  </DropdownMenuItem>
+                )}
+                {perms.createQuote && (
+                  <DropdownMenuItem onClick={() => setDuplicateOpen(true)}>
+                    <Copy className="w-4 h-4 mr-2" /> Duplica preventivo
+                  </DropdownMenuItem>
+                )}
+                {isAdmin && (
+                  <DropdownMenuItem onClick={toggleLock} disabled={locking}>
+                    {quote.isLocked ? <Unlock className="w-4 h-4 mr-2" /> : <Lock className="w-4 h-4 mr-2" />}
+                    {quote.isLocked ? "Sblocca modifiche" : "Blocca modifiche"}
+                  </DropdownMenuItem>
+                )}
+                {perms.deleteQuote && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={deleteQuote}>
+                      <Trash2 className="w-4 h-4 mr-2" /> Elimina preventivo
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </div>
 
@@ -1128,6 +1199,18 @@ export function QuoteEditor({ initialQuote, clients, related }: QuoteEditorProps
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
+            {sitesEnabled &&
+              (site ? (
+                <DropdownMenuItem asChild>
+                  <Link href={`/cantieri/${site.id}`}>
+                    <HardHat className="w-4 h-4 mr-2" /> Vai al cantiere
+                  </Link>
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem onClick={explainNoSite}>
+                  <HardHat className="w-4 h-4 mr-2 opacity-50" /> Cantiere non ancora creato
+                </DropdownMenuItem>
+              ))}
             <DropdownMenuItem onClick={() => exportQuote("pdf")}>
               <Download className="w-4 h-4 mr-2" /> PDF (salva o condividi)
             </DropdownMenuItem>
