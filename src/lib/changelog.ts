@@ -43,6 +43,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "4.8.3",
+    date: "2026-11-21",
+    headline: "Notifiche più ordinate.",
+    highlights: [
+      {
+        icon: "settings",
+        title: "Notifiche per 30 giorni",
+        description: "Le notifiche si cancellano da sole dopo 30 giorni, lette o no: la campanella resta leggera su tutti i dispositivi.",
+      },
+    ],
+  },
+  {
     version: "4.8.2",
     date: "2026-11-21",
     headline: "Documenti del cantiere apribili anche su iPhone.",

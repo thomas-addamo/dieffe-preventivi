@@ -48,10 +48,12 @@ export async function GET(req: Request) {
     .where(sql`${userAccessLog.loginAt} < now() - interval '12 months'`)
     .returning({ id: userAccessLog.id });
 
-  // Notifiche già lette da più di 90 giorni (le non lette restano sempre).
+  // A9: le notifiche restano 30 giorni dalla creazione, lette o no (decisione
+  // del 2026-11-21). Le richieste di sblocco non si perdono: il loro stato sta
+  // nel preventivo (quotes.unlock_requested_at), non nella notifica.
   const oldNotifications = await db
     .delete(notifications)
-    .where(sql`${notifications.readAt} < now() - interval '90 days'`)
+    .where(lt(notifications.createdAt, thirtyDaysAgo))
     .returning({ id: notifications.id });
 
   // Firme vecchie ancora in base64 nel DB → Cloudinary.

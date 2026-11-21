@@ -15,7 +15,7 @@
 | A6 | Barra del preventivo compatta | ✅ Fatto, verificato in produzione | 4.7.0 |
 | A7 | SAL per ogni preventivo (anche extra) | 🧪 In test: online, da confermare con l'utente | 4.8.0 |
 | A8 | Stato cantiere "Da avviare" | ✅ Fatto, verificato in produzione | 4.8.1 |
-| A9 | Notifiche cancellate dopo 30 giorni | 📋 Da fare (decidere: anche le non lette?) | — |
+| A9 | Notifiche cancellate dopo 30 giorni | 🧪 Pronto, da pubblicare | 4.8.3 |
 | B1 | Blocco automatico dei preventivi | 🧪 In test: verificato da admin ed editor; manca il 423 via API | 4.8.0 + 4.8.1 |
 | B2 | Correzione automatica con IA | 🧪 In test: online, da provare nell'uso reale | 4.8.0 |
 | B3 | Documenti PDF nel cantiere | 🧪 In test: caricamento e apertura verificati; manca il PDF grande | 4.8.0 → 4.8.2 |
@@ -228,15 +228,16 @@ Da fare per prime: sono bug che bloccano il lavoro o modifiche piccole e già ch
 
 
 ### A9. Notifiche cancellate dal DB dopo 30 giorni  _(#16, aggiunta il 2026-11-21)_
-- **Stato:** 📋 Da fare
+- **Stato:** 🧪 Pronto in 4.8.3 — **da pubblicare** (2026-11-21, branch `claude/project-changes-documentation-e7b724`)
 - **Piattaforme:** server (vale per sito, desktop e iPhone, che leggono le stesse notifiche)
 - **Cosa:** le notifiche (campanella) devono essere eliminate dal database dopo 30 giorni.
 - **Situazione attuale:** il cron notturno `GET /api/cron/cleanup-trash` (ogni giorno alle 2:00, `vercel.json`) cancella già le notifiche, ma solo quelle **lette** da più di **90 giorni** (`read_at < now() - 90 giorni`); le non lette restano per sempre.
-- **Da decidere con l'utente:** i 30 giorni si contano dalla creazione per tutte, anche le non lette (proposta), oppure solo per quelle già lette?
+- **Deciso con l'utente (2026-11-21):** 30 giorni dalla creazione per **tutte** le notifiche, anche le non lette.
 - **Dove:** `src/app/api/cron/cleanup-trash/route.ts` (righe ~51–55), eventuale testo in `NotificationsView.swift` / pannello notifiche del sito («le notifiche restano 30 giorni»).
 - **Test specifici:** il cron cancella solo le notifiche più vecchie di 30 giorni; le richieste di sblocco (B1) in attesa non perdono il loro stato (vive in `quotes.unlock_requested_at`, non nella notifica); badge «non lette» corretto su sito e iPhone dopo la pulizia.
 - **Analisi DB (2026-11-21):** `notifications` 66 righe, 120 kB, circa 0,4 nuove al giorno (la più vecchia è dell'11/06/2026); **39 più vecchie di 30 giorni**, che verrebbero cancellate al primo giro; 2 non lette in totale, nessuna non letta più vecchia di 30 giorni. Indici esistenti: `notifications_user_id_idx`, `notifications_user_read_idx (user_id, read_at)`. Una cancellazione per `created_at` su tutta la tabella oggi è trascurabile (66 righe); se la tabella crescerà, valutare un indice su `created_at`. Nessuna migrazione necessaria.
-- **Esito:** —
+- **Esito:** nel cron notturno la regola «lette da più di 90 giorni» è sostituita da `created_at < oggi − 30 giorni` (stessa data già usata dal cron per il cestino). Prova sul ramo Neon di prova: 56 notifiche cancellate su 78, 22 restano; la cancellazione richiede 1,7 ms (scansione sequenziale di una tabella minuscola: indice su `created_at` non necessario ora). Effetto in produzione al primo giro dopo il rilascio (alle 2:00): circa 39 notifiche su 66.
+  - **Da verificare dopo il rilascio:** la mattina dopo, contare le notifiche più vecchie di 30 giorni (devono essere 0) e controllare il badge su sito e iPhone.
 ---
 
 ## 2. Fase B — Medio termine: nuove funzioni
@@ -360,6 +361,7 @@ _(scelte condivise che valgono per tutte le modifiche — aggiungere con data)_
 - 2026-11-21 — Inizio lavori automatico (A8): se non è impostato a mano, è il giorno della prima fase completata.
 - 2026-11-21 — I PDF del cantiere si aprono solo con link firmati e a tempo (l'account Cloudinary blocca la consegna pubblica dei PDF: non cambiarla).
 - 2026-11-21 — La 4.8.0 è segnata `important: true`: il blocco automatico cambia il comportamento per tutti.
+- 2026-11-21 — Le notifiche restano 30 giorni dalla creazione, lette o no (A9).
 
 ## 5b. In sospeso (da controllare)
 - **iPhone 17 Pro:** non aggiornato dalla 4.7.0 (telefono non raggiungibile alle 14:46 e alle 14:58); il servizio sul Mac (`agent.sh`) riprova da solo. L'iPhone di Thomas ha la 4.8.2 (build 145); l'iPhone 17 Pro non era raggiungibile neanche alle 15:06.
