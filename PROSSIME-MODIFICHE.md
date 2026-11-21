@@ -4,7 +4,7 @@
 > Ogni sessione lo legge **per intero** prima di iniziare e lo aggiorna quando prende in carico o chiude una voce.
 > Schermate di riferimento: `docs/prossime-modifiche/`.
 
-### Quadro d'insieme (aggiornato al 2026-11-21, 4.8.1 online)
+### Quadro d'insieme (aggiornato al 2026-11-21, 4.8.2 online)
 | Voce | Cosa | Stato | Versione |
 |---|---|---|---|
 | A1 | Riepilogo che non scorre | ✅ Fatto, verificato in produzione | 4.6.1 |
@@ -15,6 +15,7 @@
 | A6 | Barra del preventivo compatta | ✅ Fatto, verificato in produzione | 4.7.0 |
 | A7 | SAL per ogni preventivo (anche extra) | 🧪 In test: online, da confermare con l'utente | 4.8.0 |
 | A8 | Stato cantiere "Da avviare" | ✅ Fatto, verificato in produzione | 4.8.1 |
+| A9 | Notifiche cancellate dopo 30 giorni | 📋 Da fare (decidere: anche le non lette?) | — |
 | B1 | Blocco automatico dei preventivi | 🧪 In test: verificato da admin ed editor; manca il 423 via API | 4.8.0 + 4.8.1 |
 | B2 | Correzione automatica con IA | 🧪 In test: online, da provare nell'uso reale | 4.8.0 |
 | B3 | Documenti PDF nel cantiere | 🧪 In test: caricamento e apertura verificati; manca il PDF grande | 4.8.0 → 4.8.2 |
@@ -225,6 +226,17 @@ Da fare per prime: sono bug che bloccano il lavoro o modifiche piccole e già ch
   - **Verifica in produzione (deploy `59b2c19`):** alla prima apertura "Ristrutturazione alloggio" ha preso inizio 21/11 e fine prevista 22/12 (4 fasi in calendario) e "Palazzina Nasi" inizio 18/11 e fine 21 lug (10 fasi in calendario): entrambi «In tempo» su sito, API e iPhone (simulatore), in verde sulla mappa. Gli altri cantieri attivi restano «Da avviare» perché sono allo 0%. ✅
   - **Nota per l'utente:** la fine prevista si calcola dalle durate delle fasi stimate dall'IA; se non è realistica si corregge in «Tempi e costi».
 
+
+### A9. Notifiche cancellate dal DB dopo 30 giorni  _(#16, aggiunta il 2026-11-21)_
+- **Stato:** 📋 Da fare
+- **Piattaforme:** server (vale per sito, desktop e iPhone, che leggono le stesse notifiche)
+- **Cosa:** le notifiche (campanella) devono essere eliminate dal database dopo 30 giorni.
+- **Situazione attuale:** il cron notturno `GET /api/cron/cleanup-trash` (ogni giorno alle 2:00, `vercel.json`) cancella già le notifiche, ma solo quelle **lette** da più di **90 giorni** (`read_at < now() - 90 giorni`); le non lette restano per sempre.
+- **Da decidere con l'utente:** i 30 giorni si contano dalla creazione per tutte, anche le non lette (proposta), oppure solo per quelle già lette?
+- **Dove:** `src/app/api/cron/cleanup-trash/route.ts` (righe ~51–55), eventuale testo in `NotificationsView.swift` / pannello notifiche del sito («le notifiche restano 30 giorni»).
+- **Test specifici:** il cron cancella solo le notifiche più vecchie di 30 giorni; le richieste di sblocco (B1) in attesa non perdono il loro stato (vive in `quotes.unlock_requested_at`, non nella notifica); badge «non lette» corretto su sito e iPhone dopo la pulizia.
+- **Analisi DB (2026-11-21):** `notifications` 66 righe, 120 kB, circa 0,4 nuove al giorno (la più vecchia è dell'11/06/2026); **39 più vecchie di 30 giorni**, che verrebbero cancellate al primo giro; 2 non lette in totale, nessuna non letta più vecchia di 30 giorni. Indici esistenti: `notifications_user_id_idx`, `notifications_user_read_idx (user_id, read_at)`. Una cancellazione per `created_at` su tutta la tabella oggi è trascurabile (66 righe); se la tabella crescerà, valutare un indice su `created_at`. Nessuna migrazione necessaria.
+- **Esito:** —
 ---
 
 ## 2. Fase B — Medio termine: nuove funzioni
@@ -350,7 +362,7 @@ _(scelte condivise che valgono per tutte le modifiche — aggiungere con data)_
 - 2026-11-21 — La 4.8.0 è segnata `important: true`: il blocco automatico cambia il comportamento per tutti.
 
 ## 5b. In sospeso (da controllare)
-- **iPhone 17 Pro:** non aggiornato dalla 4.7.0 (telefono non raggiungibile alle 14:46 e alle 14:58); il servizio sul Mac (`agent.sh`) riprova da solo. L'iPhone di Thomas ha la 4.8.1 (build 143).
+- **iPhone 17 Pro:** non aggiornato dalla 4.7.0 (telefono non raggiungibile alle 14:46 e alle 14:58); il servizio sul Mac (`agent.sh`) riprova da solo. L'iPhone di Thomas ha la 4.8.2 (build 145); l'iPhone 17 Pro non era raggiungibile neanche alle 15:06.
 - **Ramo Neon `test-fase-b-migrazione`** (`br-purple-sky-alkvpi0h`): creato per provare la migrazione 0018, da eliminare con l'ok dell'utente.
 - **Account non admin:** serve ancora per il rifiuto 423 via API (B1) e per A3 da utente normale. «Richiedi sblocco» è già stato provato da Riccardo.
 - **Notifiche di prova** «PREV-2026-006 sbloccato/bloccato» arrivate a Riccardo Addamo il 21/11 (13:54 dai test, 13:57–13:58 da un'altra prova dell'admin) prima della correzione della 4.8.1.
@@ -380,3 +392,4 @@ _(spostare qui le voci completate, con versione ed esito)_
 | — | — | 13 | A6 |
 | — | — | 14 | A7 |
 | — | — | 15 | A8 |
+| — | — | 16 | A9 |
