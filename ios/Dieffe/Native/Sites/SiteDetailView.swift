@@ -36,6 +36,7 @@ struct SiteDetailView: View {
     }
 
     @State private var data: SiteDetail?
+    @State private var documents = SiteDocumentsState()
     @State private var error: String?
     @State private var tab: Tab = .avanzamento
     @State private var showSettings = false
@@ -146,10 +147,11 @@ struct SiteDetailView: View {
                                   delete: { confirmDeletePhoto = $0 })
             case .documenti:
                 SiteDocumentsSection(detail: d, editable: editable, canDelete: { owns($0.userId) },
-                                     mutate: mutate, reload: { await load() })
+                                     mutate: mutate, state: documents)
             }
         }
         .environment(\.editMode, $editMode)
+        .siteDocumentsPresentation(documents, siteID: siteID, reload: { await load() })
         .onChange(of: tab) { editMode = .inactive }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {

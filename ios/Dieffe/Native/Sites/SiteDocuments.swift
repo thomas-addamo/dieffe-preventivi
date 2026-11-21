@@ -8,19 +8,25 @@ import UniformTypeIdentifiers
 // (POST /api/sites/:id/documents). Si aprono in anteprima con Quick Look e
 // restano in cache sul telefono: aperti una volta, si rivedono anche offline.
 
+/// Stato condiviso con SiteDetailView: le presentazioni (selezione file,
+/// anteprima Quick Look, avvisi) stanno sulla lista del cantiere, perché su
+/// una Section dentro una List non partono.
+@MainActor @Observable
+final class SiteDocumentsState {
+    var importing = false
+    var uploading: String?
+    var progressText: String?
+    var previewURL: URL?
+    var opening: String?
+    var error: String?
+}
+
 struct SiteDocumentsSection: View {
     let detail: SiteDetail
     let editable: Bool
     let canDelete: (SiteDetail.Document) -> Bool
     let mutate: SiteMutation
-    let reload: () async -> Void
-
-    @State private var importing = false
-    @State private var uploading: String?
-    @State private var progressText: String?
-    @State private var previewURL: URL?
-    @State private var opening: String?
-    @State private var error: String?
+    @Bindable var state: SiteDocumentsState
 
     var body: some View {
         Section {
@@ -44,7 +50,7 @@ struct SiteDocumentsSection: View {
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                         Spacer()
-                        if opening == doc.id { ProgressView() }
+                        if state.opening == doc.id { ProgressView() }
                     }
                 }
                 .swipeActions(edge: .trailing) {
@@ -62,35 +68,52 @@ struct SiteDocumentsSection: View {
                 }
             }
             if editable {
-                if let uploading {
+                if let uploading = state.uploading {
                     HStack {
                         ProgressView()
-                        Text("Caricamento di «\(uploading)»\(progressText.map { " · \($0)" } ?? "")…")
+                        Text("Caricamento di «\(uploading)»\(state.progressText.map { " · \($0)" } ?? "")…")
                             .font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
                     }
                 } else {
-                    Button("Aggiungi PDF", systemImage: "doc.badge.plus") { importing = true }
+                    Button("Aggiungi PDF", systemImage: "doc.badge.plus") { state.importing = true }
                 }
             }
         } header: {
             Text("Documenti")
         }
-        .fileImporter(isPresented: $importing, allowedContentTypes: [.pdf], allowsMultipleSelection: true) { result in
-            if case .success(let urls) = result { Task { await upload(urls) } }
-        }
-        .quickLookPreview($previewURL)
-        .alert("Documento", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
-            Button("OK", role: .cancel) {}
-        } message: { Text(error ?? "") }
     }
 
     private func open(_ doc: SiteDetail.Document) {
-        guard opening == nil else { return }
-        opening = doc.id
+        guard state.opening == nil else { return }
+        state.opening = doc.id
         Task {
-            defer { opening = nil }
-            do { previewURL = try await SiteDocumentFile.local(doc, siteID: detail.site.id) } catch { self.error = "Impossibile aprire il documento: \(error.localizedDescription)" }
+            defer { state.opening = nil }
+            do { state.previewURL = try await SiteDocumentFile.local(doc, siteID: detail.site.id) } catch { state.error = "Impossibile aprire il documento: \(error.localizedDescription)" }
         }
+    }
+}
+
+extension View {
+    /// Selezione dei PDF, anteprima e avvisi della scheda Documenti (sulla lista del cantiere).
+    func siteDocumentsPresentation(_ state: SiteDocumentsState, siteID: String, reload: @escaping () async -> Void) -> some View {
+        modifier(SiteDocumentsPresentation(state: state, siteID: siteID, reload: reload))
+    }
+}
+
+private struct SiteDocumentsPresentation: ViewModifier {
+    @Bindable var state: SiteDocumentsState
+    let siteID: String
+    let reload: () async -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .fileImporter(isPresented: $state.importing, allowedContentTypes: [.pdf], allowsMultipleSelection: true) { result in
+                if case .success(let urls) = result { Task { await upload(urls) } }
+            }
+            .quickLookPreview($state.previewURL)
+            .alert("Documento", isPresented: Binding(get: { state.error != nil }, set: { if !$0 { state.error = nil } })) {
+                Button("OK", role: .cancel) {}
+            } message: { Text(state.error ?? "") }
     }
 
     private struct Sign: Decodable {
@@ -105,24 +128,24 @@ struct SiteDocumentsSection: View {
             let access = url.startAccessingSecurityScopedResource()
             defer { if access { url.stopAccessingSecurityScopedResource() } }
             let name = url.lastPathComponent
-            uploading = name
-            progressText = nil
+            state.uploading = name
+            state.progressText = nil
             do {
                 let data = try Data(contentsOf: url)
-                let sign: Sign = try await APIClient.shared.send("POST", "/api/sites/\(detail.site.id)/documents/sign", as: Sign.self)
+                let sign: Sign = try await APIClient.shared.send("POST", "/api/sites/\(siteID)/documents/sign", as: Sign.self)
                 guard data.count <= sign.maxBytes else {
                     throw SiteDocumentError("«\(name)» supera i \(sign.maxBytes / 1_048_576) MB")
                 }
-                progressText = SiteDocumentFile.size(data.count)
+                state.progressText = SiteDocumentFile.size(data.count)
                 let publicId = try await SiteDocumentFile.uploadToCloudinary(sign.uploadUrl, fields: sign.fields, data: data, filename: name)
-                try await APIClient.shared.send("POST", "/api/sites/\(detail.site.id)/documents",
+                try await APIClient.shared.send("POST", "/api/sites/\(siteID)/documents",
                                                 json: ["publicId": publicId, "name": name], as: Empty.self)
                 added += 1
             } catch {
-                self.error = error.localizedDescription
+                state.error = error.localizedDescription
             }
         }
-        uploading = nil
+        state.uploading = nil
         if added > 0 {
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             await reload()
