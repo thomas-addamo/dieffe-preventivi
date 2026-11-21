@@ -294,7 +294,7 @@ _(spostare qui le voci completate, con versione ed esito)_
 - **A2** Tolto il tasto "Riassegna": 4.6.2, 2026-11-21 (dettagli nella voce A2).
 - **A3** Tasto "Vai al cantiere" (sito, desktop, iPhone): 4.7.0, 2026-11-21.
 - **A4** Archivio cantieri raggiungibile su iPhone: 4.7.0, 2026-11-21.
-- **A5** SAL e fasi: studio e 6 bug corretti: 4.7.0, 2026-11-21.
+- **A5** SAL e fasi: studio e 6 bug corretti: 4.7.0 + 4.7.1 (SAL fatturati vecchi mostrati come raggiunti), 2026-11-21.
 - **A6** Barra del preventivo compatta e adattiva: 4.7.0, 2026-11-21.
 
 ---

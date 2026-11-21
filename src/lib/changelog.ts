@@ -43,6 +43,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "4.7.1",
+    date: "2026-11-21",
+    headline: "SAL fatturati sempre segnati come raggiunti.",
+    highlights: [
+      {
+        icon: "zap",
+        title: "SAL coerenti",
+        description: "I SAL già fatturati o incassati risultano raggiunti anche nei cantieri creati prima della 4.7.0.",
+      },
+    ],
+  },
+  {
     version: "4.7.0",
     date: "2026-11-21",
     headline: "Dal preventivo al cantiere con un tocco, SAL più chiari.",

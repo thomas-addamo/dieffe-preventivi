@@ -343,6 +343,10 @@ export async function getSiteDetail(id: string): Promise<SiteDetail | null> {
   const metrics = computeSiteMetrics({ site: row.site, quotes, milestones, phases });
   const valued = milestones.map((m) => ({
     ...m,
+    // Fatturato o incassato implica raggiunto (dati delle versioni precedenti
+    // alla 4.7.0, sistemati nel DB al primo ricalcolo del cantiere).
+    reachedAt: m.reachedAt ?? m.invoicedAt ?? m.paidAt,
+    invoicedAt: m.invoicedAt ?? m.paidAt,
     value: milestoneAmount(m, quoteNet, mainNet),
   }));
 
