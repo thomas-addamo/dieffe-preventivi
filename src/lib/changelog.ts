@@ -43,6 +43,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "4.8.2",
+    date: "2026-11-21",
+    headline: "Documenti del cantiere apribili anche su iPhone.",
+    highlights: [
+      {
+        icon: "site",
+        title: "PDF su iPhone",
+        description: "Su iPhone i documenti del cantiere si aprono in anteprima e si possono aggiungere dalla scheda Documenti.",
+      },
+    ],
+  },
+  {
     version: "4.8.1",
     date: "2026-11-21",
     headline: "Lo stato del cantiere si aggiorna da solo.",

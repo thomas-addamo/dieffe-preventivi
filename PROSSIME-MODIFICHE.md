@@ -17,7 +17,7 @@
 | A8 | Stato cantiere "Da avviare" | ✅ Fatto, verificato in produzione | 4.8.1 |
 | B1 | Blocco automatico dei preventivi | 🧪 In test: verificato da admin ed editor; manca il 423 via API | 4.8.0 + 4.8.1 |
 | B2 | Correzione automatica con IA | 🧪 In test: online, da provare nell'uso reale | 4.8.0 |
-| B3 | Documenti PDF nel cantiere | 🧪 In test: caricamento e apertura verificati; manca il PDF grande | 4.8.0 + 4.8.1 |
+| B3 | Documenti PDF nel cantiere | 🧪 In test: caricamento e apertura verificati; manca il PDF grande | 4.8.0 → 4.8.2 |
 | C1–C3 | Restyling | 📋 Da fare (prima i mockup) | — |
 | D1 | Sopralluogo con IA vocale | 📋 Da fare (prima lo studio) | — |
 
@@ -273,7 +273,7 @@ Da fare per prime: sono bug che bloccano il lavoro o modifiche piccole e già ch
 - **Test specifici:** PDF grande (20 MB), nome lungo, eliminazione, permessi, apertura offline su iPhone se prevista.
 - **Analisi DB:** Nuova tabella `site_documents` (solo riferimenti, ~200 byte a riga) con indice `(site_id, created_at)`: lettura del dettaglio cantiere 0,03 ms (EXPLAIN ANALYZE sul ramo di prova). I file stanno su Cloudinary (tipo raw), non nel DB.
 - **Esito:** Scheda **Documenti** (sito, desktop, iPhone): PDF fino a 25 MB caricati direttamente su Cloudinary con firma del server (niente limite dei 4,5 MB delle funzioni Vercel), poi registrati dopo una verifica lato server di esistenza e peso. Anteprima nell'app (sito: finestra con il PDF; iPhone: Quick Look, il file resta in cache e si riapre offline), rinomina (sito), eliminazione (autore o admin), trascinamento dei file sul sito. API: `POST /api/sites/:id/documents/sign`, `POST /api/sites/:id/documents`, `PATCH|DELETE /api/sites/:id/documents/:docId`; `documents` nel dettaglio del cantiere. Verifica in produzione (4.8.0): caricamento, registrazione, rifiuto di file di altre cartelle (400) ed eliminazione OK; l'apertura dall'indirizzo pubblico dava 401 («deny or ACL failure»: l'account Cloudinary blocca la consegna dei PDF). Dalla 4.8.1 i PDF si aprono da `GET /api/sites/:id/documents/:docId/file` (link di download firmato, 15 minuti; `?json=1` per l'iPhone).   - **Verifica in produzione (4.8.1):** il link firmato risponde 200 con `application/pdf` e apertura in linea (non come download); su iPhone (simulatore) il documento si apre in Quick Look. Il file di prova è stato eliminato (0 documenti nel DB). ✅
-  - **Corretto anche (non pubblicato, prossima versione):** su iPhone la selezione dei file, l'anteprima e gli avvisi non partivano perché erano agganciati alla sezione della lista; ora stanno sulla vista del cantiere (`siteDocumentsPresentation`).
+  - **Corretto in 4.8.2:** su iPhone la selezione dei file, l'anteprima e gli avvisi non partivano perché erano agganciati alla sezione della lista; ora stanno sulla vista del cantiere (`siteDocumentsPresentation`).
   - **Da verificare:** limite reale del piano Cloudinary per i file raw (il gratuito si ferma a 10 MB); PDF da 20 MB; caricamento dall'iPhone vero.
 
 ---
@@ -350,7 +350,6 @@ _(scelte condivise che valgono per tutte le modifiche — aggiungere con data)_
 - 2026-11-21 — La 4.8.0 è segnata `important: true`: il blocco automatico cambia il comportamento per tutti.
 
 ## 5b. In sospeso (da controllare)
-- **Correzione iPhone dei Documenti** (anteprima e selezione file che non si aprivano): nel branch, da pubblicare con la prossima versione.
 - **iPhone 17 Pro:** non aggiornato dalla 4.7.0 (telefono non raggiungibile alle 14:46 e alle 14:58); il servizio sul Mac (`agent.sh`) riprova da solo. L'iPhone di Thomas ha la 4.8.1 (build 143).
 - **Ramo Neon `test-fase-b-migrazione`** (`br-purple-sky-alkvpi0h`): creato per provare la migrazione 0018, da eliminare con l'ok dell'utente.
 - **Account non admin:** serve ancora per il rifiuto 423 via API (B1) e per A3 da utente normale. «Richiedi sblocco» è già stato provato da Riccardo.
