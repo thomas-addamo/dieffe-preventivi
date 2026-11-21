@@ -28,6 +28,7 @@ struct HeaderEditView: View {
             Form {
                 Section("Titolo") {
                     TextField("Titolo", text: headerBinding(editor, \.title, default: ""), axis: .vertical)
+                        .autoCorrect(headerBinding(editor, \.title, default: ""), .title, active: editor.isEditable)
                 }
                 if let code = quote?.code {
                     LabeledContent("Codice", value: code)
@@ -95,6 +96,7 @@ struct HeaderEditView: View {
                     TextField("Note", text: optionalText(headerBinding(editor, \.notes, default: nil)),
                               prompt: Text("Note aggiuntive per il preventivo…"), axis: .vertical)
                         .lineLimit(3...10)
+                        .autoCorrect(optionalText(headerBinding(editor, \.notes, default: nil)), .notes, active: editor.isEditable)
                 }
             }
             .disabled(!editor.isEditable)

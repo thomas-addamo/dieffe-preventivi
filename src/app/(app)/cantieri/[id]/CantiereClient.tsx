@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   Flag,
   Images,
+  FileText,
   ListChecks,
   Mail,
   MapPin,
@@ -34,6 +35,7 @@ import { CalendarTab } from "./CalendarTab";
 import { InsightsCard, NotesTab } from "./NotesTab";
 import { SiteSettingsDialog } from "./SiteSettingsDialog";
 import { PhotosTab } from "./PhotosTab";
+import { DocumentsTab } from "./DocumentsTab";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Pagina del cantiere: avanzamento (fasi), SAL e fatturazione, calendario con
@@ -47,6 +49,7 @@ const TABS = [
   { id: "calendario", label: "Calendario", icon: CalendarDays },
   { id: "note", label: "Note e consigli", icon: NotebookPen },
   { id: "foto", label: "Foto", icon: Images },
+  { id: "documenti", label: "Documenti", icon: FileText },
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
 
@@ -337,6 +340,7 @@ export function CantiereClient({
       {tab === "calendario" && <CalendarTab data={data} canManage={canManage} onEditSettings={() => setSettings(true)} />}
       {tab === "note" && <NotesTab data={data} canManage={canManage} userName={userName} userId={userId} isAdmin={isAdmin} />}
       {tab === "foto" && <PhotosTab data={data} canManage={canManage} userId={userId} isAdmin={isAdmin} />}
+      {tab === "documenti" && <DocumentsTab data={data} canManage={canManage} userId={userId} isAdmin={isAdmin} />}
 
       {settings && <SiteSettingsDialog data={data} open={settings} onOpenChange={setSettings} />}
 

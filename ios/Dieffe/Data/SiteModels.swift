@@ -224,6 +224,8 @@ struct SiteDetail: Decodable {
     var notes: [Note]
     /// Foto di cantiere (4.5.0): assenti sui server più vecchi.
     var photos: [Photo]?
+    /// Documenti PDF (B3, dalla 4.8.0).
+    var documents: [Document]?
     var metrics: SiteMetrics
     let setupPending: Bool
     var insightsStale: Bool?
@@ -325,10 +327,21 @@ struct SiteDetail: Decodable {
         var fullURL: URL? { URL(string: SitePhotoURL.transform(url, "f_auto,q_auto,w_2000,c_limit")) }
     }
 
+    struct Document: Decodable, Identifiable, Hashable {
+        let id: String
+        let name: String
+        let url: String
+        let bytes: Int?
+        let userId: String?
+        let userName: String?
+        let createdAt: String
+    }
+
     var isPending: Bool { site.status == "pending" }
     var isArchived: Bool { site.archivedAt != nil }
     var archiveReason: SiteArchiveReason? { isArchived ? SiteArchiveReason(raw: site.archiveReason) : nil }
     var allPhotos: [Photo] { photos ?? [] }
+    var allDocuments: [Document] { documents ?? [] }
 }
 
 // MARK: Testi e date

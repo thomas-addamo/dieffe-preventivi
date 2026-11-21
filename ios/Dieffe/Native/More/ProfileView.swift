@@ -97,6 +97,8 @@ struct ProfileView: View {
 
             NotificationsSection()
 
+            if model.canEdit { AutoCorrectSettingsSection() }
+
             Section("App") {
                 NavigationLink {
                     SettingsView(embedded: true)

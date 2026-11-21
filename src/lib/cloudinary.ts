@@ -34,13 +34,15 @@ export function logoUrl(publicId: string | null | undefined, width = 560): strin
   return cloudinary.url(publicId, { fetch_format: "auto", quality: "auto", width, crop: "limit", secure: true });
 }
 
-export async function deleteCloudinaryAsset(publicId: string) {
-  return cloudinary.uploader.destroy(publicId);
+export async function deleteCloudinaryAsset(publicId: string, resourceType: "image" | "raw" = "image") {
+  return cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
 }
 
 export async function deleteCloudinaryFolder(folder: string) {
   try {
     await cloudinary.api.delete_resources_by_prefix(folder);
+    // Documenti PDF (B3): sono file "raw", vanno cancellati a parte.
+    await cloudinary.api.delete_resources_by_prefix(folder, { resource_type: "raw" }).catch(() => {});
     await cloudinary.api.delete_folder(folder).catch(() => {});
   } catch {
     // cartella già inesistente o vuota

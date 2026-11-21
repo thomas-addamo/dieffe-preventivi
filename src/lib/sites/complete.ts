@@ -48,7 +48,8 @@ export async function completeSite(siteId: string, userId: string | null) {
         automatico: userId == null,
       },
     }),
-    db.update(quotes).set({ worksCompletedAt: now }).where(eq(quotes.siteId, siteId)),
+    // Lavori conclusi: i preventivi accettati tornano bloccati (B1).
+    db.update(quotes).set({ worksCompletedAt: now, lockOverrideAt: null, lockOverrideBy: null }).where(eq(quotes.siteId, siteId)),
     db
       .update(sites)
       .set({ archivedAt: now, archiveReason: "completed", updatedAt: now })

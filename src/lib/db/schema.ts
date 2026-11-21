@@ -169,6 +169,13 @@ export const quotes = pgTable(
     /** Lavori conclusi: il cantiere è in archivio; il preventivo non ne
      *  genera uno nuovo. */
     worksCompletedAt: timestamp("works_completed_at", { withTimezone: true }),
+    /** Blocco automatico (inviato, rifiutato, accettato con lavori conclusi)
+     *  tolto a mano: vale finché non cambia lo stato o si concludono i lavori. */
+    lockOverrideAt: timestamp("lock_override_at", { withTimezone: true }),
+    lockOverrideBy: text("lock_override_by").references(() => users.id, { onDelete: "set null" }),
+    /** Richiesta di sblocco in attesa dell'admin. */
+    unlockRequestedAt: timestamp("unlock_requested_at", { withTimezone: true }),
+    unlockRequestedBy: text("unlock_requested_by").references(() => users.id, { onDelete: "set null" }),
   },
   (t) => [
     uniqueIndex("quotes_code_idx").on(t.code),
@@ -594,6 +601,27 @@ export const sitePhotos = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("site_photos_site_idx").on(t.siteId, t.createdAt)]
+);
+
+/** Documenti PDF del cantiere (B3): permessi, progetti, contratti. Il file sta
+ *  su Cloudinary (tipo "raw", caricato direttamente dal client), qui solo il
+ *  riferimento. */
+export const siteDocuments = pgTable(
+  "site_documents",
+  {
+    id: text("id").primaryKey(),
+    siteId: text("site_id")
+      .notNull()
+      .references(() => sites.id, { onDelete: "cascade" }),
+    publicId: text("public_id").notNull(),
+    url: text("url").notNull(),
+    /** Nome del file come caricato (es. "Permesso di costruire.pdf"). */
+    name: text("name").notNull(),
+    bytes: integer("bytes"),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("site_documents_site_idx").on(t.siteId, t.createdAt)]
 );
 
 // ─── Types ────────────────────────────────────────────────────────────────────

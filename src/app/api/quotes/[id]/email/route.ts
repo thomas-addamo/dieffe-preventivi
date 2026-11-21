@@ -214,7 +214,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   });
   if (markSent)
     await db.batch([
-      db.update(quotes).set({ status: "sent", sentAt: now, updatedAt: now }).where(eq(quotes.id, id)),
+      db.update(quotes).set({ status: "sent", sentAt: now, updatedAt: now, lockOverrideAt: null, lockOverrideBy: null }).where(eq(quotes.id, id)),
       logEntry,
     ]);
   else await logEntry;

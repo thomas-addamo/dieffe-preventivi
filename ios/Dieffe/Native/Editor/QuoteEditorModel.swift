@@ -37,10 +37,20 @@ final class QuoteEditorModel {
         self.quoteID = quoteID
     }
 
-    /// Modificabile: ruolo admin/editor e preventivo non bloccato (l'admin può sempre).
+    /// Modificabile: ruolo admin/editor e preventivo non bloccato. Con il
+    /// blocco del server (B1) bloccato vale per tutti: l'admin sblocca con un tocco.
     var isEditable: Bool {
         guard canEdit, let quote else { return false }
+        if let lock = quote.lock { return !lock.locked }
         return !quote.isLocked || role == "admin"
+    }
+
+    /// Lo stato si cambia anche da "inviato" bloccato (accettato/rifiutato):
+    /// è il suo percorso normale. Gli altri blocchi lo vietano (admin a parte).
+    var canChangeStatus: Bool {
+        guard canEdit, let quote else { return false }
+        guard let lock = quote.lock, lock.locked else { return isEditable }
+        return lock.reason == "sent" || role == "admin"
     }
 
     // MARK: Caricamento
@@ -217,10 +227,12 @@ final class QuoteEditorModel {
     // MARK: Azioni sul preventivo
 
     func setStatus(_ status: QuoteStatus) async {
-        guard isEditable, let old = quote?.status, old != status else { return }
+        guard canChangeStatus, let old = quote?.status, old != status else { return }
+        await flush()
         quote?.status = status
         do {
             try await api.send("PATCH", "/api/quotes/\(quoteID)/status", json: ["status": status.rawValue], as: Empty.self)
+            await load() // il nuovo stato può bloccare o sbloccare (B1)
         } catch {
             quote?.status = old
             fail(error)
@@ -244,11 +256,34 @@ final class QuoteEditorModel {
         }
     }
 
+    /// Blocca/riblocca o sblocca (B1); i permessi li decide il server.
     func setLocked(_ locked: Bool) async {
-        guard role == "admin" else { return }
+        if locked { await flush() }
         do {
             try await api.send("PATCH", "/api/quotes/\(quoteID)/\(locked ? "lock" : "unlock")", as: Empty.self)
-            quote?.isLocked = locked
+            await load()
+        } catch {
+            fail(error)
+        }
+    }
+
+    /// Chiede all'admin di sbloccare (notifica a tutti gli admin).
+    func requestUnlock() async -> Bool {
+        do {
+            try await api.send("POST", "/api/quotes/\(quoteID)/unlock-request", as: Empty.self)
+            await load()
+            return true
+        } catch {
+            fail(error)
+            return false
+        }
+    }
+
+    /// L'admin rifiuta la richiesta, o chi l'ha fatta la ritira.
+    func cancelUnlockRequest() async {
+        do {
+            try await api.send("DELETE", "/api/quotes/\(quoteID)/unlock-request", as: Empty.self)
+            await load()
         } catch {
             fail(error)
         }

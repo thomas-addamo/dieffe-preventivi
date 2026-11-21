@@ -1,3 +1,4 @@
+import { lockReason, LOCK_TEXT } from "@/lib/quote-lock";
 import { db } from "@/lib/db/client";
 import {
   quotes,
@@ -49,14 +50,19 @@ export type QuoteEditGuard =
  */
 export async function checkQuoteEditable(
   quoteId: string,
-  role: string
+  role: string,
+  opts: { statusChange?: boolean } = {}
 ): Promise<QuoteEditGuard> {
   const [q] = await db.select().from(quotes).where(eq(quotes.id, quoteId)).limit(1);
   if (!q) return { ok: false, status: 404, error: "Preventivo non trovato" };
   if (q.deletedAt)
     return { ok: false, status: 409, error: "Il preventivo è nel cestino" };
-  if (q.isLocked && role !== "admin")
-    return { ok: false, status: 423, error: "Preventivo bloccato dall'amministratore" };
+  // Blocco (manuale o automatico, B1): gli admin passano sempre (l'interfaccia
+  // chiede comunque di sbloccare prima); un preventivo "inviato" può cambiare
+  // stato (accettato/rifiutato) anche bloccato: è il suo percorso normale.
+  const reason = lockReason(q);
+  if (reason && role !== "admin" && !(opts.statusChange && reason === "sent"))
+    return { ok: false, status: 423, error: `${LOCK_TEXT[reason].title}: ${LOCK_TEXT[reason].body}` };
   return { ok: true, quote: q };
 }
 

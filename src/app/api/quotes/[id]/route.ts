@@ -1,3 +1,4 @@
+import { lockInfo } from "@/lib/quote-lock";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db/client";
@@ -32,7 +33,8 @@ export async function GET(
   const quote = await getQuoteWithRelations(id);
   if (!quote) return NextResponse.json({ error: "Non trovato" }, { status: 404 });
 
-  return NextResponse.json(quote);
+  // `lock` (B1): stato del blocco già calcolato per l'utente (app iPhone).
+  return NextResponse.json({ ...quote, lock: lockInfo(quote, session.user.role) });
 }
 
 export async function PATCH(

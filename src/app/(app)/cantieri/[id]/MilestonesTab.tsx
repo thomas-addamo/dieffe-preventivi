@@ -158,6 +158,11 @@ export function MilestonesTab({ data, canManage }: { data: SiteData; canManage: 
                   <p className="font-medium">
                     {x.label}
                     {x.percent != null && x.amount == null && <span className="ml-1.5 text-sm text-muted-foreground">{x.percent}%</span>}
+                    {data.quotes.length > 1 && x.quoteId && x.quoteId !== data.quotes[0]?.id && (
+                      <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                        {data.quotes.find((q) => q.id === x.quoteId)?.code.split("-").pop()}
+                      </span>
+                    )}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {triggerText(x)} ·{" "}
@@ -229,14 +234,16 @@ export function MilestonesTab({ data, canManage }: { data: SiteData; canManage: 
       {canManage &&
         (adding ? (
           <form
-            className="surface grid gap-2 md:grid-cols-[1fr_90px_110px_1fr_auto]"
+            className={cn("surface grid gap-2", data.quotes.length > 1 ? "md:grid-cols-[1fr_90px_110px_1fr_1fr_auto]" : "md:grid-cols-[1fr_90px_110px_1fr_auto]")}
             onSubmit={(e) => {
               e.preventDefault();
               const fd = new FormData(e.currentTarget);
               const pct = Number(String(fd.get("percent")).replace(",", "."));
               const amt = Number(String(fd.get("amount")).replace(",", "."));
               const phaseId = String(fd.get("phaseId") || "");
+              const quoteId = String(fd.get("quoteId") || "") || null;
               add.mutate({
+                quoteId,
                 label: String(fd.get("label")),
                 percent: fd.get("percent") ? pct : null,
                 amount: !fd.get("percent") && fd.get("amount") ? amt : null,
@@ -248,6 +255,17 @@ export function MilestonesTab({ data, canManage }: { data: SiteData; canManage: 
             <Input name="label" required placeholder="Descrizione (es. Fine impianti)" />
             <Input name="percent" inputMode="decimal" placeholder="%" />
             <Input name="amount" inputMode="decimal" placeholder="oppure €" />
+            {/* A7: con lavori extra si sceglie su quale preventivo si calcola la % */}
+            {data.quotes.length > 1 && (
+              <select name="quoteId" defaultValue={data.quotes[0]?.id} className="h-10 rounded-lg border bg-card px-2 text-sm" aria-label="Preventivo">
+                {data.quotes.map((q, i) => (
+                  <option key={q.id} value={q.id}>
+                    {q.code}
+                    {i === 0 ? " (principale)" : " (extra)"}
+                  </option>
+                ))}
+              </select>
+            )}
             <select name="phaseId" className="h-10 rounded-lg border bg-card px-2 text-sm">
               <option value="">Lo segno io quando è raggiunto</option>
               <option value="__end">A fine lavori</option>

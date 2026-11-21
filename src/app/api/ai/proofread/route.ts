@@ -15,6 +15,8 @@ const SYSTEM = `Sei un correttore di bozze italiano per un'impresa edile.
 Correggi SOLO errori di ortografia, grammatica (inclusi congiuntivi, concordanze e tempi verbali), punteggiatura, accenti, apostrofi e maiuscole.
 Non cambiare il tono, il registro (Lei/tu), il significato, l'ordine delle frasi né la terminologia tecnica.
 Non aggiungere né togliere contenuti. Mantieni gli a capo originali.
+Non toccare MAI numeri, importi, misure, unità di misura, codici e date.
+Lascia intatti i marcatori di formato (**, *, __, ~~, "- " e "1. " a inizio riga).
 Se il testo è già corretto restituiscilo identico.
 Rispondi SOLO con il testo corretto: niente commenti, virgolette o spiegazioni.`;
 
@@ -74,7 +76,12 @@ export async function POST(req: NextRequest) {
         .map((l) => l.trimEnd())
         .join("\n")
         .trim() || text;
-    const changes = corrected === text ? [] : diffWords(text, corrected).slice(0, 50);
+    // Rete di sicurezza: se l'AI ha toccato cifre o marcatori di formato, si
+    // scarta la correzione (meglio un refuso che un importo sbagliato).
+    const digits = (t: string) => t.replace(/[^0-9]/g, "");
+    const marks = (t: string) => t.replace(/[^*_~]/g, "");
+    const safe = digits(corrected) === digits(text) && marks(corrected) === marks(text);
+    const changes = !safe || corrected === text ? [] : diffWords(text, corrected).slice(0, 50);
     return NextResponse.json({ corrected: changes.length ? corrected : text, changes });
   } catch (err) {
     console.error("[AI proofread]", err instanceof Error ? err.message.slice(0, 200) : err);

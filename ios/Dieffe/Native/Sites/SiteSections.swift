@@ -134,12 +134,15 @@ struct SiteMilestonesSection: View {
 struct MilestoneAddSheet: View {
     @Environment(\.dismiss) private var dismiss
     let phases: [SiteDetail.Phase]
+    /// Preventivi del cantiere (principale per primo, poi i lavori extra): A7.
+    var quotes: [SiteDetail.Quote] = []
     let save: ([String: Any?]) async -> Bool
 
     @State private var label = ""
     @State private var usePercent = true
     @State private var value = ""
     @State private var when = "manual"
+    @State private var quoteId = ""
 
     var body: some View {
         NavigationStack {
@@ -152,6 +155,13 @@ struct MilestoneAddSheet: View {
                 .pickerStyle(.segmented)
                 LabeledContent(usePercent ? "Percentuale (%)" : "Importo (€)") {
                     TextField("0", text: $value).keyboardType(.decimalPad).multilineTextAlignment(.trailing)
+                }
+                if quotes.count > 1 {
+                    Picker("Preventivo", selection: $quoteId) {
+                        ForEach(Array(quotes.enumerated()), id: \.element.id) { i, q in
+                            Text("\(q.code) · \(i == 0 ? "principale" : "extra")").tag(q.id)
+                        }
+                    }
                 }
                 Picker("Quando scatta", selection: $when) {
                     Text("Lo segno io").tag("manual")
@@ -168,7 +178,8 @@ struct MilestoneAddSheet: View {
                         let n = Double(value.replacingOccurrences(of: ",", with: "."))
                         var body: [String: Any?] = ["label": label.trimmingCharacters(in: .whitespaces),
                                                     "percent": usePercent ? n : nil,
-                                                    "amount": usePercent ? nil : n]
+                                                    "amount": usePercent ? nil : n,
+                                                    "quoteId": quoteId.isEmpty ? quotes.first?.id : quoteId]
                         switch when {
                         case "manual", "end": body["trigger"] = when
                         default: body["trigger"] = "phase"; body["phaseId"] = when
@@ -179,7 +190,8 @@ struct MilestoneAddSheet: View {
                 }
             }
         }
-        .presentationDetents([.medium])
+        .presentationDetents([.medium, .large])
+        .onAppear { if quoteId.isEmpty { quoteId = quotes.first?.id ?? "" } }
     }
 }
 

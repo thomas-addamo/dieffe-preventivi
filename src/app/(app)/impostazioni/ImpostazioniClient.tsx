@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -38,7 +38,7 @@ import {
   Monitor,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useEditorPref } from "@/lib/editor-prefs";
+import { AUTOCORRECT_DELAYS, useAutoCorrectDelay, useEditorPref } from "@/lib/editor-prefs";
 import { cn } from "@/lib/utils";
 import type { CompanySettings } from "@/lib/db/schema";
 import { APP_VERSION } from "@/lib/version";
@@ -159,11 +159,10 @@ export function ImpostazioniClient({
   const [resetting, setResetting] = useState(false);
   const [aiSuggestEnabled, setAiSuggestEnabled] = useEditorPref("aiPriceSuggestions");
   const [listinoEnabled, setListinoEnabled] = useEditorPref("listinoAutocomplete");
-  const [aiAutoImprove, setAiAutoImprove] = useState(false);
-
-  useEffect(() => {
-    setAiAutoImprove(localStorage.getItem("ai_auto_improve") === "true");
-  }, []);
+  const [acTitle, setAcTitle] = useEditorPref("autoCorrectTitle");
+  const [acDescriptions, setAcDescriptions] = useEditorPref("autoCorrectDescriptions");
+  const [acNotes, setAcNotes] = useEditorPref("autoCorrectNotes");
+  const [acDelay, setAcDelay] = useAutoCorrectDelay();
 
   const {
     register,
@@ -403,16 +402,53 @@ export function ImpostazioniClient({
                   : "Riattiva listino e suggerimenti"}
               </button>
               <div className="border-t" />
-              <SettingToggle
-                checked={aiAutoImprove}
-                onChange={(next) => {
-                  setAiAutoImprove(next);
-                  localStorage.setItem("ai_auto_improve", String(next));
-                  toast.success(next ? "Auto-miglioramento attivato" : "Auto-miglioramento disattivato");
-                }}
-                title="Miglioramento automatico descrizione"
-                description="Migliora automaticamente dopo 3s di inattività"
-              />
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm font-medium">Correzione automatica</p>
+                  <p className="text-xs text-muted-foreground">
+                    Quando smetti di scrivere sistema maiuscole, punteggiatura e refusi. Non cambia significato né cifre; ogni correzione si può annullare.
+                  </p>
+                </div>
+                <SettingToggle
+                  checked={acTitle}
+                  onChange={(next) => setAcTitle(next)}
+                  title="Titolo del preventivo"
+                  description="Corregge il titolo"
+                />
+                <SettingToggle
+                  checked={acDescriptions}
+                  onChange={(next) => setAcDescriptions(next)}
+                  title="Descrizioni delle voci"
+                  description="Corregge le descrizioni quando esci dal campo"
+                />
+                <SettingToggle
+                  checked={acNotes}
+                  onChange={(next) => setAcNotes(next)}
+                  title="Note"
+                  description="Note generali del preventivo e note delle voci"
+                />
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium">Attesa prima della correzione</p>
+                    <p className="text-xs text-muted-foreground">Secondi senza scrivere prima di correggere</p>
+                  </div>
+                  <select
+                    value={acDelay}
+                    onChange={(e) => {
+                      setAcDelay(Number(e.target.value));
+                      toast.success(`Correzione dopo ${e.target.value} s di pausa`);
+                    }}
+                    className="h-9 rounded-lg border bg-card px-2 text-sm"
+                    aria-label="Attesa prima della correzione"
+                  >
+                    {AUTOCORRECT_DELAYS.map((s) => (
+                      <option key={s} value={s}>
+                        {s} {s === 1 ? "secondo" : "secondi"}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
           </Section>
 

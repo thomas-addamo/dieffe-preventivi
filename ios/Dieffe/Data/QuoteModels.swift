@@ -26,6 +26,8 @@ struct QuoteDetail: Codable, Identifiable, Equatable {
     var sections: [QuoteSection]
     /// Firma o rifiuto del cliente dal link pubblico (tabella quote_signatures).
     var signature: QuoteSignature?
+    /// Blocco (B1, dalla 4.8.0) già calcolato dal server per l'utente.
+    var lock: QuoteLock?
 
     var isExtra: Bool { kind == "extra" }
 
@@ -50,6 +52,20 @@ struct QuoteDetail: Codable, Identifiable, Equatable {
     }
 
     var totals: QuoteTotals { QuoteTotals(self) }
+}
+
+/// Blocco del preventivo (src/lib/quote-lock.ts → lockInfo): manuale
+/// dell'admin o automatico (inviato, rifiutato, accettato con lavori conclusi).
+struct QuoteLock: Codable, Equatable {
+    /// admin · completed · rejected · sent (nil = modificabile)
+    let reason: String?
+    let locked: Bool
+    let title: String?
+    let message: String?
+    let canUnlock: Bool
+    let canRequest: Bool
+    let requestedAt: String?
+    let canRelock: Bool?
 }
 
 struct QuoteSignature: Codable, Equatable {

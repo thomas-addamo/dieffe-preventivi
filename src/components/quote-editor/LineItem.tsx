@@ -32,6 +32,7 @@ import { ImageUploader } from "./ImageUploader";
 import type { ItemWithImages } from "@/types";
 import type { PriceListItem } from "@/lib/db/schema";
 import { UNIT_OF_MEASURES, formatCurrency } from "@/lib/utils";
+import { useAutoCorrect } from "@/hooks/use-auto-correct";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useEditorPref } from "@/lib/editor-prefs";
@@ -347,6 +348,25 @@ export function LineItem({
   const [showImages, setShowImages] = useState(false);
   const { isViewer, can: perms } = usePermissions();
   const descAnchorRef = useRef<HTMLDivElement>(null);
+  // Correzione automatica (B2): descrizione (editor ricco, si applica uscendo
+  // dal campo) e note della voce.
+  const itemNotesRef = useRef<HTMLInputElement>(null);
+  useAutoCorrect({
+    pref: "autoCorrectDescriptions",
+    label: "Descrizione",
+    value: item.description,
+    onChange: (description) => onUpdate({ description }),
+    richSelector: `[data-autocorrect="${item.id}"]`,
+    disabled: isViewer,
+  });
+  useAutoCorrect({
+    pref: "autoCorrectNotes",
+    label: "Nota",
+    value: item.notes,
+    onChange: (notes) => onUpdate({ notes }),
+    inputRef: itemNotesRef,
+    disabled: isViewer,
+  });
   // Un solo layout montato alla volta: ogni voce ha UN editor rich-text.
   const isDesktop = useMediaQuery("(min-width: 768px)", true);
 
@@ -558,7 +578,7 @@ export function LineItem({
   const descriptionBlock = (isMobile: boolean) => (
     <div className="relative min-w-0 flex-1">
       <div className="flex items-start gap-1">
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1" data-autocorrect={item.id}>
           <RichDescriptionEditor
             anchorRef={descAnchorRef}
             value={item.description}
@@ -599,8 +619,10 @@ export function LineItem({
 
       {item.notes !== null && item.notes !== undefined && (
         <Input
+          ref={itemNotesRef}
           value={item.notes}
           onChange={(e) => onUpdate({ notes: e.target.value })}
+          readOnly={isViewer}
           placeholder="Note..."
           className="mt-1 h-6 text-xs bg-transparent border-none shadow-none focus-visible:ring-0 text-muted-foreground placeholder:text-muted-foreground/40"
         />

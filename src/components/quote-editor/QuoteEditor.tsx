@@ -49,6 +49,8 @@ import { toPlainText } from "@/lib/rich-text";
 import { QuoteHeaderForm } from "./QuoteHeaderForm";
 import type { QuoteWithRelations, SectionWithItems, ItemWithImages } from "@/types";
 import type { QuoteSite } from "@/lib/sites/quote-site";
+import { lockInfo } from "@/lib/quote-lock";
+import { QuoteReadOnlyContext } from "./quote-readonly";
 import type { PriceListItem } from "@/lib/db/schema";
 import { QUOTE_STATUS_LABELS, QUOTE_STATUS_COLORS, generateId, formatCurrency, formatDate } from "@/lib/utils";
 import { calcQuoteTotals } from "@/lib/calculations";
@@ -257,8 +259,12 @@ function findScrollParent(el: HTMLElement): HTMLElement | null {
 
 export function QuoteEditor({ initialQuote, clients, related, site: initialSite }: QuoteEditorProps) {
   const router = useRouter();
-  const { isViewer, isAdmin, can: perms } = usePermissions();
+  const { isViewer: roleViewer, isAdmin, role, can: perms } = usePermissions();
   const [quote, setQuote] = useState<QuoteWithRelations>(initialQuote);
+  // Blocco (B1): manuale o automatico (inviato, rifiutato, lavori conclusi).
+  // Bloccato = sola lettura per tutti, admin compresi (che sbloccano con un clic).
+  const lock = lockInfo(quote, role);
+  const isViewer = roleViewer || lock.locked;
   const [saveState, setSaveState] = useState<"saved" | "saving" | "unsaved">("saved");
   const [mobileTotalsOpen, setMobileTotalsOpen] = useState(false);
   const [readonlyBannerDismissed, setReadonlyBannerDismissed] = useState(false);
@@ -801,7 +807,7 @@ export function QuoteEditor({ initialQuote, clients, related, site: initialSite 
   // passaggio avviene da solo. `need` = larghezza necessaria con le etichette,
   // misurata solo quando sono visibili (isteresi: niente sfarfallio).
   const titleRef = useRef<HTMLDivElement>(null);
-  const actionsKey = [quote.status, quote.isLocked, quote.kind, !!site, sitesEnabled, isViewer, isAdmin].join("|");
+  const actionsKey = [quote.status, lock.reason, lock.canRelock, quote.kind, !!site, sitesEnabled, isViewer, isAdmin].join("|");
   // Compatta solo per l'insieme di tasti misurato: se i tasti cambiano si
   // torna alle etichette e si rimisura.
   const [compactFor, setCompactFor] = useState<string | null>(null);
@@ -864,17 +870,49 @@ export function QuoteEditor({ initialQuote, clients, related, site: initialSite 
 
   const [locking, setLocking] = useState(false);
 
-  async function toggleLock() {
+  /** Blocca (admin) o riblocca, oppure sblocca (B1). */
+  async function setLocked(locked: boolean) {
     setLocking(true);
-    const isCurrentlyLocked = quote.isLocked;
-    const res = await fetch(`/api/quotes/${quote.id}/${isCurrentlyLocked ? "unlock" : "lock"}`, { method: "PATCH" });
+    const res = await fetch(`/api/quotes/${quote.id}/${locked ? "lock" : "unlock"}`, { method: "PATCH" });
+    setLocking(false);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      toast.error((data as { error?: string }).error ?? "Errore durante l'operazione.");
+      return;
+    }
+    const now = new Date().toISOString();
+    setQuote((q) => {
+      if (locked) {
+        // Riblocca un blocco automatico tolto a mano, altrimenti blocco dell'admin.
+        return q.lockOverrideAt ? { ...q, lockOverrideAt: null } : { ...q, isLocked: true };
+      }
+      return q.isLocked
+        ? { ...q, isLocked: false }
+        : { ...q, lockOverrideAt: now as never, unlockRequestedAt: null };
+    });
+    toast.success(locked ? "Preventivo bloccato." : "Preventivo sbloccato: ora puoi modificarlo.");
+  }
+  function toggleLock() {
+    void setLocked(!lock.locked);
+  }
+  async function requestUnlock() {
+    setLocking(true);
+    const res = await fetch(`/api/quotes/${quote.id}/unlock-request`, { method: "POST" });
     setLocking(false);
     if (res.ok) {
-      setQuote((q) => ({ ...q, isLocked: !isCurrentlyLocked }));
-      toast.success(isCurrentlyLocked ? "Preventivo sbloccato." : "Preventivo bloccato.");
-    } else {
-      toast.error("Errore durante l'operazione.");
-    }
+      setQuote((q) => ({ ...q, unlockRequestedAt: new Date().toISOString() as never }));
+      toast.success("Richiesta inviata: l'amministratore riceve una notifica.");
+    } else toast.error("Impossibile inviare la richiesta.");
+  }
+  /** L'admin rifiuta la richiesta, o chi l'ha fatta la ritira. */
+  async function answerUnlockRequest() {
+    setLocking(true);
+    const res = await fetch(`/api/quotes/${quote.id}/unlock-request`, { method: "DELETE" });
+    setLocking(false);
+    if (res.ok) {
+      setQuote((q) => ({ ...q, unlockRequestedAt: null }));
+      toast.success(isAdmin ? "Richiesta rifiutata." : "Richiesta ritirata.");
+    } else toast.error("Errore durante l'operazione.");
   }
 
   const totals = calcQuoteTotals(
@@ -897,9 +935,10 @@ export function QuoteEditor({ initialQuote, clients, related, site: initialSite 
   }, [quote]);
 
   return (
+    <QuoteReadOnlyContext.Provider value={lock.locked}>
     <div className="flex flex-col min-h-full">
       {/* Read-only banner */}
-      {isViewer && !readonlyBannerDismissed && (
+      {roleViewer && !readonlyBannerDismissed && (
         <div className="bg-muted/60 border-b px-4 py-2 flex items-center gap-2 text-sm text-muted-foreground">
           <Lock className="w-3.5 h-3.5 shrink-0" />
           <span>Modalità sola lettura — non hai i permessi per modificare questo preventivo.</span>
@@ -965,11 +1004,40 @@ export function QuoteEditor({ initialQuote, clients, related, site: initialSite 
         )
       )}
 
-      {/* Lock banner for non-admin */}
-      {quote.isLocked && !isAdmin && (
-        <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-2 flex items-center gap-2 text-sm text-yellow-800">
-          <Lock className="w-3.5 h-3.5 shrink-0" />
-          <span>Questo preventivo è bloccato dall&apos;amministratore. Contatta l&apos;admin per sbloccare.</span>
+      {/* Blocco (B1): perché è in sola lettura e cosa si può fare */}
+      {lock.locked && !roleViewer && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200 md:px-6">
+          <Lock className="h-4 w-4 shrink-0" />
+          <span className="min-w-0 flex-1">
+            <strong>{lock.title}.</strong> {lock.message}
+            {lock.requestedAt && (
+              <span className="ml-1 font-medium">
+                {isAdmin ? "C'è una richiesta di sblocco in attesa." : "Richiesta di sblocco inviata all'amministratore."}
+              </span>
+            )}
+          </span>
+          <span className="flex shrink-0 items-center gap-2">
+            {lock.canUnlock && (
+              <Button size="sm" variant="outline" className="h-7 gap-1.5 bg-background" onClick={() => setLocked(false)} disabled={locking}>
+                <Unlock className="h-3.5 w-3.5" /> {lock.requestedAt && isAdmin ? "Approva e sblocca" : "Sblocca"}
+              </Button>
+            )}
+            {isAdmin && lock.requestedAt && (
+              <Button size="sm" variant="ghost" className="h-7" onClick={() => answerUnlockRequest()} disabled={locking}>
+                Rifiuta richiesta
+              </Button>
+            )}
+            {lock.canRequest && !lock.requestedAt && (
+              <Button size="sm" variant="outline" className="h-7 gap-1.5 bg-background" onClick={requestUnlock} disabled={locking}>
+                <Mail className="h-3.5 w-3.5" /> Richiedi sblocco
+              </Button>
+            )}
+            {lock.canRequest && lock.requestedAt && (
+              <Button size="sm" variant="ghost" className="h-7" onClick={() => answerUnlockRequest()} disabled={locking}>
+                Ritira richiesta
+              </Button>
+            )}
+          </span>
         </div>
       )}
 
@@ -993,6 +1061,9 @@ export function QuoteEditor({ initialQuote, clients, related, site: initialSite 
         <div ref={titleRef} className="flex-1 min-w-0">
           <h1 className="flex items-center gap-1.5 font-semibold text-sm leading-tight">
             <span className="truncate">{quote.code}</span>
+            {lock.locked && (
+              <Lock className="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" aria-label={lock.title ?? "Bloccato"} />
+            )}
             {quote.kind === "extra" && (
               <span className="shrink-0 rounded-full bg-amber-100 px-1.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
                 Extra
@@ -1041,7 +1112,7 @@ export function QuoteEditor({ initialQuote, clients, related, site: initialSite 
           </>
         )}
 
-        {perms.changeQuoteStatus ? (
+        {perms.changeQuoteStatus && (!lock.locked || lock.reason === "sent" || isAdmin) ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="gap-1.5 h-8 px-2 md:px-3">
@@ -1153,10 +1224,10 @@ export function QuoteEditor({ initialQuote, clients, related, site: initialSite 
                     <Copy className="w-4 h-4 mr-2" /> Duplica preventivo
                   </DropdownMenuItem>
                 )}
-                {isAdmin && (
+                {(lock.locked ? lock.canUnlock : isAdmin || lock.canRelock) && (
                   <DropdownMenuItem onClick={toggleLock} disabled={locking}>
-                    {quote.isLocked ? <Unlock className="w-4 h-4 mr-2" /> : <Lock className="w-4 h-4 mr-2" />}
-                    {quote.isLocked ? "Sblocca modifiche" : "Blocca modifiche"}
+                    {lock.locked ? <Unlock className="w-4 h-4 mr-2" /> : <Lock className="w-4 h-4 mr-2" />}
+                    {lock.locked ? "Sblocca modifiche" : lock.canRelock ? "Riblocca" : "Blocca modifiche"}
                   </DropdownMenuItem>
                 )}
                 {perms.deleteQuote && (
@@ -1239,17 +1310,20 @@ export function QuoteEditor({ initialQuote, clients, related, site: initialSite 
                 </DropdownMenuItem>
               </>
             )}
-            {isAdmin && (
+            {(lock.locked ? lock.canUnlock || lock.canRequest : isAdmin || lock.canRelock) && (
               <>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={toggleLock} disabled={locking}>
-                  {quote.isLocked ? (
-                    <Unlock className="w-4 h-4 mr-2" />
-                  ) : (
-                    <Lock className="w-4 h-4 mr-2" />
-                  )}
-                  {quote.isLocked ? "Sblocca modifiche" : "Blocca modifiche"}
-                </DropdownMenuItem>
+                {lock.canRequest ? (
+                  <DropdownMenuItem onClick={requestUnlock} disabled={locking || !!lock.requestedAt}>
+                    <Mail className="w-4 h-4 mr-2" />
+                    {lock.requestedAt ? "Sblocco già richiesto" : "Richiedi sblocco"}
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem onClick={toggleLock} disabled={locking}>
+                    {lock.locked ? <Unlock className="w-4 h-4 mr-2" /> : <Lock className="w-4 h-4 mr-2" />}
+                    {lock.locked ? "Sblocca modifiche" : lock.canRelock ? "Riblocca" : "Blocca modifiche"}
+                  </DropdownMenuItem>
+                )}
               </>
             )}
             {perms.deleteQuote && (
@@ -1426,5 +1500,6 @@ export function QuoteEditor({ initialQuote, clients, related, site: initialSite 
         />
       )}
     </div>
+    </QuoteReadOnlyContext.Provider>
   );
 }

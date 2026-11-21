@@ -42,6 +42,7 @@ struct ItemEditView: View {
                         TextField("Note", text: optionalText(binding(\.notes, nil)),
                                   prompt: Text("Note interne o per il cliente (facoltative)"), axis: .vertical)
                             .lineLimit(1...5)
+                            .autoCorrect(optionalText(binding(\.notes, nil)), .notes, active: editor.isEditable)
                     }
                     photoSection(item)
                     if editable {
@@ -88,6 +89,7 @@ struct ItemEditView: View {
                 .focused($descriptionFocused)
                 .frame(minHeight: 110)
                 .font(.body)
+                .autoCorrect(binding(\.description, ""), .descriptions, active: editor.isEditable)
             if let text = item?.description, text.contains(where: { "*_~-".contains($0) }) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Anteprima")

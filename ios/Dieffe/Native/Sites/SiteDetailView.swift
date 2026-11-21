@@ -11,13 +11,14 @@ struct SiteDetailView: View {
     var initialTab: String?
 
     enum Tab: String, CaseIterable {
-        case avanzamento = "Fasi", sal = "SAL", calendario = "Calendario", note = "Note", foto = "Foto"
+        case avanzamento = "Fasi", sal = "SAL", calendario = "Calendario", note = "Note", foto = "Foto", documenti = "Documenti"
         init(param: String?) {
             switch param {
             case "sal": self = .sal
             case "calendario": self = .calendario
             case "note": self = .note
             case "foto": self = .foto
+            case "documenti": self = .documenti
             default: self = .avanzamento
             }
         }
@@ -29,6 +30,7 @@ struct SiteDetailView: View {
             case .calendario: "calendar"
             case .note: "note.text"
             case .foto: "photo.on.rectangle"
+            case .documenti: "doc.text"
             }
         }
     }
@@ -112,7 +114,9 @@ struct SiteDetailView: View {
             Section {
                 SiteFilterBar(selection: $tab, items: Tab.allCases.map { t in
                     .init(value: t, title: t == .sal && d.metrics.toInvoice > 0 ? "SAL •" : t.rawValue,
-                          count: t == .foto ? (d.allPhotos.isEmpty ? nil : d.allPhotos.count) : nil, symbol: t.symbol)
+                          count: t == .foto ? (d.allPhotos.isEmpty ? nil : d.allPhotos.count)
+                              : t == .documenti ? (d.allDocuments.isEmpty ? nil : d.allDocuments.count) : nil,
+                          symbol: t.symbol)
                 })
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
@@ -140,6 +144,9 @@ struct SiteDetailView: View {
                                   open: { viewer = PhotoViewerItem(id: $0.id, photos: $1) },
                                   edit: { present(.editPhoto($0)) },
                                   delete: { confirmDeletePhoto = $0 })
+            case .documenti:
+                SiteDocumentsSection(detail: d, editable: editable, canDelete: { owns($0.userId) },
+                                     mutate: mutate, reload: { await load() })
             }
         }
         .environment(\.editMode, $editMode)
@@ -177,7 +184,7 @@ struct SiteDetailView: View {
             case .editPhase(let p):
                 PhaseEditSheet(phase: p) { body in await mutate("PATCH", "/api/sites/\(siteID)/phases/\(p.id)", body) }
             case .addMilestone:
-                MilestoneAddSheet(phases: d.phases) { body in await mutate("POST", "/api/sites/\(siteID)/milestones", body) }
+                MilestoneAddSheet(phases: d.phases, quotes: d.quotes) { body in await mutate("POST", "/api/sites/\(siteID)/milestones", body) }
             case .event(let draft):
                 EventSheet(draft: draft) { body in
                     if let id = draft.id { return await mutate("PATCH", "/api/sites/\(siteID)/events/\(id)", body) }

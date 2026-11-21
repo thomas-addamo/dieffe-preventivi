@@ -2,7 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { and, eq, sql, asc } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import { sitePhases, siteMilestones, siteEvents, siteNotes, SITE_EVENT_TYPES } from "@/lib/db/schema";
+import { quotes, sitePhases, siteMilestones, siteEvents, siteNotes, SITE_EVENT_TYPES } from "@/lib/db/schema";
 import { generateId } from "@/lib/utils";
 import { recomputeSite } from "./recompute";
 import { schedulePhases } from "./schedule";
@@ -41,8 +41,10 @@ const milestoneCreate = z.object({
   amount: z.number().min(0).max(100_000_000).nullable().optional(),
   trigger: z.enum(["accept", "start", "phase", "end", "manual"]).optional(),
   phaseId: z.string().nullable().optional(),
+  /** Preventivo (principale o lavoro extra) su cui si calcola la percentuale (A7). */
+  quoteId: z.string().nullable().optional(),
 });
-const milestonePatch = milestoneCreate.partial().extend({
+const milestonePatch = milestoneCreate.omit({ quoteId: true }).partial().extend({
   reached: z.boolean().optional(),
   invoiced: z.boolean().optional(),
   invoiceNumber: z.string().max(40).nullable().optional(),
@@ -87,6 +89,11 @@ export async function createEntity(siteId: string, entity: Entity, body: unknown
       const p = milestoneCreate.safeParse(body);
       if (!p.success || (p.data.percent == null && p.data.amount == null)) return bad("Indica percentuale o importo");
       const trigger = p.data.trigger ?? (p.data.phaseId ? "phase" : "manual");
+      // Il preventivo deve appartenere al cantiere (principale o extra).
+      if (p.data.quoteId) {
+        const [q] = await db.select({ id: quotes.id }).from(quotes).where(and(eq(quotes.id, p.data.quoteId), eq(quotes.siteId, siteId))).limit(1);
+        if (!q) return bad("Preventivo non collegato al cantiere");
+      }
       const row = { id: generateId(), siteId, ...p.data, trigger, orderIndex: await nextOrder(siteMilestones, siteId) };
       await db.insert(siteMilestones).values(row);
       await recomputeSite(siteId);

@@ -11,7 +11,41 @@ export const EDITOR_PREFS = {
   listinoAutocomplete: "listino_autocomplete_enabled",
   /** Suggerimento AI automatico di U.M./prezzo mentre si scrive. */
   aiPriceSuggestions: "ai_suggestions_enabled",
+  /** Correzione automatica (B2) del titolo del preventivo. */
+  autoCorrectTitle: "autocorrect_title_enabled",
+  /** Correzione automatica delle descrizioni delle voci. */
+  autoCorrectDescriptions: "autocorrect_descriptions_enabled",
+  /** Correzione automatica delle note (generali e delle voci). */
+  autoCorrectNotes: "autocorrect_notes_enabled",
 } as const;
+
+/** Secondi di inattività prima della correzione automatica (B2). */
+export const AUTOCORRECT_DELAY_KEY = "autocorrect_delay_s";
+export const AUTOCORRECT_DELAY_DEFAULT = 3;
+export const AUTOCORRECT_DELAYS = [1, 2, 3, 5, 10] as const;
+
+export function readAutoCorrectDelay(): number {
+  try {
+    const v = Number(localStorage.getItem(AUTOCORRECT_DELAY_KEY));
+    return v >= 1 && v <= 30 ? v : AUTOCORRECT_DELAY_DEFAULT;
+  } catch {
+    return AUTOCORRECT_DELAY_DEFAULT;
+  }
+}
+
+export function writeAutoCorrectDelay(seconds: number) {
+  try {
+    localStorage.setItem(AUTOCORRECT_DELAY_KEY, String(seconds));
+  } catch {
+    // storage non disponibile: ignora
+  }
+  window.dispatchEvent(new Event(CHANGE_EVENT));
+}
+
+export function useAutoCorrectDelay(): [number, (s: number) => void] {
+  const value = useSyncExternalStore(subscribe, readAutoCorrectDelay, () => AUTOCORRECT_DELAY_DEFAULT);
+  return [value, writeAutoCorrectDelay];
+}
 
 export type EditorPref = keyof typeof EDITOR_PREFS;
 

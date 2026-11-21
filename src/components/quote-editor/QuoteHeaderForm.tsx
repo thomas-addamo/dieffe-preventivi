@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useAutoCorrect } from "@/hooks/use-auto-correct";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,6 +30,11 @@ export function QuoteHeaderForm({
 }: QuoteHeaderFormProps) {
   const [collapsed, setCollapsed] = useState(false);
   const { isViewer } = usePermissions();
+  // Correzione automatica (B2) di titolo e note generali.
+  const titleRef = useRef<HTMLInputElement>(null);
+  const notesRef = useRef<HTMLTextAreaElement>(null);
+  useAutoCorrect({ pref: "autoCorrectTitle", label: "Titolo", value: quote.title, onChange: (title) => onChange({ title }), inputRef: titleRef, disabled: isViewer });
+  useAutoCorrect({ pref: "autoCorrectNotes", label: "Note", value: quote.notes, onChange: (notes) => onChange({ notes }), inputRef: notesRef, disabled: isViewer });
 
   return (
     <div className="surface overflow-hidden p-0">
@@ -57,6 +63,7 @@ export function QuoteHeaderForm({
           <div className="space-y-1.5 col-span-1 md:col-span-2">
             <Label>Titolo preventivo</Label>
             <Input
+              ref={titleRef}
               value={quote.title}
               onChange={(e) => onChange({ title: e.target.value })}
               readOnly={isViewer}
@@ -139,6 +146,7 @@ export function QuoteHeaderForm({
           <div className="space-y-1.5 col-span-1 md:col-span-2">
             <Label>Note generali</Label>
             <Textarea
+              ref={notesRef}
               value={quote.notes ?? ""}
               onChange={(e) => onChange({ notes: e.target.value })}
               readOnly={isViewer}

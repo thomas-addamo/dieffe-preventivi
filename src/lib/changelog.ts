@@ -43,6 +43,34 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "4.8.0",
+    date: "2026-11-21",
+    headline: "Preventivi protetti, testi corretti da soli e documenti nel cantiere.",
+    important: true,
+    highlights: [
+      {
+        icon: "shield",
+        title: "Blocco automatico dei preventivi",
+        description: "Inviati, rifiutati e accettati con i lavori conclusi diventano di sola lettura. Un inviato lo sblocchi tu con un tocco; gli altri li sblocca l'amministratore, a cui puoi chiedere lo sblocco.",
+      },
+      {
+        icon: "sparkles",
+        title: "Correzione automatica",
+        description: "Quando smetti di scrivere, titolo, descrizioni e note vengono sistemati (maiuscole, punteggiatura, refusi) senza toccare cifre e significato. Si annulla con un tocco; attesa e campi si scelgono in Impostazioni.",
+      },
+      {
+        icon: "site",
+        title: "Documenti del cantiere",
+        description: "Nuova scheda Documenti: carica permessi, progetti e contratti in PDF (fino a 25 MB) e aprili in anteprima, anche su iPhone e senza rete dopo la prima apertura.",
+      },
+      {
+        icon: "zap",
+        title: "SAL dei lavori extra",
+        description: "Aggiungendo un SAL scegli su quale preventivo calcolarlo, il principale o un lavoro extra (anche su iPhone).",
+      },
+    ],
+  },
+  {
     version: "4.7.1",
     date: "2026-11-21",
     headline: "SAL fatturati sempre segnati come raggiunti.",

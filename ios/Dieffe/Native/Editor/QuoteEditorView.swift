@@ -244,7 +244,45 @@ struct QuoteEditorView: View {
                 Text("Lo trovi anche nella Dynamic Island e sulla schermata di blocco.")
             }
         }
-        if quote.isLocked {
+        if let lock = quote.lock, lock.locked, editor.canEdit {
+            // Blocco (B1): perché è in sola lettura e cosa si può fare.
+            Section {
+                VStack(alignment: .leading, spacing: 10) {
+                    Label(lock.title ?? "Preventivo bloccato", systemImage: "lock.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.orange)
+                    if let message = lock.message {
+                        Text(message).font(.subheadline).foregroundStyle(.secondary)
+                    }
+                    if lock.requestedAt != nil {
+                        Label(editor.role == "admin" ? "C'è una richiesta di sblocco in attesa." : "Richiesta di sblocco inviata all'amministratore.",
+                              systemImage: "clock")
+                            .font(.footnote.weight(.medium))
+                    }
+                    HStack(spacing: 10) {
+                        if lock.canUnlock {
+                            Button(lock.requestedAt != nil && editor.role == "admin" ? "Approva e sblocca" : "Sblocca", systemImage: "lock.open") {
+                                Task { await editor.setLocked(false) }
+                            }
+                            .buttonStyle(.glassProminent)
+                        }
+                        if lock.requestedAt != nil, editor.role == "admin" || lock.canRequest {
+                            Button(editor.role == "admin" ? "Rifiuta" : "Ritira richiesta") {
+                                Task { await editor.cancelUnlockRequest() }
+                            }
+                            .buttonStyle(.glass)
+                        } else if lock.canRequest {
+                            Button("Richiedi sblocco", systemImage: "paperplane") {
+                                Task { _ = await editor.requestUnlock() }
+                            }
+                            .buttonStyle(.glassProminent)
+                        }
+                    }
+                    .font(.subheadline.weight(.semibold))
+                }
+                .padding(.vertical, 4)
+            }
+        } else if quote.lock == nil, quote.isLocked {
             Section {
                 Label(editor.role == "admin"
                       ? "Preventivo bloccato: solo gli amministratori possono modificarlo."
@@ -377,7 +415,7 @@ struct QuoteEditorView: View {
                 } label: {
                     StatusBadge(status: quote.status)
                 }
-                .disabled(!editor.isEditable)
+                .disabled(!editor.canChangeStatus)
             }
             ToolbarItem(placement: .primaryAction) {
                 Menu {
@@ -412,7 +450,15 @@ struct QuoteEditorView: View {
                             } else {
                                 Button("Termina sopralluogo", systemImage: "stop.circle") { endSiteVisit() }
                             }
-                            if editor.role == "admin" {
+                            if let lock = quote.lock {
+                                if lock.locked, lock.canUnlock {
+                                    Button("Sblocca modifiche", systemImage: "lock.open") { Task { await editor.setLocked(false) } }
+                                } else if !lock.locked, lock.canRelock == true {
+                                    Button("Riblocca", systemImage: "lock") { Task { await editor.setLocked(true) } }
+                                } else if !lock.locked, editor.role == "admin" {
+                                    Button("Blocca modifiche", systemImage: "lock") { Task { await editor.setLocked(true) } }
+                                }
+                            } else if editor.role == "admin" {
                                 Button(quote.isLocked ? "Sblocca modifiche" : "Blocca modifiche",
                                        systemImage: quote.isLocked ? "lock.open" : "lock") {
                                     Task { await editor.setLocked(!quote.isLocked) }

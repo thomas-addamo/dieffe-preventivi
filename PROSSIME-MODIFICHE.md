@@ -178,12 +178,24 @@ Da fare per prime: sono bug che bloccano il lavoro o modifiche piccole e già ch
 - **Analisi DB:** Nessun impatto.
 - **Esito:** Barra da tablet in su: stato, Condividi, Esporta, Cantiere e menu **⋯ Altre azioni** (Lavoro extra, Duplica, Blocca/Sblocca, Elimina). Compattazione automatica misurando lo spazio reale (ResizeObserver con isteresi, non breakpoint): quando non ci sta, i tasti restano solo icone con tooltip. Telefono invariato (menu ⋯). Scorciatoie e menu dell'app desktop (`useMenuParam`) invariati.
 
+
+### A7. iPhone: aggiungere i SAL (stato avanzamento lavori) per ogni preventivo  _(#14, aggiunta il 2026-11-21)_
+- **Stato:** 🧪 In test — 4.8.0 (2026-11-21, branch `claude/project-changes-documentation-e7b724`): da verificare in produzione
+- **Piattaforme:** iPhone (allineare al sito)
+- **Cosa:** su iPhone non si riesce ad aggiungere lo stato avanzamento lavori per ciascun preventivo. Da verificare con l'utente cosa manca esattamente; ipotesi emerse dal codice:
+  - oggi né sito né iPhone permettono di scegliere **a quale preventivo** (principale o lavoro extra) appartiene un SAL aggiunto a mano: la percentuale si calcola sempre sul principale (`createEntity` in `src/lib/sites/entities.ts` non riceve `quoteId`);
+  - sui cantieri "in attesa" (preventivo inviato) l'iPhone non mostra la sezione SAL finché il preventivo non è accettato;
+  - dall'editor del preventivo su iPhone non c'è un accesso diretto ai suoi SAL (ora c'è "Vai al cantiere", A3).
+- **Dove:** `ios/Dieffe/Native/Sites/SiteSections.swift` (`MilestoneAddSheet`), `SiteDetailView.swift`, `src/lib/sites/entities.ts` (campo `quoteId` nella creazione), `MilestonesTab.tsx`.
+- **Test specifici:** SAL a percentuale su un lavoro extra (importo calcolato sull'extra, non sul principale); SAL aggiunto da iPhone visibile sul sito e viceversa; cantiere in attesa.
+- **Analisi DB:** Nessuna colonna nuova: `site_milestones.quote_id` esisteva già ma non si poteva impostare. 1 preventivo extra su 37.
+- **Esito:** Aggiungendo un SAL si sceglie il preventivo (principale o lavoro extra) su cui calcolare la percentuale: sito (tendina, che compare solo con più preventivi) e iPhone (selettore nel foglio «Nuovo SAL», ora anche a tutta altezza). Il server verifica che il preventivo appartenga al cantiere. Sul sito i SAL di un extra mostrano il suo numero.
 ---
 
 ## 2. Fase B — Medio termine: nuove funzioni
 
 ### B1. Blocco automatico dei preventivi conclusi, rifiutati e inviati  _(#1)_
-- **Stato:** 📋 Da fare
+- **Stato:** 🧪 In test — 4.8.0 (2026-11-21, branch `claude/project-changes-documentation-e7b724`): da verificare in produzione
 - **Piattaforme:** sito · desktop · iPhone
 - **Cosa:**
   | Stato del preventivo | Blocco | Chi può sbloccare |
@@ -194,11 +206,11 @@ Da fare per prime: sono bug che bloccano il lavoro o modifiche piccole e già ch
 - **Note:** esistono già `isLocked`, `lockedBy`, `lockedAt` e le notifiche `quote_locked`/`quote_unlocked` (`src/lib/db/schema.ts`): partire da lì. Serve un flusso "Richiedi sblocco" → notifica all'admin → approva/rifiuta. Da definire con l'utente: cosa vuol dire esattamente "lavori conclusi" (cantiere chiuso? tutte le fasi completate?).
 - **Dove:** `schema.ts`, `src/lib/permissions/`, `src/lib/notifications.ts`, dashboard, `QuoteEditor.tsx`, editor iPhone.
 - **Test specifici:** tutti i passaggi di stato; un utente non può modificare via API un preventivo bloccato (test lato server, non solo interfaccia); richiesta → notifica → sblocco; icona lucchetto visibile in elenco e nell'editor.
-- **Analisi DB:** — _(da fare prima della progettazione, §0.3)_
-- **Esito:** —
+- **Analisi DB:** 37 preventivi vivi: con il blocco automatico 25 diventano sola lettura (9 inviati, 9 rifiutati, 7 accettati con lavori conclusi). Il blocco NON si salva per riga: si calcola da `status`, `works_completed_at`, `is_locked` e dal nuovo `lock_override_at` (4 colonne nuove in `quotes`, nessun indice: si leggono sempre per chiave primaria). Migrazione `0018` provata su un ramo Neon di prova.
+- **Esito:** "Lavori conclusi" = cantiere chiuso con «Concludi lavori» (`works_completed_at`). Regole in `src/lib/quote-lock.ts` (6 test): inviato → lo sblocca chi può modificarlo; rifiutato, lavori conclusi e blocco manuale → solo admin, gli altri usano **Richiedi sblocco** (notifica agli admin, che approvano sbloccando o rifiutano). Lo sblocco vale finché non cambia lo stato o si concludono i lavori, poi si riblocca da solo; c'è anche «Riblocca». Il server rifiuta le modifiche dei non-admin (423); un inviato bloccato può comunque passare ad accettato/rifiutato. Sito: banner con i tasti, lucchetto accanto al codice, editor tutto in sola lettura tramite `QuoteReadOnlyContext`. iPhone: stesso banner e menu (`lock` in GET /api/quotes/:id).
 
 ### B2. Correzione automatica con IA di titoli, note e descrizioni  _(#3)_
-- **Stato:** 📋 Da fare
+- **Stato:** 🧪 In test — 4.8.0 (2026-11-21, branch `claude/project-changes-documentation-e7b724`): da verificare in produzione
 - **Piattaforme:** sito · desktop · iPhone
 - **Cosa:** dopo un tempo di inattività **scelto dall'utente** (predefinito 3 secondi) l'IA sistema maiuscole iniziali, punteggiatura e refusi in:
   - titolo del preventivo
@@ -208,17 +220,17 @@ Da fare per prime: sono bug che bloccano il lavoro o modifiche piccole e già ch
 - **Note:** la correzione non deve cambiare il significato né le cifre. Deve essere annullabile (Cmd+Z o "Annulla correzione") e mai attiva mentre l'utente sta scrivendo. Correzioni semplici (maiuscola iniziale) in locale senza IA; l'IA solo per il resto, per contenere i costi.
 - **Dove:** `src/lib/editor-prefs.ts`, `src/app/(app)/impostazioni/ImpostazioniClient.tsx`, `src/lib/ai/`, `QuoteHeaderForm.tsx`, `QuoteEditor.tsx`.
 - **Test specifici:** tempo 1, 3 e 10 s; interruttori spenti → nessuna chiamata; il cursore non salta durante la correzione; numero di chiamate IA per preventivo.
-- **Analisi DB:** — _(da fare prima della progettazione, §0.3)_
-- **Esito:** —
+- **Analisi DB:** Nessun impatto sul DB: le preferenze stanno sul dispositivo; le chiamate IA passano da `/api/ai/proofread` (già esistente) con cache per testo, e solo per testi di almeno 3 parole modificati dall'utente (i testi già salvati non si toccano all'apertura).
+- **Esito:** Correzioni locali sicure (`src/lib/autocorrect-text.ts`, 6 test: maiuscola iniziale anche negli elenchi, spazi doppi, spazi prima/dopo la punteggiatura; cifre, a capo e marcatori intatti) + IA per refusi e grammatica. Il server scarta la correzione se l'IA cambia cifre o marcatori. Si annulla dalla notifica («Annulla») e il testo annullato non viene più ricorretto. Cursore: nei campi semplici resta al suo posto, nelle descrizioni (editor ricco) la correzione si applica uscendo dal campo. Impostazioni → Assistenza alla scrittura: tre interruttori (titolo, descrizioni, note) e attesa 1–10 s (predefinita 3); sostituisce il vecchio interruttore «Miglioramento automatico» che non era collegato a nulla. iPhone: stessi campi e impostazioni in Profilo.
 
 ### B3. Allegati PDF nel cantiere  _(#11)_
-- **Stato:** 📋 Da fare
+- **Stato:** 🧪 In test — 4.8.0 (2026-11-21, branch `claude/project-changes-documentation-e7b724`): da verificare in produzione
 - **Piattaforme:** sito · desktop · iPhone
 - **Cosa:** nuova sezione "Documenti" in Gestione Cantieri. Per ogni cantiere si caricano PDF (permessi, progetti, contratti…) che si aprono direttamente nell'app, anche su iPhone, con anteprima.
 - **Dove:** nuova scheda accanto a `PhotosTab.tsx`; storage come per le foto (`src/lib/cloudinary.ts` o alternativa); `ios/Dieffe/Native/Sites/`.
 - **Test specifici:** PDF grande (20 MB), nome lungo, eliminazione, permessi, apertura offline su iPhone se prevista.
-- **Analisi DB:** — _(da fare prima della progettazione, §0.3)_
-- **Esito:** —
+- **Analisi DB:** Nuova tabella `site_documents` (solo riferimenti, ~200 byte a riga) con indice `(site_id, created_at)`: lettura del dettaglio cantiere 0,03 ms (EXPLAIN ANALYZE sul ramo di prova). I file stanno su Cloudinary (tipo raw), non nel DB.
+- **Esito:** Scheda **Documenti** (sito, desktop, iPhone): PDF fino a 25 MB caricati direttamente su Cloudinary con firma del server (niente limite dei 4,5 MB delle funzioni Vercel), poi registrati dopo una verifica lato server di esistenza e peso. Anteprima nell'app (sito: finestra con il PDF; iPhone: Quick Look, il file resta in cache e si riapre offline), rinomina (sito), eliminazione (autore o admin), trascinamento dei file sul sito. API: `POST /api/sites/:id/documents/sign`, `POST /api/sites/:id/documents`, `PATCH|DELETE /api/sites/:id/documents/:docId`; `documents` nel dettaglio del cantiere. Da verificare in produzione: limite reale del piano Cloudinary per i file raw (il piano gratuito si ferma a 10 MB).
 
 ---
 
@@ -309,3 +321,4 @@ _(spostare qui le voci completate, con versione ed esito)_
 | 5 | C2 | 11 | B3 |
 | 6 | C3 | 12 | A3 |
 | — | — | 13 | A6 |
+| — | — | 14 | A7 |

@@ -118,6 +118,8 @@ export async function POST(
     .set({
       status: action,
       publicTokenExpiresAt: new Date(), // expire immediately after signing
+      lockOverrideAt: null, // cambio di stato: torna il blocco automatico (B1)
+      lockOverrideBy: null,
     })
     .where(eq(quotes.id, quote.id));
   // Accettato dal cliente → il cantiere diventa attivo (rifiutato → sparisce).

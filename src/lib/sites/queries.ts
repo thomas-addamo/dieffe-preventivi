@@ -9,6 +9,7 @@ import {
   siteEvents,
   siteNotes,
   sitePhotos,
+  siteDocuments,
   users,
   type Site,
   type SitePhase,
@@ -287,13 +288,15 @@ export type SiteDetail = {
   events: SiteEvent[];
   notes: { id: string; body: string; createdAt: Date; updatedAt: Date | null; userId: string | null; userName: string | null }[];
   photos: (Omit<SitePhoto, "siteId"> & { userName: string | null })[];
+  /** Documenti PDF (B3, dalla 4.8.0: opzionale per l'iPhone). */
+  documents: { id: string; name: string; url: string; bytes: number | null; userId: string | null; userName: string | null; createdAt: Date }[];
   metrics: SiteMetrics;
   /** Fasi/SAL ancora da generare per preventivi accettati. */
   setupPending: boolean;
 };
 
 export async function getSiteDetail(id: string): Promise<SiteDetail | null> {
-  const [[row], quoteRows, phases, milestones, events, notes, photos] = await Promise.all([
+  const [[row], quoteRows, phases, milestones, events, notes, photos, documents] = await Promise.all([
     db
       .select({ site: sites, clientName: clients.name, clientPhone: clients.phone, clientEmail: clients.email })
       .from(sites)
@@ -334,6 +337,20 @@ export async function getSiteDetail(id: string): Promise<SiteDetail | null> {
       .leftJoin(users, eq(sitePhotos.userId, users.id))
       .where(eq(sitePhotos.siteId, id))
       .orderBy(desc(sitePhotos.createdAt)),
+    db
+      .select({
+        id: siteDocuments.id,
+        name: siteDocuments.name,
+        url: siteDocuments.url,
+        bytes: siteDocuments.bytes,
+        userId: siteDocuments.userId,
+        userName: users.name,
+        createdAt: siteDocuments.createdAt,
+      })
+      .from(siteDocuments)
+      .leftJoin(users, eq(siteDocuments.userId, users.id))
+      .where(eq(siteDocuments.siteId, id))
+      .orderBy(desc(siteDocuments.createdAt)),
   ]);
   if (!row) return null;
 
@@ -361,6 +378,7 @@ export async function getSiteDetail(id: string): Promise<SiteDetail | null> {
     events,
     notes,
     photos,
+    documents,
     metrics,
     setupPending: !row.site.archivedAt && row.site.status === "active" && quotes.some((q) => q.status === "accepted" && !q.setupDone),
   };
