@@ -68,21 +68,6 @@ private struct SideMenuButton: ViewModifier {
     }
 }
 
-/// Il rettangolo meno la sua forma arrotondata: riempito (pari-dispari) copre i 4 angoli.
-private struct CornerCutout: Shape {
-    var radius: CGFloat
-    var animatableData: CGFloat {
-        get { radius }
-        set { radius = newValue }
-    }
-
-    func path(in rect: CGRect) -> Path {
-        var path = Path(rect)
-        path.addPath(RoundedRectangle(cornerRadius: radius, style: .continuous).path(in: rect))
-        return path
-    }
-}
-
 private struct SideMenuContainer: ViewModifier {
     @Environment(AppModel.self) private var model
     /// Spostamento del dito mentre si apre o si chiude (punti).
@@ -129,12 +114,15 @@ private struct SideMenuContainer: ViewModifier {
                             .ignoresSafeArea()
                     }
                 }
+                // La pagina ritagliata davvero con gli angoli dello schermo (come Polso): l'ombra
+                // dietro resta intera, senza righe dritte lungo il bordo.
+                .mask {
+                    RoundedRectangle(cornerRadius: radius, style: .continuous)
+                        .ignoresSafeArea()
+                }
                 .overlay {
                     if progress > 0 {
                         ZStack {
-                            // Angoli: fuori dalla curva si vede il fondo del menu.
-                            CornerCutout(radius: radius)
-                                .fill(menuBackground, style: FillStyle(eoFill: true))
                             RoundedRectangle(cornerRadius: radius, style: .continuous)
                                 .strokeBorder(Color.primary.opacity(0.08 * progress))
                             // Pagina spostata: un tocco la riporta al centro.
@@ -317,15 +305,21 @@ private struct SideMenuPanel: View {
             .padding(.top, 12)
     }
 
+    private var bottomBarHeight: CGFloat { 52 }
+
     private var bottomBar: some View {
-        HStack(spacing: 14) {
+        // Border radius annidato con l'angolo in basso a sinistra dell'iPhone: i tasti sono alti
+        // 52 (raggio 26) e stanno a (raggio dello schermo − 26) dal bordo sinistro e dal fondo,
+        // così la loro curva è concentrica a quella dello schermo.
+        let inset = max(12, screenCornerRadius - bottomBarHeight / 2)
+        return HStack(spacing: 12) {
             Button {
                 close()
                 model.showProfile = true
             } label: {
                 Text(InitialsAvatar.initials(of: model.currentUser?.name ?? ""))
                     .font(.system(size: 18, weight: .semibold))
-                    .frame(width: 52, height: 52)
+                    .frame(width: bottomBarHeight, height: bottomBarHeight)
             }
             .buttonStyle(.plain)
             .glassEffect(.regular.interactive(), in: .circle)
@@ -343,21 +337,22 @@ private struct SideMenuPanel: View {
                         .lineLimit(1)
                         .fixedSize()
                         .foregroundStyle(Color(uiColor: .systemBackground))
-                        .padding(.horizontal, 22)
-                        .padding(.vertical, 16)
+                        .padding(.horizontal, 20)
+                        .frame(height: bottomBarHeight)
                         .background(Color.primary, in: Capsule())
                         .shadow(color: .black.opacity(0.2), radius: 12, y: 4)
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(.horizontal, 20)
+        .padding(.leading, inset)
+        .padding(.trailing, 16)
         .padding(.top, 28)
-        .padding(.bottom, max(bottom, 20))
+        .padding(.bottom, inset)
         // La lista sfuma sotto i tasti invece di finirci sotto di netto.
         .background {
             LinearGradient(stops: [.init(color: menuBackground.opacity(0), location: 0),
-                                   .init(color: menuBackground, location: 0.45)],
+                                   .init(color: menuBackground, location: 0.3)],
                            startPoint: .top, endPoint: .bottom)
                 .allowsHitTesting(false)
         }
