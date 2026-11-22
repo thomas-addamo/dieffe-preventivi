@@ -17,6 +17,7 @@ struct SurveyOrb: View {
     var size: CGFloat = 180
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var clock = OrbClock()
 
     private static let palette: [Color] = [
         Color(red: 0.18, green: 0.29, blue: 0.62), // blu Dieffe
@@ -29,10 +30,13 @@ struct SurveyOrb: View {
     var body: some View {
         TimelineView(.animation(minimumInterval: 1 / 60, paused: reduceMotion)) { context in
             let t = context.date.timeIntervalSinceReferenceDate
-            let speed = mood == .thinking ? 1.8 : mood == .listening ? 0.9 + level * 1.6 : 0.35
-            let phase = t * speed
+            // Velocità dei colori: lenta a riposo, più svelta quando parli, svelta quando elabora.
+            let speed = mood == .thinking ? 0.9 : mood == .listening ? 0.35 + clock.level * 0.9 : 0.22
+            // La fase avanza fotogramma per fotogramma: cambiando velocità i colori accelerano
+            // o rallentano con fluidità, senza salti (prima era t × velocità e saltava).
+            let phase = clock.advance(to: t, speed: speed, level: level)
             let pulse = mood == .idle ? 0.025 * sin(t * 1.6) : 0
-            let scale = 1 + pulse + (mood == .listening ? level * 0.14 : 0) + (mood == .thinking ? 0.03 * sin(t * 4) : 0)
+            let scale = 1 + pulse + (mood == .listening ? clock.level * 0.12 : 0) + (mood == .thinking ? 0.03 * sin(t * 4) : 0)
 
             ZStack {
                 // Alone morbido dietro, più forte quando parli.
@@ -41,7 +45,7 @@ struct SurveyOrb: View {
                     .blur(radius: size * 0.22)
                     .scaleEffect(1.05 + level * 0.25)
 
-                MeshGradient(width: 3, height: 3, points: points(phase: phase, energy: mood == .listening ? 0.6 + level : 0.5),
+                MeshGradient(width: 3, height: 3, points: points(phase: phase, energy: mood == .listening ? 0.6 + clock.level * 0.6 : 0.5),
                              colors: colors(phase: phase), smoothsColors: true)
                     .clipShape(Circle())
                     .overlay {
@@ -96,6 +100,22 @@ struct SurveyOrb: View {
             let f = phase * 0.6 - floor(phase * 0.6)
             return i == 4 ? Self.palette[3] : base.mix(with: next, by: f)
         }
+    }
+}
+
+/// Orologio interno della sfera: somma la fase nel tempo e smussa il livello della voce.
+private final class OrbClock {
+    private var last: Double?
+    private(set) var phase: Double = 0
+    private(set) var level: Double = 0
+
+    func advance(to time: Double, speed: Double, level target: Double) -> Double {
+        let dt = min(0.1, max(0, time - (last ?? time)))
+        last = time
+        // Il livello segue la voce con un po' di ritardo: niente scatti.
+        level += (target - level) * min(1, dt * 6)
+        phase += dt * speed
+        return phase
     }
 }
 
