@@ -83,10 +83,10 @@ struct SurveyView: View {
 
             VStack(spacing: 0) {
                 topBar
-                SurveyOrb(mood: mood, level: level, size: 150)
-                    .padding(.top, 6)
+                SurveyOrb(mood: mood, level: level, size: 120)
+                    .padding(.top, 28)
                 statusLine
-                    .padding(.top, 14)
+                    .padding(.top, 30)
                 LiveTranscript(text: text)
                     .padding(.horizontal, 24)
                     .padding(.top, 10)
@@ -291,6 +291,8 @@ struct SurveyView: View {
                  item: SurveyItem(section: "Demolizioni", text: "Trasporto e smaltimento calcinacci", quantity: "a corpo")),
             Step(say: "C'è umidità di risalita sulla parete nord, da controllare prima di posare.",
                  note: "Umidità di risalita sulla parete nord del bagno: verificare prima della posa."),
+            Step(say: "Va tolto anche il vecchio box doccia in muratura, rifatto il massetto e impermeabilizzato con guaina liquida bicomponente prima della nuova pavimentazione.",
+                 item: SurveyItem(section: "Demolizioni", text: "Rimozione del vecchio box doccia in muratura con piastrelle, rifacimento del massetto e impermeabilizzazione con guaina liquida bicomponente sotto la nuova pavimentazione, compresi sfridi e pulizia finale", quantity: "1 a corpo")),
             Step(say: "Nuovo piatto doccia ottanta per centoventi, filo pavimento.",
                  item: SurveyItem(section: "Impianti e sanitari", text: "Fornitura e posa piatto doccia 80×120 filo pavimento", quantity: "1 pz")),
             Step(say: "Rifacimento impianto idrico del bagno completo.",
@@ -347,7 +349,8 @@ private struct LiveTranscript: View {
             .frame(height: 70, alignment: .bottom)
             .clipped()
             // Le righe vecchie sfumano verso l'alto.
-            .mask(LinearGradient(stops: [.init(color: .clear, location: 0), .init(color: .black, location: 0.55)],
+            .mask(LinearGradient(stops: [.init(color: .clear, location: 0), .init(color: .clear, location: 0.12),
+                                         .init(color: .black, location: 0.62)],
                                  startPoint: .top, endPoint: .bottom))
             .accessibilityLabel(text.isEmpty ? "Nessun testo ancora" : text)
     }
@@ -427,6 +430,14 @@ private struct DraftSheet: View {
                 .padding(18)
             }
             .scrollIndicators(.hidden)
+            // Le card scorrono dentro il foglio: ritagliate dai suoi angoli e sfumate in alto.
+            .mask {
+                VStack(spacing: 0) {
+                    LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom).frame(height: 18)
+                    Rectangle()
+                }
+            }
+            .clipShape(UnevenRoundedRectangle(topLeadingRadius: 30, topTrailingRadius: 30, style: .continuous))
             .onChange(of: items.count) {
                 withAnimation(.smooth(duration: 0.5)) { proxy.scrollTo("bottom", anchor: .bottom) }
             }
@@ -493,18 +504,22 @@ private struct ItemRow: View {
     let fresh: Bool
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 10) {
+        HStack(alignment: .top, spacing: 10) {
             Text("\(index)")
                 .font(.caption.weight(.bold).monospacedDigit())
                 .foregroundStyle(.white)
                 .frame(width: 22, height: 22)
                 .background(Color.accentColor, in: Circle())
+            // Le voci lunghe vanno a capo; la quantità resta intera a destra, in alto.
             Text(item.text)
                 .font(.subheadline.weight(.medium))
+                .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
             if let quantity = item.quantity {
                 Text(quantity)
                     .font(.caption.weight(.semibold).monospacedDigit())
+                    .lineLimit(1)
+                    .fixedSize()
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(Color.primary.opacity(0.06), in: Capsule())
