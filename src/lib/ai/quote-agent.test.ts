@@ -68,3 +68,20 @@ test("risposte malformate → nessuna operazione", () => {
   assert.deepEqual(sanitizeAgentOps(null, "", quote), []);
   assert.deepEqual(sanitizeAgentOps({ ops: [{ op: "boh" }] }, "", quote), []);
 });
+
+test("cliente: si crea o si aggiorna solo con dati validi", () => {
+  const noClient: AgentQuote = { title: "x", sections: [] };
+  const ops = sanitizeAgentOps(
+    { ops: [
+      { op: "update_client", phone: "333 1234567" },
+      { op: "set_client", name: "Mario Rossi", email: "non-una-email", phone: "333 1234567" },
+      { op: "update_client", email: "mario@rossi.it" },
+    ] },
+    "il cliente è Mario Rossi, telefono 333 1234567, email mario@rossi.it",
+    noClient
+  );
+  // Senza cliente, update_client vale solo dopo un set_client.
+  assert.equal(ops.length, 2);
+  assert.deepEqual(ops[0], { op: "set_client", name: "Mario Rossi", phone: "333 1234567" });
+  assert.deepEqual(ops[1], { op: "update_client", email: "mario@rossi.it" });
+});

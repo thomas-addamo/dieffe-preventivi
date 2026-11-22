@@ -11,9 +11,18 @@ import { z } from "zod";
 
 export type AgentItem = { ref: string; text: string; quantity?: number | null; unit?: string | null; price?: number | null };
 export type AgentSection = { ref: string; title: string; optional?: boolean; items: AgentItem[] };
+export type AgentClient = {
+  name: string;
+  address?: string | null;
+  vatNumber?: string | null;
+  email?: string | null;
+  phone?: string | null;
+};
 export type AgentQuote = {
   title?: string | null;
   client?: string | null;
+  /** Dati del cliente (oltre al nome), se il preventivo ne ha uno. */
+  clientInfo?: Omit<AgentClient, "name"> | null;
   address?: string | null;
   vatRate?: number | null;
   discountPercent?: number | null;
@@ -51,6 +60,22 @@ const opSchema = z.discriminatedUnion("op", [
   }),
   z.object({ op: z.literal("remove_item"), item: ref }),
   z.object({ op: z.literal("add_note"), text: str(800) }),
+  z.object({
+    op: z.literal("set_client"),
+    name: str(200),
+    address: z.string().trim().max(300).nullable().optional(),
+    vatNumber: z.string().trim().max(40).nullable().optional(),
+    email: z.string().trim().max(200).nullable().optional(),
+    phone: z.string().trim().max(40).nullable().optional(),
+  }),
+  z.object({
+    op: z.literal("update_client"),
+    name: str(200).optional(),
+    address: z.string().trim().max(300).nullable().optional(),
+    vatNumber: z.string().trim().max(40).nullable().optional(),
+    email: z.string().trim().max(200).nullable().optional(),
+    phone: z.string().trim().max(40).nullable().optional(),
+  }),
   z.object({
     op: z.literal("set_quote"),
     title: str(200).optional(),
@@ -171,7 +196,11 @@ function fmt(n: number) {
 export function quoteForPrompt(q: AgentQuote): string {
   const lines: string[] = [];
   lines.push(`Titolo: ${q.title || "(nessuno)"}`);
-  if (q.client) lines.push(`Cliente: ${q.client}`);
+  if (q.client) {
+    const c = q.clientInfo;
+    const extra = c ? [c.address && `indirizzo ${c.address}`, c.phone && `tel. ${c.phone}`, c.email && `email ${c.email}`, c.vatNumber && `P.IVA/CF ${c.vatNumber}`].filter(Boolean).join(", ") : "";
+    lines.push(`Cliente: ${q.client}${extra ? ` (${extra})` : ""}`);
+  } else lines.push("Cliente: (nessuno)");
   if (q.address) lines.push(`Indirizzo cantiere: ${q.address}`);
   if (q.vatRate != null) lines.push(`IVA: ${q.vatRate}%`);
   if (q.discountPercent) lines.push(`Sconto: ${fmt(q.discountPercent)}%`);
@@ -235,6 +264,10 @@ export function sanitizeAgentOps(raw: unknown, spoken: string, quote: AgentQuote
       } else op.price = null;
     }
     if ((op.op === "add_item" || op.op === "update_item") && op.unit) op.unit = normalizeUnit(op.unit);
+    if (op.op === "update_client" && !quote.client && !ops.some((o) => o.op === "set_client")) continue;
+    if ((op.op === "set_client" || op.op === "update_client") && op.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(op.email)) {
+      delete (op as { email?: string | null }).email;
+    }
     if (op.op === "set_quote" && op.discountPercent != null && !priceWasSpoken(op.discountPercent, spoken)) {
       delete (op as { discountPercent?: number | null }).discountPercent;
     }
@@ -264,10 +297,13 @@ Rispondi SOLO con JSON {"ops":[...]}. Operazioni possibili:
 - {"op":"update_item","item":"V3","text":"…","quantity":…,"unit":"…","price":…,"section":"S2"} — metti SOLO i campi da cambiare.
 - {"op":"remove_item","item":"V3"}
 - {"op":"add_note","text":"…"} — osservazioni che non sono lavorazioni (stato dei luoghi, problemi, accessi, cose da verificare, richieste del cliente).
+- {"op":"set_client","name":"Mario Rossi","address":"…","phone":"…","email":"…","vatNumber":"…"} — il cliente del preventivo diventa questo (se esiste già con quel nome si usa quello, altrimenti si crea). Solo quando il tecnico indica il cliente ("il cliente è…", "è per la signora Bianchi").
+- {"op":"update_client","name":"…","address":"…","phone":"…","email":"…","vatNumber":"…"} — corregge o completa i dati del cliente ATTUALE (telefono, email, indirizzo, P.IVA/codice fiscale, nome scritto male). Solo i campi detti.
 - {"op":"set_quote","title":"…","vatRate":10,"discountPercent":5,"validUntil":"AAAA-MM-GG","paymentTerms":"…","address":"…"} — dati generali, solo i campi detti. IVA solo 0, 4, 10 o 22. Titolo solo se manca o se il tecnico lo chiede.
 
 Regole importanti:
 - PREZZI: un prezzo detto ("a 45 euro al metro", "quarantacinque euro", "1500 a corpo") va SEMPRE nel campo "price" della voce a cui si riferisce (prezzo unitario; se è "a corpo" metti quantity 1 e unit "a corpo"). Se il tecnico non dice un prezzo, "price" resta null: mai stimare né inventare.
+- Dati del cliente (telefono, email, P.IVA, indirizzo) solo se detti esattamente: mai inventarli. L'indirizzo del cantiere va in set_quote.address, quello del cliente in set_client/update_client.
 - Quantità e unità solo se dette (m², m, m³, pz, h, kg, a corpo).
 - Una frase che corregge una voce esistente ("no, sono 40 metri", "mettici 50 euro", "togli la demolizione") → update_item/remove_item su quella voce, NON una voce nuova.
 - Mai duplicare voci o note già presenti.

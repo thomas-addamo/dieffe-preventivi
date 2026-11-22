@@ -4,7 +4,8 @@ import { and, desc, eq } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 import { checkQuoteEditable } from "@/lib/db/quotes";
 import { db } from "@/lib/db/client";
-import { auditLog, clients } from "@/lib/db/schema";
+import { auditLog } from "@/lib/db/schema";
+import { queueSiteSync } from "@/lib/sites/sync";
 import { aiDisabledResponse } from "@/lib/ai/guard";
 import { generateAIJson, isAiConfigured } from "@/lib/ai/client";
 import { agentSystemPrompt, quoteForPrompt, sanitizeAgentOps } from "@/lib/ai/quote-agent";
@@ -40,12 +41,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!parsed.success) return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
   const { text } = parsed.data;
 
-  const base = await loadQuoteForAgent(id, null);
+  const base = await loadQuoteForAgent(id);
   if (!base) return NextResponse.json({ error: "Preventivo non trovato" }, { status: 404 });
-  if (base.quote.clientId) {
-    const [c] = await db.select({ name: clients.name }).from(clients).where(eq(clients.id, base.quote.clientId)).limit(1);
-    base.agent.client = c?.name ?? null;
-  }
 
   let ops;
   try {
@@ -59,6 +56,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!ops.length) return NextResponse.json({ changes: [], undoId: null });
 
   const { summary, undo } = await applyAgentOps(id, base, ops);
+  // Cliente o indirizzo cambiati: il cantiere collegato si aggiorna.
+  if (ops.some((o) => o.op === "set_client" || o.op === "update_client" || (o.op === "set_quote" && o.address !== undefined))) queueSiteSync();
   const undoId = generateId();
   await db.insert(auditLog).values({
     id: undoId,
@@ -88,6 +87,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   if (!changes?.undo) return NextResponse.json({ error: "Niente da annullare" }, { status: 404 });
   if (changes.undone) return NextResponse.json({ ok: true });
   await undoAgentOps(id, changes.undo);
+  queueSiteSync();
   await db.update(auditLog).set({ changes: { ...changes, undone: true, undoneBy: session.user.id } }).where(eq(auditLog.id, undoId));
   return NextResponse.json({ ok: true });
 }

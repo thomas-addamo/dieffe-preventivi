@@ -53,15 +53,39 @@ extension View {
     func sideMenuButton() -> some View { modifier(SideMenuButton()) }
 }
 
+extension AppModel {
+    /// Elementi da guardare nelle pagine del menu (es. il cestino): lo stesso
+    /// numero compare sul tasto ☰, così si vede senza aprire il menu.
+    var trashBadge: Int { canEdit ? (home.data?.trashCount ?? 0) : 0 }
+    var sideMenuBadge: Int { trashBadge }
+}
+
 private struct SideMenuButton: ViewModifier {
     @Environment(AppModel.self) private var model
 
     func body(content: Content) -> some View {
         content.toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button("Menu", systemImage: "line.3.horizontal") {
+                Button {
                     withAnimation(menuSpring) { model.sideMenuOpen = true }
+                } label: {
+                    Image(systemName: "line.3.horizontal")
+                        .overlay(alignment: .topTrailing) {
+                            if model.sideMenuBadge > 0 {
+                                Text("\(min(model.sideMenuBadge, 99))")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .monospacedDigit()
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 4)
+                                    .frame(minWidth: 17, minHeight: 17)
+                                    .background(Color.red, in: Capsule())
+                                    .offset(x: 11, y: -10)
+                                    .transition(.scale.combined(with: .opacity))
+                            }
+                        }
+                        .animation(.spring(response: 0.35, dampingFraction: 0.7), value: model.sideMenuBadge)
                 }
+                .accessibilityLabel(model.sideMenuBadge > 0 ? "Menu, \(model.sideMenuBadge) nel cestino" : "Menu")
                 .accessibilityHint("Apre il menu con le altre sezioni dell'app")
             }
         }
@@ -298,7 +322,7 @@ private struct SideMenuPanel: View {
         row("Statistiche", icon: "chart.bar") { model.openMenuPage(.route(.stats)) }
         row("Comunicazioni", icon: "envelope") { model.openMenuPage(.route(.communications)) }
         if model.canEdit {
-            row("Cestino", icon: "trash", badge: model.home.data?.trashCount ?? 0) { model.openMenuPage(.route(.trash)) }
+            row("Cestino", icon: "trash", badge: model.trashBadge) { model.openMenuPage(.route(.trash)) }
         }
         if model.currentUser?.role == "admin" {
             sectionTitle("Amministrazione").padding(.top, 14)

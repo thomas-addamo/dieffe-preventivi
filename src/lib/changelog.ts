@@ -43,6 +43,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "4.13.0",
+    date: "2026-11-22",
+    headline: "Sopralluogo con l'IA, preventivi modificati a voce e una dashboard nuova.",
+    important: true,
+    highlights: [
+      { icon: "sparkles", title: "Sopralluogo con l'IA (iPhone)", description: "Da Nuovo preventivo parli mentre giri il cantiere e scatti le foto: l'IA crea sezioni e voci (anche opzionali), mette i prezzi solo se li dici e riconosce il cliente." },
+      { icon: "zap", title: "Modifiche a voce (iPhone)", description: "Nel preventivo tocca ✦ › Modifica a voce: «la posa a 45 euro», «aggiungi in opzione il box doccia», «IVA al 10», «il telefono del cliente è…». Tutto si annulla con un tocco." },
+      { icon: "layout", title: "Menu laterale su iPhone", description: "Tocca ☰ o scorri dal bordo: recenti, lavori extra, statistiche, cestino e profilo. Il numerino sul tasto ti dice quanti preventivi ci sono nel cestino." },
+      { icon: "keyboard", title: "Dashboard e ricerca ⌘K", description: "Sul sito e sul Mac la dashboard mostra cosa fare adesso; l'elenco completo è in Preventivi. Cerchi preventivi, clienti e cantieri da ogni pagina con ⌘K." },
+    ],
+  },
+  {
     version: "4.12.0",
     date: "2026-11-22",
     headline: "iPhone: l'IA capisce meglio e modifica il preventivo a voce.",

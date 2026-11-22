@@ -23,6 +23,16 @@ const schema = z.object({
   text: z.string().trim().min(1).max(6000),
   draft: z.object({
     title: z.string().max(200).nullable().optional(),
+    client: z
+      .object({
+        name: z.string().max(200),
+        address: z.string().max(300).nullable().optional(),
+        vatNumber: z.string().max(40).nullable().optional(),
+        email: z.string().max(200).nullable().optional(),
+        phone: z.string().max(40).nullable().optional(),
+      })
+      .nullable()
+      .optional(),
     vatRate: z.number().nullable().optional(),
     discountPercent: z.number().nullable().optional(),
     paymentTerms: z.string().max(500).nullable().optional(),
@@ -46,7 +56,8 @@ export async function POST(req: NextRequest) {
   const { text, draft } = parsed.data;
   const quote: AgentQuote = {
     title: draft.title,
-    client: null,
+    client: draft.client?.name || null,
+    clientInfo: draft.client ?? null,
     vatRate: draft.vatRate ?? undefined,
     discountPercent: draft.discountPercent,
     paymentTerms: draft.paymentTerms,

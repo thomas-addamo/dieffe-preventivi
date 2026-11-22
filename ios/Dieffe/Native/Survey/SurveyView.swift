@@ -70,6 +70,45 @@ struct SurveyOp: Decodable {
     let discountPercent: Double?
     let paymentTerms: String?
     let validUntil: String?
+    let name: String?
+    let address: String?
+    let vatNumber: String?
+    let email: String?
+    let phone: String?
+}
+
+/// Cliente del sopralluogo: quello scelto all'avvio o quello detto a voce (D1c).
+/// Al salvataggio si usa quello in rubrica con lo stesso nome, altrimenti si crea.
+struct SurveyClient: Equatable {
+    var id: String?
+    var name: String
+    var address: String?
+    var vatNumber: String?
+    var email: String?
+    var phone: String?
+    /// Dati cambiati a voce da scrivere nella rubrica.
+    var changed = false
+
+    var payload: [String: Any] {
+        var out: [String: Any] = ["name": name]
+        if let address { out["address"] = address }
+        if let vatNumber { out["vatNumber"] = vatNumber }
+        if let email { out["email"] = email }
+        if let phone { out["phone"] = phone }
+        return out
+    }
+
+    var details: String? {
+        let parts = [phone, email, address, vatNumber.map { "P.IVA/CF \($0)" }].compactMap { $0 }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    mutating func merge(_ op: SurveyOp) {
+        if let x = op.address?.nilIfEmpty { address = x; changed = true }
+        if let x = op.vatNumber?.nilIfEmpty { vatNumber = x; changed = true }
+        if let x = op.email?.nilIfEmpty { email = x; changed = true }
+        if let x = op.phone?.nilIfEmpty { phone = x; changed = true }
+    }
 }
 
 /// Dati generali dettati (IVA, sconto, pagamenti, validità): vanno nel preventivo al salvataggio.
@@ -117,6 +156,7 @@ struct SurveyView: View {
     @State private var sectionOrder: [String] = []
     @State private var optionalSections: Set<String> = []
     @State private var quoteFields = SurveyQuoteFields()
+    @State private var client: SurveyClient?
     /// Codici dell'ultima bozza mandata all'IA → voce / sezione.
     @State private var itemRefs: [String: UUID] = [:]
     @State private var sectionRefs: [String: String] = [:]
@@ -157,7 +197,7 @@ struct SurveyView: View {
                 LiveTranscript(text: text)
                     .padding(.horizontal, 24)
                     .padding(.top, 10)
-                DraftSheet(context: context, title: draftTitle, items: items, notes: notes, shots: shots, fresh: fresh, demo: isDemo,
+                DraftSheet(context: context, title: draftTitle, client: client, items: items, notes: notes, shots: shots, fresh: fresh, demo: isDemo,
                            sectionOrder: sectionOrder, optionalSections: optionalSections,
                            offline: aiOffline, onRemove: removeItem, onRemoveNote: removeNote)
                     .padding(.horizontal, 12)
@@ -172,6 +212,7 @@ struct SurveyView: View {
         .task {
             started = .now
             draftTitle = context.title
+            if let c = context.client { client = SurveyClient(id: c.id, name: c.name) }
             if isDemo { runDemo() } else { await speech.start() }
         }
         // Ogni frase definitiva fa ripartire l'attesa: si manda all'IA dopo una breve
@@ -190,7 +231,7 @@ struct SurveyView: View {
         }
         .sheet(isPresented: $showReview) {
             SurveyReviewView(context: context, title: draftTitle, initialText: text, items: items, aiNotes: notes.map(\.text), shots: shots,
-                             sectionOrder: sectionOrder, optionalSections: optionalSections, quoteFields: quoteFields)
+                             sectionOrder: sectionOrder, optionalSections: optionalSections, quoteFields: quoteFields, client: client)
         }
         .confirmationDialog("Annullare il sopralluogo?", isPresented: $confirmCancel, titleVisibility: .visible) {
             Button("Annulla il sopralluogo", role: .destructive) { model.survey = nil }
@@ -428,6 +469,7 @@ struct SurveyView: View {
         sectionRefs = sectionMap
         var payload: [String: Any] = ["sections": sections, "notes": notes.map(\.text)]
         if let draftTitle { payload["title"] = draftTitle }
+        if let client { payload["client"] = client.payload }
         if let x = quoteFields.vatRate { payload["vatRate"] = x }
         if let x = quoteFields.discountPercent { payload["discountPercent"] = x }
         if let x = quoteFields.paymentTerms { payload["paymentTerms"] = x }
@@ -511,6 +553,27 @@ struct SurveyView: View {
             case "add_note":
                 guard let text = op.text else { continue }
                 withAnimation(.spring(response: 0.5, dampingFraction: 0.75)) { notes.append(SurveyNote(text: text)) }
+            case "set_client":
+                // Un lavoro extra resta del cliente del preventivo principale.
+                guard context.parentQuoteID == nil, let name = op.name?.nilIfEmpty else { continue }
+                withAnimation(.smooth) {
+                    if var same = client, same.name.caseInsensitiveCompare(name) == .orderedSame {
+                        same.merge(op)
+                        client = same
+                    } else {
+                        var fresh = SurveyClient(id: nil, name: name)
+                        fresh.merge(op)
+                        fresh.changed = false
+                        client = fresh
+                    }
+                }
+            case "update_client":
+                guard var current = client else { continue }
+                withAnimation(.smooth) {
+                    if let name = op.name?.nilIfEmpty, name != current.name { current.name = name; current.changed = true }
+                    current.merge(op)
+                    client = current
+                }
             case "set_quote":
                 withAnimation(.smooth) {
                     if let title = op.title?.nilIfEmpty { draftTitle = title }
@@ -626,6 +689,7 @@ struct LiveTranscript: View {
 private struct DraftSheet: View {
     let context: SurveyContext
     let title: String?
+    var client: SurveyClient? = nil
     let items: [SurveyItem]
     let notes: [SurveyNote]
     let shots: [SurveyShot]
@@ -733,10 +797,19 @@ private struct DraftSheet: View {
                 .contentTransition(.opacity)
                 .font(.title3.weight(.bold))
                 .lineLimit(2)
-            if let client = context.client?.name {
-                Label(client, systemImage: "person")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+            if let client = client ?? context.client.map({ SurveyClient(id: $0.id, name: $0.name) }) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Label(client.name, systemImage: client.id == nil ? "person.badge.plus" : "person")
+                        .font(.subheadline)
+                    if let details = client.details {
+                        Text(details)
+                            .font(.caption)
+                            .lineLimit(2)
+                            .padding(.leading, 26)
+                    }
+                }
+                .foregroundStyle(.secondary)
+                .contentTransition(.opacity)
             }
             if offline {
                 Label("Senza rete: il testo è al sicuro e verrà elaborato appena torna la connessione.", systemImage: "wifi.slash")
@@ -887,6 +960,7 @@ struct SurveyReviewView: View {
     var sectionOrder: [String] = []
     var optionalSections: Set<String> = []
     var quoteFields = SurveyQuoteFields()
+    var client: SurveyClient?
 
     @State private var editTitle = ""
     @State private var notes = ""
@@ -909,6 +983,15 @@ struct SurveyReviewView: View {
                     Text("Note dal sopralluogo")
                 } footer: {
                     Text("Correggi il testo se serve: va nelle note del preventivo. Il testo trascritto non viene conservato altrove.")
+                }
+                if let client {
+                    Section("Cliente") {
+                        Label(client.id == nil ? "\(client.name) — nuovo, va in rubrica" : client.name,
+                              systemImage: client.id == nil ? "person.badge.plus" : "person")
+                        if let details = client.details {
+                            Text(details).font(.footnote).foregroundStyle(.secondary)
+                        }
+                    }
                 }
                 if !items.isEmpty {
                     Section {
@@ -980,6 +1063,25 @@ struct SurveyReviewView: View {
         Task {
             defer { saving = false }
             do {
+                // Cliente detto a voce: quello in rubrica con lo stesso nome, altrimenti nuovo.
+                var clientId = context.client?.id
+                if let c = client {
+                    progress = "Cliente…"
+                    if let existing = c.id {
+                        if c.changed { let _: ClientRef = try await APIClient.shared.send("PATCH", "/api/clients/\(existing)", json: c.payload) }
+                        clientId = existing
+                    } else if context.parentQuoteID == nil {
+                        let query = c.name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? c.name
+                        let found: [ClientRef] = (try? await APIClient.shared.get("/api/clients?search=\(query)")) ?? []
+                        if let match = found.first(where: { $0.name.caseInsensitiveCompare(c.name) == .orderedSame }) {
+                            if c.payload.count > 1 { let _: ClientRef = try await APIClient.shared.send("PATCH", "/api/clients/\(match.id)", json: c.payload) }
+                            clientId = match.id
+                        } else {
+                            let created: CreatedID = try await APIClient.shared.send("POST", "/api/clients", json: c.payload)
+                            clientId = created.id
+                        }
+                    }
+                }
                 progress = "Creo il preventivo…"
                 let id: String
                 if let parent = context.parentQuoteID {
@@ -992,7 +1094,7 @@ struct SurveyReviewView: View {
                     let fallback = "Sopralluogo del " + Date.now.formatted(.dateTime.day().month(.wide).year())
                     let created: CreatedID = try await APIClient.shared.send("POST", "/api/quotes", json: [
                         "title": finalTitle.isEmpty ? fallback : finalTitle,
-                        "clientId": context.client?.id,
+                        "clientId": clientId,
                         "projectAddress": context.address,
                         "notes": note.isEmpty ? nil : note,
                     ])

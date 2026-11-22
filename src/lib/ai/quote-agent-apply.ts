@@ -1,7 +1,8 @@
 import "server-only";
-import { asc, eq, inArray } from "drizzle-orm";
+import { asc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import { quoteItems, quoteSections, quotes } from "@/lib/db/schema";
+import { clients, quoteItems, quoteSections, quotes } from "@/lib/db/schema";
+import { generateId } from "@/lib/utils";
 import { updateQuoteField, upsertItem, upsertSection } from "@/lib/db/quotes";
 import type { AgentOp, AgentQuote } from "./quote-agent";
 
@@ -14,12 +15,15 @@ import type { AgentOp, AgentQuote } from "./quote-agent";
 
 type SectionRow = typeof quoteSections.$inferSelect;
 type ItemRow = typeof quoteItems.$inferSelect;
-type QuoteFields = Pick<typeof quotes.$inferSelect, "title" | "vatRate" | "discountType" | "discountValue" | "validUntil" | "paymentTerms" | "projectAddress" | "notes">;
+type ClientRow = typeof clients.$inferSelect;
+type QuoteFields = Pick<typeof quotes.$inferSelect, "clientId" | "title" | "vatRate" | "discountType" | "discountValue" | "validUntil" | "paymentTerms" | "projectAddress" | "notes">;
 
 export type AgentUndo = {
   quote?: QuoteFields;
   createdSections: string[];
   createdItems: string[];
+  createdClients?: string[];
+  clients?: ClientRow[];
   sections: SectionRow[];
   items: ItemRow[];
 };
@@ -31,12 +35,14 @@ export type LoadedQuote = {
   sections: SectionRow[];
   items: ItemRow[];
   quote: typeof quotes.$inferSelect;
+  client: ClientRow | null;
 };
 
 /** Il preventivo con i codici S1…/V1… per l'agente. */
-export async function loadQuoteForAgent(quoteId: string, clientName: string | null): Promise<LoadedQuote | null> {
+export async function loadQuoteForAgent(quoteId: string): Promise<LoadedQuote | null> {
   const [quote] = await db.select().from(quotes).where(eq(quotes.id, quoteId)).limit(1);
   if (!quote || quote.deletedAt) return null;
+  const [client] = quote.clientId ? await db.select().from(clients).where(eq(clients.id, quote.clientId)).limit(1) : [];
   const sections = await db.select().from(quoteSections).where(eq(quoteSections.quoteId, quoteId)).orderBy(asc(quoteSections.orderIndex));
   const items = sections.length
     ? await db.select().from(quoteItems).where(inArray(quoteItems.sectionId, sections.map((s) => s.id))).orderBy(asc(quoteItems.orderIndex))
@@ -46,7 +52,8 @@ export async function loadQuoteForAgent(quoteId: string, clientName: string | nu
   let v = 0;
   const agent: AgentQuote = {
     title: quote.title,
-    client: clientName,
+    client: client?.name ?? null,
+    clientInfo: client ? { address: client.address, vatNumber: client.vatNumber, email: client.email, phone: client.phone } : null,
     address: quote.projectAddress,
     vatRate: quote.vatRate,
     discountPercent: quote.discountType === "percent" ? quote.discountValue : null,
@@ -70,14 +77,26 @@ export async function loadQuoteForAgent(quoteId: string, clientName: string | nu
       };
     }),
   };
-  return { agent, sectionByRef, itemByRef, sections, items, quote };
+  return { agent, sectionByRef, itemByRef, sections, items, quote, client: client ?? null };
 }
 
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 /** Applica le operazioni; restituisce cosa è cambiato (per l'utente) e l'annulla. */
 export async function applyAgentOps(quoteId: string, loaded: LoadedQuote, ops: AgentOp[]) {
-  const undo: AgentUndo = { createdSections: [], createdItems: [], sections: [], items: [] };
+  const undo: AgentUndo = { createdSections: [], createdItems: [], sections: [], items: [], createdClients: [], clients: [] };
+  let currentClient = loaded.client;
+  const q0 = loaded.quote;
+  const rememberQuote = () => {
+    if (!undo.quote) {
+      undo.quote = { clientId: q0.clientId, title: q0.title, vatRate: q0.vatRate, discountType: q0.discountType, discountValue: q0.discountValue, validUntil: q0.validUntil, paymentTerms: q0.paymentTerms, projectAddress: q0.projectAddress, notes: q0.notes };
+    }
+  };
+  const clientFields = (op: { address?: string | null; vatNumber?: string | null; email?: string | null; phone?: string | null }) => {
+    const set: Partial<ClientRow> = {};
+    for (const k of ["address", "vatNumber", "email", "phone"] as const) if (op[k]) set[k] = op[k];
+    return set;
+  };
   const summary: string[] = [];
   const sectionByRef = new Map(loaded.sectionByRef);
   const sections = [...loaded.sections];
@@ -183,12 +202,45 @@ export async function applyAgentOps(quoteId: string, loaded: LoadedQuote, ops: A
         summary.push(`Tolta «${row.description.slice(0, 60)}»`);
         break;
       }
+      case "set_client": {
+        rememberQuote();
+        const name = op.name.trim();
+        const [existing] = await db.select().from(clients).where(sql`lower(trim(${clients.name})) = ${name.toLowerCase()}`).limit(1);
+        const fields = clientFields(op);
+        let row: ClientRow;
+        if (existing) {
+          if (Object.keys(fields).length) {
+            if (!undo.clients!.some((c) => c.id === existing.id)) undo.clients!.push(existing);
+            await db.update(clients).set(fields).where(eq(clients.id, existing.id));
+          }
+          row = { ...existing, ...fields };
+          summary.push(`Cliente: ${existing.name} (già in rubrica)`);
+        } else {
+          const id = generateId();
+          await db.insert(clients).values({ id, name, ...fields });
+          undo.createdClients!.push(id);
+          row = { id, name, address: null, vatNumber: null, email: null, phone: null, notes: null, createdAt: new Date().toISOString(), ...fields } as ClientRow;
+          summary.push(`Nuovo cliente «${name}» creato`);
+        }
+        await updateQuoteField(quoteId, { clientId: row.id });
+        currentClient = row;
+        break;
+      }
+      case "update_client": {
+        if (!currentClient) break;
+        const set: Partial<ClientRow> = clientFields(op);
+        if (op.name) set.name = op.name.trim();
+        if (!Object.keys(set).length) break;
+        if (!undo.createdClients!.includes(currentClient.id) && !undo.clients!.some((c) => c.id === currentClient!.id)) undo.clients!.push(currentClient);
+        await db.update(clients).set(set).where(eq(clients.id, currentClient.id));
+        const what = [set.name && "nome", set.address && "indirizzo", set.phone && "telefono", set.email && "email", set.vatNumber && "P.IVA/CF"].filter(Boolean).join(", ");
+        summary.push(`Cliente «${set.name ?? currentClient.name}» aggiornato: ${what}`);
+        currentClient = { ...currentClient, ...set };
+        break;
+      }
       case "add_note":
       case "set_quote": {
-        const q = loaded.quote;
-        if (!undo.quote) {
-          undo.quote = { title: q.title, vatRate: q.vatRate, discountType: q.discountType, discountValue: q.discountValue, validUntil: q.validUntil, paymentTerms: q.paymentTerms, projectAddress: q.projectAddress, notes: q.notes };
-        }
+        rememberQuote();
         if (op.op === "add_note") {
           const [cur] = await db.select({ notes: quotes.notes }).from(quotes).where(eq(quotes.id, quoteId)).limit(1);
           await updateQuoteField(quoteId, { notes: [cur?.notes?.trim(), op.text].filter(Boolean).join("\n") });
@@ -236,4 +288,12 @@ export async function undoAgentOps(quoteId: string, undo: AgentUndo) {
   }
   if (undo.quote) await updateQuoteField(quoteId, undo.quote);
   else await updateQuoteField(quoteId, {});
+  for (const c of undo.clients ?? []) {
+    await db.update(clients).set({ name: c.name, address: c.address, vatNumber: c.vatNumber, email: c.email, phone: c.phone, notes: c.notes }).where(eq(clients.id, c.id));
+  }
+  // Clienti creati dal comando: si tolgono solo se nessun preventivo li usa più.
+  for (const id of undo.createdClients ?? []) {
+    const [used] = await db.select({ id: quotes.id }).from(quotes).where(eq(quotes.clientId, id)).limit(1);
+    if (!used) await db.delete(clients).where(eq(clients.id, id));
+  }
 }
