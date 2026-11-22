@@ -1,7 +1,7 @@
 # D1 — Sopralluogo con IA vocale: studio (2026-11-22)
 
 > Documento di studio richiesto dalla voce D1 di `PROSSIME-MODIFICHE.md`.
-> Nessun codice scritto. Serve l'approvazione dell'utente sulle **scelte del §8** prima di partire.
+> Scelte del §8 fatte dall'utente il 2026-11-22 (§10). Si parte con D1a.
 
 ## 1. Cosa c'è già (analisi del codice e del database, sola lettura)
 
@@ -115,3 +115,20 @@ Oggi un cantiere nasce da un preventivo **inviato o accettato** (`syncSites`). I
 - VoiceOver.
 
 Le prove si fanno su un **ramo Neon di prova**, senza mai modificare i preventivi reali.
+
+## 10. Scelte dell'utente (2026-11-22)
+
+1. **Avvio:** da «+ Nuovo → Sopralluogo» e dalla scheda cliente → bozza di preventivo; da un cantiere aperto → lavoro extra di quel cantiere.
+2. **Voci:** entrano subito nella bozza, ognuna annullabile; a fine sopralluogo la schermata Rivedi.
+3. **Prezzi:** l'IA **non** prende prezzi dal listino e **non** li stima. Li mette solo se l'utente li dice a voce durante il sopralluogo; gli altri li definisce l'utente dopo, nell'editor. (Il listino può servire solo per descrizione e unità di misura.)
+4. **Foto:** legate al preventivo, passano da sole alle Foto del cantiere quando il cantiere nasce.
+5. **Testo trascritto:** si cancella **a fine revisione** (niente memoria sprecata). Quindi prima di cancellarlo tutto ciò che serve deve essere già nel preventivo (voci e note). L'audio si cancella dal telefono a fine sopralluogo.
+6. **Nuova richiesta:** anche **dopo** la revisione si deve poter continuare a parlare all'IA sul preventivo per chiedere modifiche o aggiunte → diventa un **comando vocale nel preventivo**, disponibile sempre (passo D1c).
+7. **Piano:** approvato; si parte con **D1a**.
+
+### Piano aggiornato
+| Passo | Contenuto |
+|---|---|
+| D1a | Tabella `surveys`, `quote_id` in `site_photos`; avvio del sopralluogo su iPhone (da Nuovo, cliente, cantiere); trascrizione sul telefono; foto collegate; schermata Rivedi con il testo modificabile che si salva nelle note del preventivo; poi il testo si cancella. Sul sito e sul Mac: foto del sopralluogo nel preventivo. |
+| D1b | Voci create dall'IA mentre si parla (prezzi solo se detti), annulla per voce, funzionamento senza rete. |
+| D1c | Comando vocale nel preventivo (anche dopo il sopralluogo): l'IA aggiunge, modifica, raggruppa voci e note su richiesta, con annulla. |

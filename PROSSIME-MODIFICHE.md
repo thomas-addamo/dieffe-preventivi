@@ -20,7 +20,7 @@
 | B2 | Correzione automatica con IA | ✅ Fatto | 4.8.0 |
 | B3 | Documenti PDF nel cantiere | ✅ Fatto | 4.8.0 → 4.8.2 |
 | C1–C3 | Restyling (solo sito e Mac) | ✅ Fatto | 4.9.0 |
-| D1 | Sopralluogo con IA vocale | 📄 Studio consegnato il 22/11: in attesa delle 5 scelte | — |
+| D1 | Sopralluogo con IA vocale | 🔨 Scelte fatte il 22/11; in corso D1a | — |
 | D2 | iPhone: menu laterale al posto di "Altro" | 🚀 Pubblicato il 22/11 | 4.9.1 |
 
 ---
@@ -340,7 +340,7 @@ Da fare insieme, per avere un linguaggio visivo coerente. **Proporre all'utente 
 ## 4. Fase D — Lungo termine: progetti grandi
 
 ### D1. Sopralluogo con IA vocale (iPhone, visibile anche su macOS)  _(#10)_
-- **Stato:** 📄 Studio consegnato il 2026-11-22 (`docs/prossime-modifiche/D1-studio-sopralluogo.md`): **nessun codice finché l'utente non sceglie i 5 punti del §8 dello studio**
+- **Stato:** 🔨 Scelte dell'utente fatte il 2026-11-22 (§10 dello studio `docs/prossime-modifiche/D1-studio-sopralluogo.md`); in corso **D1a**.
 - **Piattaforme:** iPhone (registrazione); sito e desktop (consultazione e modifica)
 - **Cosa:** nella scheda cantiere, sezione Sopralluogo. Durante il sopralluogo:
   1. si **parla con l'IA** e si spiega qualsiasi cosa;
@@ -403,6 +403,7 @@ _(scelte condivise che valgono per tutte le modifiche — aggiungere con data)_
 - 2026-11-22 — 4.9.0 **non** segnata `important`: la schermata Novità comparirebbe anche sull'iPhone, che in fase C non si tocca.
 - 2026-11-22 — **Cartellini delle novità** (`src/components/shared/FeatureTips.tsx`): fumetto accanto al tasto nuovo («Da adesso l'elenco completo dei preventivi lo trovi qui!»), uno alla volta, solo nei 5 giorni dopo il rilascio e solo finché l'utente non lo chiude (memoria del browser, per utente). Da usare per tutte le novità importanti: `data-tip="…"` sul tasto + una voce in `TIPS`.
 - 2026-11-22 — Su richiesta dell'utente tutte le voci A, B e C sono segnate **Fatte**; i controlli ancora aperti restano in «5b. In sospeso».
+- 2026-11-22 — D1: avvio da Nuovo/cliente (bozza) e da cantiere (lavoro extra); voci subito nella bozza e annullabili; **prezzi solo se detti a voce**, altrimenti li mette l'utente nell'editor; foto al preventivo e poi al cantiere; **testo trascritto cancellato a fine revisione**; comando vocale sul preventivo anche dopo (D1c); si parte con D1a.
 - 2026-11-22 — Dashboard corretta a pagina stretta (le colonne uscivano dallo schermo).
 
 ## 5b. In sospeso (da controllare)
