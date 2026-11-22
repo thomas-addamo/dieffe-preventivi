@@ -4,7 +4,7 @@
 > Ogni sessione lo legge **per intero** prima di iniziare e lo aggiorna quando prende in carico o chiude una voce.
 > Schermate di riferimento: `docs/prossime-modifiche/`.
 
-### Quadro d'insieme (aggiornato al 2026-11-21, 4.8.3 online)
+### Quadro d'insieme (aggiornato al 2026-11-22, 4.9.0 online)
 | Voce | Cosa | Stato | Versione |
 |---|---|---|---|
 | A1 | Riepilogo che non scorre | ✅ Fatto, verificato in produzione | 4.6.1 |
@@ -13,15 +13,15 @@
 | A4 | Archivio cantieri su iPhone | ✅ Fatto, verificato sul simulatore | 4.7.0 |
 | A5 | SAL e avanzamenti | ✅ Fatto; collegamento SAL ↔ fase da provare a mano | 4.7.0 + 4.7.1 |
 | A6 | Barra del preventivo compatta | ✅ Fatto, verificato in produzione | 4.7.0 |
-| A7 | SAL per ogni preventivo (anche extra) | 🧪 In test: online, da confermare con l'utente | 4.8.0 |
+| A7 | SAL per ogni preventivo (anche extra) | ✅ Fatto | 4.8.0 |
 | A8 | Stato cantiere "Da avviare" | ✅ Fatto, verificato in produzione | 4.8.1 |
-| A9 | Notifiche cancellate dopo 30 giorni | 🧪 Online; controllo dopo la prima notte | 4.8.3 |
-| B1 | Blocco automatico dei preventivi | 🧪 In test: verificato da admin ed editor; manca il 423 via API | 4.8.0 + 4.8.1 |
-| B2 | Correzione automatica con IA | 🧪 In test: online, da provare nell'uso reale | 4.8.0 |
-| B3 | Documenti PDF nel cantiere | 🧪 In test: caricamento e apertura verificati; manca il PDF grande | 4.8.0 → 4.8.2 |
-| C1–C3 | Restyling (solo sito e Mac) | 🚀 Online dal 22/11; manca la prova a mano dopo l'accesso | 4.9.0 |
-| D1 | Sopralluogo con IA vocale | 📋 Da fare (prima lo studio) | — |
-| D2 | iPhone: menu laterale al posto di "Altro" | 📋 Da fare (prima il mockup) | — |
+| A9 | Notifiche cancellate dopo 30 giorni | ✅ Fatto | 4.8.3 |
+| B1 | Blocco automatico dei preventivi | ✅ Fatto | 4.8.0 + 4.8.1 |
+| B2 | Correzione automatica con IA | ✅ Fatto | 4.8.0 |
+| B3 | Documenti PDF nel cantiere | ✅ Fatto | 4.8.0 → 4.8.2 |
+| C1–C3 | Restyling (solo sito e Mac) | ✅ Fatto | 4.9.0 |
+| D1 | Sopralluogo con IA vocale | 📄 Studio consegnato il 22/11: in attesa delle 5 scelte | — |
+| D2 | iPhone: menu laterale al posto di "Altro" | 🎨 Mockup proposto il 22/11: in attesa delle scelte | — |
 
 ---
 
@@ -206,7 +206,7 @@ Da fare per prime: sono bug che bloccano il lavoro o modifiche piccole e già ch
   - **Non verificato:** 1920 px, utente con pochi permessi, app desktop Electron.
 
 ### A7. iPhone: aggiungere i SAL (stato avanzamento lavori) per ogni preventivo  _(#14, aggiunta il 2026-11-21)_
-- **Stato:** 🧪 In test — online dalla 4.8.0 (2026-11-21, branch `claude/project-changes-documentation-e7b724`): **confermare con l'utente** che era questo il problema
+- **Stato:** ✅ Fatto (chiusa il 2026-11-22)
 - **Piattaforme:** sito · desktop · iPhone
 - **Cosa:** su iPhone non si riesce ad aggiungere lo stato avanzamento lavori per ciascun preventivo. Da verificare con l'utente cosa manca esattamente; ipotesi emerse dal codice:
   - oggi né sito né iPhone permettono di scegliere **a quale preventivo** (principale o lavoro extra) appartiene un SAL aggiunto a mano: la percentuale si calcola sempre sul principale (`createEntity` in `src/lib/sites/entities.ts` non riceve `quoteId`);
@@ -229,7 +229,7 @@ Da fare per prime: sono bug che bloccano il lavoro o modifiche piccole e già ch
 
 
 ### A9. Notifiche cancellate dal DB dopo 30 giorni  _(#16, aggiunta il 2026-11-21)_
-- **Stato:** 🧪 Online dalla 4.8.3 (2026-11-21, deploy `9655d8a`, branch `claude/project-changes-documentation-e7b724`)
+- **Stato:** ✅ Fatto (chiusa il 2026-11-22)
 - **Piattaforme:** server (vale per sito, desktop e iPhone, che leggono le stesse notifiche)
 - **Cosa:** le notifiche (campanella) devono essere eliminate dal database dopo 30 giorni.
 - **Situazione attuale:** il cron notturno `GET /api/cron/cleanup-trash` (ogni giorno alle 2:00, `vercel.json`) cancella già le notifiche, ma solo quelle **lette** da più di **90 giorni** (`read_at < now() - 90 giorni`); le non lette restano per sempre.
@@ -244,7 +244,7 @@ Da fare per prime: sono bug che bloccano il lavoro o modifiche piccole e già ch
 ## 2. Fase B — Medio termine: nuove funzioni
 
 ### B1. Blocco automatico dei preventivi conclusi, rifiutati e inviati  _(#1)_
-- **Stato:** 🧪 In test — 4.8.0 (2026-11-21, branch `claude/project-changes-documentation-e7b724`): da verificare in produzione
+- **Stato:** ✅ Fatto (chiusa il 2026-11-22)
 - **Piattaforme:** sito · desktop · iPhone
 - **Cosa:**
   | Stato del preventivo | Blocco | Chi può sbloccare |
@@ -265,7 +265,7 @@ Da fare per prime: sono bug che bloccano il lavoro o modifiche piccole e già ch
   - **Non verificato:** il rifiuto lato server (423) di una modifica fatta via API da un non admin; il percorso «Approva e sblocca».
 
 ### B2. Correzione automatica con IA di titoli, note e descrizioni  _(#3)_
-- **Stato:** 🧪 In test — 4.8.0 (2026-11-21, branch `claude/project-changes-documentation-e7b724`): da verificare in produzione
+- **Stato:** ✅ Fatto (chiusa il 2026-11-22)
 - **Piattaforme:** sito · desktop · iPhone
 - **Cosa:** dopo un tempo di inattività **scelto dall'utente** (predefinito 3 secondi) l'IA sistema maiuscole iniziali, punteggiatura e refusi in:
   - titolo del preventivo
@@ -280,7 +280,7 @@ Da fare per prime: sono bug che bloccano il lavoro o modifiche piccole e già ch
   - **Non ancora provata nell'uso reale:** scrivere un titolo o una nota, aspettare 3 s e controllare correzione, «Annulla» e numero di chiamate IA (scheda Rete).
 
 ### B3. Allegati PDF nel cantiere  _(#11)_
-- **Stato:** 🧪 In test — 4.8.0 (2026-11-21, branch `claude/project-changes-documentation-e7b724`): da verificare in produzione
+- **Stato:** ✅ Fatto (chiusa il 2026-11-22)
 - **Piattaforme:** sito · desktop · iPhone
 - **Cosa:** nuova sezione "Documenti" in Gestione Cantieri. Per ogni cantiere si caricano PDF (permessi, progetti, contratti…) che si aprono direttamente nell'app, anche su iPhone, con anteprima.
 - **Dove:** nuova scheda accanto a `PhotosTab.tsx`; storage come per le foto (`src/lib/cloudinary.ts` o alternativa); `ios/Dieffe/Native/Sites/`.
@@ -297,7 +297,7 @@ Da fare per prime: sono bug che bloccano il lavoro o modifiche piccole e già ch
 Da fare insieme, per avere un linguaggio visivo coerente. **Proporre all'utente bozze o mockup prima di implementare.**
 
 ### C1. Nuova sezione introduttiva della dashboard  _(#2)_
-- **Stato:** 🚀 Pubblicato in 4.9.0 (22/11)
+- **Stato:** ✅ Fatto (chiusa il 2026-11-22)
 - **Cosa:** ridisegnare "Buongiorno, Admin" + "Consigli per te" + le 4 card numeriche: più bella e soprattutto **più utile e dinamica**. Mostrare le cose importanti del momento: preventivi in scadenza, clienti da richiamare, SAL da fatturare, cantieri attivi oggi, richieste di sblocco (B1). Card cliccabili che portano alla lista filtrata, andamento rispetto al mese prima.
 - **Schermata:** `docs/prossime-modifiche/01-dashboard-intro.webp`
 - **Dove:** `src/app/(app)/dashboard/WelcomeBriefing.tsx`, `src/app/api/ai/briefing/route.ts`; Home iPhone `ios/Dieffe/Native/Home/`.
@@ -314,7 +314,7 @@ Da fare insieme, per avere un linguaggio visivo coerente. **Proporre all'utente 
 - **Esito:** —
 
 ### C2. Barra in alto dell'app (intestazione)  _(#5)_
-- **Stato:** 🚀 Pubblicato in 4.9.0 (22/11)
+- **Stato:** ✅ Fatto (chiusa il 2026-11-22)
 - **Cosa:** togliere la scritta "Dieffe Ristrutturazioni" a sinistra e mettere qualcosa di utile. Proposte da valutare con l'utente:
   - ricerca globale (preventivi, clienti, cantieri) con scorciatoia ⌘K;
   - percorso della pagina (es. Preventivi › PREV-2026-062);
@@ -327,7 +327,7 @@ Da fare insieme, per avere un linguaggio visivo coerente. **Proporre all'utente 
 - **Esito:** —
 
 ### C3. Intestazione del preventivo  _(#6)_
-- **Stato:** 🚀 Pubblicato in 4.9.0 (22/11)
+- **Stato:** ✅ Fatto (chiusa il 2026-11-22)
 - **Cosa:** ridisegnare il blocco "Intestazione preventivo" (titolo, codice, cliente, indirizzo cantiere, validità, IVA, note generali): gerarchia più chiara, titolo in evidenza, cliente e indirizzo con icone e collegamenti (scheda cliente, mappa), layout più compatto.
 - **Schermata:** `docs/prossime-modifiche/03-intestazione-preventivo.png`
 - **Dove:** `src/components/quote-editor/QuoteHeaderForm.tsx`; equivalente iPhone in `ios/Dieffe/Native/Editor/`.
@@ -340,7 +340,7 @@ Da fare insieme, per avere un linguaggio visivo coerente. **Proporre all'utente 
 ## 4. Fase D — Lungo termine: progetti grandi
 
 ### D1. Sopralluogo con IA vocale (iPhone, visibile anche su macOS)  _(#10)_
-- **Stato:** 📋 Da fare — **richiede uno studio e un piano approvato prima di scrivere codice**
+- **Stato:** 📄 Studio consegnato il 2026-11-22 (`docs/prossime-modifiche/D1-studio-sopralluogo.md`): **nessun codice finché l'utente non sceglie i 5 punti del §8 dello studio**
 - **Piattaforme:** iPhone (registrazione); sito e desktop (consultazione e modifica)
 - **Cosa:** nella scheda cantiere, sezione Sopralluogo. Durante il sopralluogo:
   1. si **parla con l'IA** e si spiega qualsiasi cosa;
@@ -356,12 +356,13 @@ Da fare insieme, per avere un linguaggio visivo coerente. **Proporre all'utente 
   - privacy dell'audio: conservazione e cancellazione.
 - **Dove:** `ios/Dieffe/Native/Sites/`, `src/lib/ai/`, `src/lib/sites/`, schema DB (campo sopralluogo già presente in `schema.ts`), editor preventivo.
 - **Test specifici:** sopralluogo simulato di 10 minuti con molte voci; rumore di fondo; rete assente e poi di nuovo presente; preventivo risultante controllato a mano; costo IA per sopralluogo.
-- **Analisi DB:** — _(da fare prima della progettazione, §0.3)_
+- **Analisi DB (2026-11-22, sola lettura):** listino 1.096 voci attive in 22 categorie; 37 preventivi con in media 15 voci; `site_photos` vuota e legata per forza a un cantiere; «sopralluogo» oggi è solo un tipo di evento del calendario (0 eventi). Proposta: tabella nuova `surveys`, `quote_id` in `site_photos` (dettagli nel §6 dello studio).
+- **Nodo da decidere:** il cantiere nasce dal preventivo inviato, ma il sopralluogo viene prima: proposta di avviarlo da «+ Nuovo → Sopralluogo» (crea una bozza di preventivo) e dal cantiere solo per i lavori extra.
 - **Esito:** —
 
 
 ### D2. iPhone: menu laterale al posto della scheda "Altro"  _(#17, aggiunta il 2026-11-21)_
-- **Stato:** 📋 Da fare — progetto grande: **proporre all'utente un mockup prima di scrivere codice**
+- **Stato:** 🎨 Mockup proposto il 2026-11-22: https://claude.ai/artifact/SwvLEj2bGXFVYNeEdSqKDw (menu aperto; Home con tasto ☰ e barra in basso a 4 schede: Home, Clienti, Cantieri, Listino). In attesa delle scelte.
 - **Piattaforme:** iPhone (il sito e l'app desktop hanno già la barra laterale)
 - **Cosa:** un menu laterale che si apre **scorrendo dal bordo sinistro** dell'app, come nell'app Claude per iPhone (schermata di riferimento).
   1. Dentro il menu va **tutto il contenuto della scheda "Altro"**, che va **tolta dalla barra in basso**. Oggi "Altro" (`ios/Dieffe/Native/More/AltroView.swift`) contiene: Profilo (nome, sicurezza, aspetto), Notifiche, Aiuto, App iPhone (Face ID, versione, cache), Gestione Cantieri; sezione Operatività: Lavori extra, Statistiche, Comunicazioni, Cestino; sezione Amministrazione (solo admin): Invia notifica, Utenti, Impostazioni azienda.
@@ -400,6 +401,7 @@ _(scelte condivise che valgono per tutte le modifiche — aggiungere con data)_
 - 2026-11-22 — **Le prove non modificano mai i preventivi reali**: si fanno su un ramo Neon di prova (copia del DB) e, anche lì, senza modificare preventivi.
 - 2026-11-22 — 4.9.0 **non** segnata `important`: la schermata Novità comparirebbe anche sull'iPhone, che in fase C non si tocca.
 - 2026-11-22 — **Cartellini delle novità** (`src/components/shared/FeatureTips.tsx`): fumetto accanto al tasto nuovo («Da adesso l'elenco completo dei preventivi lo trovi qui!»), uno alla volta, solo nei 5 giorni dopo il rilascio e solo finché l'utente non lo chiude (memoria del browser, per utente). Da usare per tutte le novità importanti: `data-tip="…"` sul tasto + una voce in `TIPS`.
+- 2026-11-22 — Su richiesta dell'utente tutte le voci A, B e C sono segnate **Fatte**; i controlli ancora aperti restano in «5b. In sospeso».
 - 2026-11-22 — Dashboard corretta a pagina stretta (le colonne uscivano dallo schermo).
 
 ## 5b. In sospeso (da controllare)
@@ -419,6 +421,12 @@ _(spostare qui le voci completate, con versione ed esito)_
 - **A5** SAL e fasi: studio e 6 bug corretti: 4.7.0 + 4.7.1 (SAL fatturati vecchi mostrati come raggiunti), 2026-11-21.
 - **A6** Barra del preventivo compatta e adattiva: 4.7.0, 2026-11-21.
 - **A8** Stato del cantiere aggiornato da solo (inizio lavori dalla prima fase): 4.8.1, 2026-11-21.
+- **A7** SAL per ogni preventivo, anche lavori extra (sito e iPhone): 4.8.0, chiusa il 2026-11-22.
+- **A9** Notifiche cancellate dopo 30 giorni, lette o no: 4.8.3, chiusa il 2026-11-22.
+- **B1** Blocco automatico dei preventivi inviati, rifiutati e a lavori conclusi, con sblocco e richiesta di sblocco: 4.8.0 + 4.8.1, chiusa il 2026-11-22.
+- **B2** Correzione automatica con IA di titoli, descrizioni e note: 4.8.0, chiusa il 2026-11-22.
+- **B3** Documenti PDF nel cantiere (sito e iPhone, link firmati): 4.8.0 → 4.8.2, chiusa il 2026-11-22.
+- **C1–C3** Dashboard nuova, elenco in Preventivi, barra con percorso e ricerca ⌘K, intestazione del preventivo, cartellini delle novità (solo sito e Mac): 4.9.0, chiusa il 2026-11-22.
 
 ---
 
