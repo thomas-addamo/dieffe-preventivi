@@ -4,6 +4,12 @@ import Foundation
 /// (chiave `DieffeBaseURL`, da project.yml) per cambiarlo senza toccare il codice.
 enum AppConfig {
     static let baseURL: URL = {
+        #if DEBUG
+        // Solo build di prova: -DieffeBaseURL http://localhost:3847 (server locale su un ramo Neon di prova).
+        if let value = UserDefaults.standard.string(forKey: "DieffeBaseURL"), let url = URL(string: value) {
+            return url
+        }
+        #endif
         if let value = Bundle.main.object(forInfoDictionaryKey: "DieffeBaseURL") as? String,
            let url = URL(string: value) {
             return url

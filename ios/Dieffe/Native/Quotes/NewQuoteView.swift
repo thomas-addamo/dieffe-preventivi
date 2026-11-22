@@ -39,6 +39,7 @@ struct NewQuoteView: View {
                         }
                         .padding(.vertical, 4)
                     }
+                    .tint(.primary)
                 }
 
                 Section {

@@ -28,7 +28,6 @@ final class SurveySpeech {
 
     private let engine = AVAudioEngine()
     private var analyzer: SpeechAnalyzer?
-    private var transcriber: SpeechTranscriber?
     private var input: AsyncStream<AnalyzerInput>.Continuation?
     private var resultsTask: Task<Void, Never>?
     private let feeder = AudioFeeder()
@@ -42,30 +41,43 @@ final class SurveySpeech {
             guard await AVAudioApplication.requestRecordPermission() else {
                 throw SpeechError("Serve il permesso del microfono: Impostazioni › Dieffe › Microfono.")
             }
-            let locale = await SpeechTranscriber.supportedLocale(equivalentTo: Locale(identifier: "it-IT"))
-                ?? Locale(identifier: "it-IT")
-            let transcriber = SpeechTranscriber(locale: locale, transcriptionOptions: [],
-                                                reportingOptions: [.volatileResults], attributeOptions: [])
+            let italian = Locale(identifier: "it-IT")
+            // Prima il trascrittore di iOS 26 (il migliore per il parlato lungo); dove non
+            // c'è o non supporta l'italiano (simulatore, iPhone meno recenti) la dettatura.
+            let module: any SpeechModule
+            let results: AsyncThrowingStream<(String, Bool), Error>
+            if SpeechTranscriber.isAvailable,
+               let locale = await SpeechTranscriber.supportedLocale(equivalentTo: italian) {
+                let transcriber = SpeechTranscriber(locale: locale, transcriptionOptions: [],
+                                                    reportingOptions: [.volatileResults], attributeOptions: [])
+                module = transcriber
+                results = Self.texts(transcriber.results.map { (String($0.text.characters), $0.isFinal) })
+            } else if let locale = await DictationTranscriber.supportedLocale(equivalentTo: italian) {
+                let dictation = DictationTranscriber(locale: locale, preset: .progressiveLongDictation)
+                module = dictation
+                results = Self.texts(dictation.results.map { (String($0.text.characters), $0.isFinal) })
+            } else {
+                throw SpeechError("La trascrizione in italiano non è disponibile su questo iPhone.")
+            }
             // Il modello italiano si scarica una volta sola (poi funziona senza rete).
-            if let request = try await AssetInventory.assetInstallationRequest(supporting: [transcriber]) {
+            if let request = try await AssetInventory.assetInstallationRequest(supporting: [module]) {
                 try await request.downloadAndInstall()
             }
-            let analyzer = SpeechAnalyzer(modules: [transcriber])
-            guard let format = await SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith: [transcriber]) else {
+            let analyzer = SpeechAnalyzer(modules: [module])
+            guard let format = await SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith: [module]) else {
                 throw SpeechError("Riconoscimento vocale non disponibile su questo iPhone.")
             }
             let (stream, continuation) = AsyncStream.makeStream(of: AnalyzerInput.self)
             try await analyzer.start(inputSequence: stream)
-            self.transcriber = transcriber
             self.analyzer = analyzer
             self.input = continuation
 
             resultsTask = Task { [weak self] in
                 do {
-                    for try await result in transcriber.results {
-                        let text = String(result.text.characters).trimmingCharacters(in: .whitespaces)
+                    for try await (raw, isFinal) in results {
+                        let text = raw.trimmingCharacters(in: .whitespaces)
                         guard let self else { return }
-                        if result.isFinal {
+                        if isFinal {
                             if !text.isEmpty {
                                 self.finalText = self.finalText.isEmpty ? text : self.finalText + " " + text
                             }
@@ -75,7 +87,7 @@ final class SurveySpeech {
                         }
                     }
                 } catch {
-                    self?.state = .failed(error.localizedDescription)
+                    self?.state = .failed(Self.friendly(error))
                 }
             }
 
@@ -83,7 +95,7 @@ final class SurveySpeech {
             state = .listening
         } catch {
             stopAudio()
-            state = .failed((error as? SpeechError)?.message ?? error.localizedDescription)
+            state = .failed(Self.friendly(error))
         }
     }
 
@@ -123,6 +135,28 @@ final class SurveySpeech {
         resultsTask?.cancel()
         analyzer = nil
         state = .idle
+    }
+
+    /// I risultati dei due motori come (testo, definitivo).
+    private static func texts<S: AsyncSequence & Sendable>(_ sequence: S) -> AsyncThrowingStream<(String, Bool), Error>
+    where S.Element == (String, Bool) {
+        AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    for try await item in sequence { continuation.yield(item) }
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
+    /// Messaggi in italiano: gli errori del sistema arrivano in inglese.
+    private static func friendly(_ error: Error) -> String {
+        if let error = error as? SpeechError { return error.message }
+        return "Non riesco ad ascoltare su questo dispositivo. Puoi scattare foto e scrivere le note nella revisione."
     }
 
     // MARK: Audio
