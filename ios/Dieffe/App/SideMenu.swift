@@ -57,6 +57,10 @@ let screenCornerRadius: CGFloat = {
 @MainActor
 private var screenShape: RoundedRectangle { RoundedRectangle(cornerRadius: screenCornerRadius, style: .continuous) }
 
+/// Fondo del menu: bianco in chiaro e nero in scuro, così la pagina (grigia) si stacca
+/// come una scheda, come nell'app Claude.
+private let menuBackground = Color(.systemBackground)
+
 /// Il rettangolo dello schermo meno la sua forma arrotondata: riempito (pari-dispari)
 /// copre solo i quattro angoli.
 private struct ScreenCornerMask: Shape {
@@ -102,7 +106,7 @@ private struct SideMenuContainer: ViewModifier {
 
         ZStack(alignment: .leading) {
             if progress > 0 {
-                Color(.systemGroupedBackground)
+                menuBackground
                     .ignoresSafeArea()
                 SideMenuPanel(top: insets.top, bottom: insets.bottom, close: { setOpen(false) })
                     .frame(width: travel)
@@ -117,7 +121,7 @@ private struct SideMenuContainer: ViewModifier {
                     if progress > 0 {
                         screenShape
                             .fill(Color(.systemBackground))
-                            .shadow(color: .black.opacity(0.18 * progress), radius: 24, x: -6)
+                            .shadow(color: .black.opacity(0.06 * progress), radius: 10, x: 0)
                             .ignoresSafeArea()
                     }
                 }
@@ -127,11 +131,11 @@ private struct SideMenuContainer: ViewModifier {
                             // Angoli dello schermo: fuori dalla curva si vede il fondo del menu,
                             // così la pagina diventa una scheda con gli stessi angoli dell'iPhone.
                             ScreenCornerMask(radius: screenCornerRadius)
-                                .fill(Color(.systemGroupedBackground), style: FillStyle(eoFill: true))
+                                .fill(menuBackground, style: FillStyle(eoFill: true))
+                            // Solo un filo sottile sul bordo, come nell'app Claude: niente velo.
                             screenShape
-                                .fill(Color.black.opacity(0.06 * progress))
-                            screenShape
-                                .stroke(Color.primary.opacity(0.1 * progress), lineWidth: 1)
+                                .strokeBorder(Color.primary.opacity(0.12 * progress), lineWidth: 0.5)
+                            Color.clear
                         }
                         .ignoresSafeArea()
                         // Un tocco o un trascinamento riportano la pagina al centro.
@@ -225,13 +229,13 @@ private struct SideMenuPanel: View {
                     .padding(.top, 10)
                     .background(alignment: .top) {
                         // La lista sfuma sotto i tasti invece di finirci sotto di netto.
-                        LinearGradient(colors: [Color(.systemGroupedBackground).opacity(0), Color(.systemGroupedBackground)],
+                        LinearGradient(colors: [menuBackground.opacity(0), menuBackground],
                                        startPoint: .top, endPoint: .bottom)
                             .frame(height: 24)
                             .offset(y: -24)
                             .allowsHitTesting(false)
                     }
-                    .background(Color(.systemGroupedBackground))
+                    .background(menuBackground)
                     .padding(.bottom, max(12, bottom - 8))
             }
             .padding(.horizontal, 12)
