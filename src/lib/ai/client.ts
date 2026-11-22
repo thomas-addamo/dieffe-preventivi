@@ -174,14 +174,17 @@ export async function generateAIJson<T = unknown>(
   systemPrompt: string,
   userPrompt: string,
   timeoutMs = 11000,
-  maxTokens = 900
+  maxTokens = 900,
+  /** smart: modello più capace (gpt-oss-120b, ragionamento basso) per compiti
+   *  dove serve capire bene, come l'agente vocale sul preventivo. */
+  opts: { smart?: boolean } = {}
 ): Promise<T> {
   const messages: ChatMessage[] = [
     { role: 'system', content: systemPrompt },
     { role: 'user', content: userPrompt },
   ];
 
-  const raw = await complete(MODELS_FAST, messages, {
+  const raw = await complete(opts.smart ? MODELS_CHAT : MODELS_FAST, messages, {
     temperature: 0.2,
     maxTokens,
     timeoutMs,

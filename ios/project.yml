@@ -18,7 +18,7 @@ settings:
     SWIFT_VERSION: "5.0"
     # La versione vera arriva da src/lib/version.ts (fonte unica per sito,
     # app desktop e iPhone): la imposta lo script "Versione" a ogni build.
-    MARKETING_VERSION: "4.6.0"
+    MARKETING_VERSION: "4.12.0"
     CURRENT_PROJECT_VERSION: "1"
 targets:
   Dieffe:
@@ -31,7 +31,7 @@ targets:
       # Dynamic Island e schermata di blocco (attività in tempo reale).
       - target: DieffeWidgets
         embed: true
-    postCompileScripts:
+    postBuildScripts:
       - name: Versione da src/lib/version.ts
         basedOnDependencyAnalysis: false
         inputFiles:
@@ -96,7 +96,7 @@ targets:
     sources:
       - path: DieffeWidgets
       - path: Shared
-    postCompileScripts:
+    postBuildScripts:
       - name: Versione da src/lib/version.ts
         basedOnDependencyAnalysis: false
         inputFiles:

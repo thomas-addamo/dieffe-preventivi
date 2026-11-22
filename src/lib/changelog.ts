@@ -43,6 +43,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "4.12.0",
+    date: "2026-11-22",
+    headline: "iPhone: l'IA capisce meglio e modifica il preventivo a voce.",
+    highlights: [
+      { icon: "sparkles", title: "Comando vocale nel preventivo (iPhone)", description: "Tocca l'onda nell'editor e di' cosa cambiare: prezzi, quantità, voci, sezioni opzionali, IVA, sconto. Le modifiche si applicano subito e si annullano con un tocco." },
+      { icon: "zap", title: "Sopralluogo più intelligente", description: "L'IA riconosce la voce giusta da modificare, mette i prezzi detti anche a parole, crea sezioni opzionali e risponde più in fretta." },
+    ],
+  },
+  {
     version: "4.11.0",
     date: "2026-11-22",
     headline: "iPhone: nel sopralluogo l'IA scrive le voci mentre parli.",

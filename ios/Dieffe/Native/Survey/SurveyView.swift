@@ -53,15 +53,40 @@ struct SurveyNote: Identifiable, Equatable {
     var text: String
 }
 
-/// Operazione decisa dall'IA (src/lib/ai/survey.ts).
+/// Operazione decisa dall'IA (src/lib/ai/quote-agent.ts). Sezioni e voci si
+/// indicano con i codici mandati nella bozza (S1…, V1…) o con quelli nuovi (N1…).
 struct SurveyOp: Decodable {
     let op: String
     let section: String?
+    let item: String?
+    let ref: String?
+    let title: String?
     let text: String?
-    let match: String?
+    let optional: Bool?
     let quantity: Double?
     let unit: String?
     let price: Double?
+    let vatRate: Double?
+    let discountPercent: Double?
+    let paymentTerms: String?
+    let validUntil: String?
+}
+
+/// Dati generali dettati (IVA, sconto, pagamenti, validità): vanno nel preventivo al salvataggio.
+struct SurveyQuoteFields: Equatable {
+    var vatRate: Double?
+    var discountPercent: Double?
+    var paymentTerms: String?
+    var validUntil: String?
+
+    var summary: [String] {
+        var out: [String] = []
+        if let vatRate { out.append("IVA \(vatRate.formatted())%") }
+        if let discountPercent, discountPercent > 0 { out.append("Sconto \(discountPercent.formatted())%") }
+        if paymentTerms != nil { out.append("Pagamenti") }
+        if validUntil != nil { out.append("Validità") }
+        return out
+    }
 }
 
 struct SurveyOpsResponse: Decodable {
@@ -88,6 +113,13 @@ struct SurveyView: View {
     @State private var showCamera = false
     // IA sul parlato (D1b)
     @State private var draftTitle: String?
+    /// Ordine delle sezioni (anche vuote) e quelle opzionali.
+    @State private var sectionOrder: [String] = []
+    @State private var optionalSections: Set<String> = []
+    @State private var quoteFields = SurveyQuoteFields()
+    /// Codici dell'ultima bozza mandata all'IA → voce / sezione.
+    @State private var itemRefs: [String: UUID] = [:]
+    @State private var sectionRefs: [String: String] = [:]
     @State private var processed = 0
     @State private var aiBusy = false
     @State private var aiOffline = false
@@ -126,6 +158,7 @@ struct SurveyView: View {
                     .padding(.horizontal, 24)
                     .padding(.top, 10)
                 DraftSheet(context: context, title: draftTitle, items: items, notes: notes, shots: shots, fresh: fresh, demo: isDemo,
+                           sectionOrder: sectionOrder, optionalSections: optionalSections,
                            offline: aiOffline, onRemove: removeItem, onRemoveNote: removeNote)
                     .padding(.horizontal, 12)
                     .padding(.top, 14)
@@ -141,8 +174,9 @@ struct SurveyView: View {
             draftTitle = context.title
             if isDemo { runDemo() } else { await speech.start() }
         }
-        // Ogni frase definitiva fa ripartire l'attesa: si manda all'IA dopo una pausa
-        // di 2 secondi, o subito se il testo da elaborare è già lungo.
+        // Ogni frase definitiva fa ripartire l'attesa: si manda all'IA dopo una breve
+        // pausa (1,2 s), o subito se il testo da elaborare è già lungo. Un invio per
+        // pausa, non per parola: risposte rapide senza sprecare richieste.
         .onChange(of: speech.finalText) { scheduleAI() }
         .onDisappear {
             demoTask?.cancel()
@@ -155,7 +189,8 @@ struct SurveyView: View {
             .ignoresSafeArea()
         }
         .sheet(isPresented: $showReview) {
-            SurveyReviewView(context: context, title: draftTitle, initialText: text, items: items, aiNotes: notes.map(\.text), shots: shots)
+            SurveyReviewView(context: context, title: draftTitle, initialText: text, items: items, aiNotes: notes.map(\.text), shots: shots,
+                             sectionOrder: sectionOrder, optionalSections: optionalSections, quoteFields: quoteFields)
         }
         .confirmationDialog("Annullare il sopralluogo?", isPresented: $confirmCancel, titleVisibility: .visible) {
             Button("Annulla il sopralluogo", role: .destructive) { model.survey = nil }
@@ -328,7 +363,7 @@ struct SurveyView: View {
         aiTask?.cancel()
         let pending = speech.finalText.count - processed
         aiTask = Task {
-            if pending < 260 { try? await Task.sleep(for: .seconds(2)) }
+            if pending < 180 { try? await Task.sleep(for: .seconds(1.2)) }
             guard !Task.isCancelled else { return }
             await processAI(force: false)
         }
@@ -363,39 +398,105 @@ struct SurveyView: View {
         }
     }
 
+    /// Sezioni nell'ordine in cui sono nate (anche vuote) con le loro voci.
+    private var groupedSections: [(String, [SurveyItem])] {
+        var order = sectionOrder
+        for item in items where !order.contains(item.section) { order.append(item.section) }
+        return order.map { title in (title, items.filter { $0.section == title }) }
+    }
+
+    /// La bozza per l'IA, con un codice per ogni sezione (S1…) e voce (V1…).
     private func draftPayload() -> [String: Any] {
-        var order: [String] = []
-        var groups: [String: [[String: Any]]] = [:]
-        for item in items {
-            if groups[item.section] == nil { order.append(item.section) }
-            var row: [String: Any] = ["text": item.text]
-            if let q = item.qty { row["quantity"] = q }
-            if let u = item.unit { row["unit"] = u }
-            if let p = item.price { row["price"] = p }
-            groups[item.section, default: []].append(row)
+        var itemMap: [String: UUID] = [:]
+        var sectionMap: [String: String] = [:]
+        var v = 0
+        let sections: [[String: Any]] = groupedSections.enumerated().map { index, group in
+            let ref = "S\(index + 1)"
+            sectionMap[ref] = group.0
+            let rows: [[String: Any]] = group.1.map { item in
+                v += 1
+                itemMap["V\(v)"] = item.id
+                var row: [String: Any] = ["ref": "V\(v)", "text": item.text]
+                if let q = item.qty { row["quantity"] = q }
+                if let u = item.unit { row["unit"] = u }
+                if let p = item.price { row["price"] = p }
+                return row
+            }
+            return ["ref": ref, "title": group.0, "optional": optionalSections.contains(group.0), "items": rows]
         }
-        var payload: [String: Any] = [
-            "sections": order.map { ["title": $0, "items": groups[$0] ?? []] },
-            "notes": notes.map(\.text),
-        ]
+        itemRefs = itemMap
+        sectionRefs = sectionMap
+        var payload: [String: Any] = ["sections": sections, "notes": notes.map(\.text)]
         if let draftTitle { payload["title"] = draftTitle }
+        if let x = quoteFields.vatRate { payload["vatRate"] = x }
+        if let x = quoteFields.discountPercent { payload["discountPercent"] = x }
+        if let x = quoteFields.paymentTerms { payload["paymentTerms"] = x }
+        if let x = quoteFields.validUntil { payload["validUntil"] = x }
         return payload
+    }
+
+    /// Titolo della sezione indicata dall'IA: codice (S1/N1) o titolo; se non c'è, la crea.
+    private func sectionTitle(for key: String) -> String {
+        if let title = sectionRefs[key.uppercased()] { return title }
+        if let title = sectionOrder.first(where: { $0.caseInsensitiveCompare(key) == .orderedSame }) { return title }
+        ensureSection(key)
+        return key
+    }
+
+    private func ensureSection(_ title: String, optional: Bool = false) {
+        withAnimation(.smooth) {
+            if !sectionOrder.contains(title) { sectionOrder.append(title) }
+            if optional { optionalSections.insert(title) }
+        }
+    }
+
+    private func itemIndex(_ ref: String?) -> Int? {
+        guard let ref, let id = itemRefs[ref.uppercased()] else { return nil }
+        return items.firstIndex { $0.id == id }
     }
 
     private func apply(_ ops: [SurveyOp]) {
         for op in ops {
             switch op.op {
+            case "add_section":
+                guard let title = op.title?.trimmingCharacters(in: .whitespaces), !title.isEmpty else { continue }
+                ensureSection(title, optional: op.optional ?? false)
+                if let ref = op.ref { sectionRefs[ref.uppercased()] = title }
+            case "update_section":
+                guard let key = op.section, let old = sectionRefs[key.uppercased()] else { continue }
+                let new = op.title?.trimmingCharacters(in: .whitespaces).nilIfEmpty ?? old
+                withAnimation(.smooth) {
+                    if new != old {
+                        if let i = sectionOrder.firstIndex(of: old) { sectionOrder[i] = new } else { sectionOrder.append(new) }
+                        for i in items.indices where items[i].section == old { items[i].section = new }
+                        if optionalSections.remove(old) != nil { optionalSections.insert(new) }
+                        sectionRefs[key.uppercased()] = new
+                    }
+                    if let optional = op.optional {
+                        if optional { optionalSections.insert(new) } else { optionalSections.remove(new) }
+                    }
+                }
+            case "remove_section":
+                guard let key = op.section, let title = sectionRefs[key.uppercased()] else { continue }
+                _ = withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                    items.removeAll { $0.section == title }
+                    sectionOrder.removeAll { $0 == title }
+                    optionalSections.remove(title)
+                }
             case "add_item":
-                guard let text = op.text, let section = op.section else { continue }
+                guard let text = op.text, let key = op.section else { continue }
+                let section = sectionTitle(for: key)
                 add(SurveyItem(section: section, text: text, quantity: SurveyItem.label(qty: op.quantity, unit: op.unit),
                                qty: op.quantity, unit: op.unit, price: op.price))
             case "update_item":
-                guard let match = op.match, let index = indexOfItem(matching: match) else { continue }
+                guard let index = itemIndex(op.item) else { continue }
+                let target = op.section.map { sectionTitle(for: $0) }
                 withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
                     if let text = op.text, !text.isEmpty { items[index].text = text }
                     if let q = op.quantity { items[index].qty = q }
                     if let u = op.unit { items[index].unit = u }
                     if let p = op.price { items[index].price = p }
+                    if let target { items[index].section = target }
                     items[index].quantity = SurveyItem.label(qty: items[index].qty, unit: items[index].unit) ?? items[index].quantity
                     fresh.insert(items[index].id)
                 }
@@ -405,23 +506,23 @@ struct SurveyView: View {
                     _ = withAnimation(.smooth(duration: 0.8)) { fresh.remove(id) }
                 }
             case "remove_item":
-                guard let match = op.match, let index = indexOfItem(matching: match) else { continue }
+                guard let index = itemIndex(op.item) else { continue }
                 _ = withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) { items.remove(at: index) }
             case "add_note":
                 guard let text = op.text else { continue }
                 withAnimation(.spring(response: 0.5, dampingFraction: 0.75)) { notes.append(SurveyNote(text: text)) }
-            case "set_title":
-                guard let text = op.text, draftTitle?.isEmpty ?? true else { continue }
-                withAnimation(.smooth) { draftTitle = text }
+            case "set_quote":
+                withAnimation(.smooth) {
+                    if let title = op.title?.nilIfEmpty { draftTitle = title }
+                    if let x = op.vatRate { quoteFields.vatRate = x }
+                    if let x = op.discountPercent { quoteFields.discountPercent = x }
+                    if let x = op.paymentTerms?.nilIfEmpty { quoteFields.paymentTerms = x }
+                    if let x = op.validUntil?.nilIfEmpty { quoteFields.validUntil = x }
+                }
             default:
                 continue
             }
         }
-    }
-
-    private func indexOfItem(matching match: String) -> Int? {
-        let m = match.lowercased()
-        return items.lastIndex { $0.text.lowercased().contains(m) || m.contains($0.text.lowercased()) }
     }
 
     private func removeItem(_ item: SurveyItem) {
@@ -499,7 +600,7 @@ struct SurveyView: View {
 
 // MARK: - Testo in diretta
 
-private struct LiveTranscript: View {
+struct LiveTranscript: View {
     let text: String
 
     var body: some View {
@@ -530,18 +631,16 @@ private struct DraftSheet: View {
     let shots: [SurveyShot]
     let fresh: Set<UUID>
     let demo: Bool
+    var sectionOrder: [String] = []
+    var optionalSections: Set<String> = []
     var offline = false
     var onRemove: (SurveyItem) -> Void = { _ in }
     var onRemoveNote: (SurveyNote) -> Void = { _ in }
 
     private var sections: [(String, [SurveyItem])] {
-        var order: [String] = []
-        var groups: [String: [SurveyItem]] = [:]
-        for item in items {
-            if groups[item.section] == nil { order.append(item.section) }
-            groups[item.section, default: []].append(item)
-        }
-        return order.map { ($0, groups[$0] ?? []) }
+        var order = sectionOrder
+        for item in items where !order.contains(item.section) { order.append(item.section) }
+        return order.map { title in (title, items.filter { $0.section == title }) }.filter { !$0.1.isEmpty }
     }
 
     var body: some View {
@@ -554,7 +653,7 @@ private struct DraftSheet: View {
                     }
                     ForEach(sections, id: \.0) { section, rows in
                         VStack(alignment: .leading, spacing: 8) {
-                            SectionLabel(section)
+                            SectionLabel(section, optional: optionalSections.contains(section))
                             ForEach(rows) { item in
                                 ItemRow(index: (items.firstIndex(of: item) ?? 0) + 1, item: item, fresh: fresh.contains(item.id),
                                         onRemove: demo ? nil : { onRemove(item) })
@@ -668,16 +767,31 @@ private struct DraftSheet: View {
 
 private struct SectionLabel: View {
     let title: String
-    init(_ title: String) { self.title = title }
+    var optional = false
+    init(_ title: String, optional: Bool = false) {
+        self.title = title
+        self.optional = optional
+    }
 
     var body: some View {
-        Text(title.uppercased())
-            .font(.system(size: 12, weight: .semibold))
-            .kerning(0.8)
-            // Colore pieno: sul vetro il grigio "secondario" diventerebbe quasi trasparente.
-            .foregroundStyle(Color(uiColor: .secondaryLabel))
-            .padding(.leading, 4)
-            .accessibilityAddTraits(.isHeader)
+        HStack(spacing: 6) {
+            Text(title.uppercased())
+                .font(.system(size: 12, weight: .semibold))
+                .kerning(0.8)
+                // Colore pieno: sul vetro il grigio "secondario" diventerebbe quasi trasparente.
+                .foregroundStyle(Color(uiColor: .secondaryLabel))
+            if optional {
+                Text("Opzionale")
+                    .font(.system(size: 10, weight: .semibold))
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 2)
+                    .background(Color.orange.opacity(0.16), in: Capsule())
+                    .foregroundStyle(Color.orange)
+                    .transition(.scale.combined(with: .opacity))
+            }
+        }
+        .padding(.leading, 4)
+        .accessibilityAddTraits(.isHeader)
     }
 }
 
@@ -770,6 +884,9 @@ struct SurveyReviewView: View {
     let items: [SurveyItem]
     var aiNotes: [String] = []
     let shots: [SurveyShot]
+    var sectionOrder: [String] = []
+    var optionalSections: Set<String> = []
+    var quoteFields = SurveyQuoteFields()
 
     @State private var editTitle = ""
     @State private var notes = ""
@@ -796,6 +913,13 @@ struct SurveyReviewView: View {
                 if !items.isEmpty {
                     Section {
                         Label("\(items.count) \(items.count == 1 ? "voce" : "voci") in \(Set(items.map(\.section)).count) sezioni", systemImage: "list.bullet.rectangle")
+                        let optionalCount = Set(items.map(\.section)).intersection(optionalSections).count
+                        if optionalCount > 0 {
+                            Label("\(optionalCount) \(optionalCount == 1 ? "sezione opzionale" : "sezioni opzionali")", systemImage: "plus.square.dashed")
+                        }
+                        if !quoteFields.summary.isEmpty {
+                            Label(quoteFields.summary.joined(separator: " · "), systemImage: "slider.horizontal.3")
+                        }
                     } footer: {
                         Text("Le voci entrano nel preventivo con le loro sezioni; i prezzi non detti restano da completare nell'editor.")
                     }
@@ -875,7 +999,7 @@ struct SurveyReviewView: View {
                     id = created.id
                 }
                 // Sezioni e voci dettate (D1b), nell'ordine in cui sono comparse.
-                var order: [String] = []
+                var order = sectionOrder.filter { title in items.contains { $0.section == title } }
                 for item in items where !order.contains(item.section) { order.append(item.section) }
                 let letters = Array("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
                 for (sIndex, section) in order.enumerated() {
@@ -884,6 +1008,7 @@ struct SurveyReviewView: View {
                         "code": sIndex < letters.count ? String(letters[sIndex]) : "\(sIndex + 1)",
                         "title": section,
                         "orderIndex": sIndex,
+                        "isOptional": optionalSections.contains(section),
                     ])
                     for (iIndex, item) in items.filter({ $0.section == section }).enumerated() {
                         let _: CreatedID = try await APIClient.shared.send("POST", "/api/quotes/\(id)/items", json: [
@@ -896,6 +1021,15 @@ struct SurveyReviewView: View {
                             "orderIndex": iIndex,
                         ])
                     }
+                }
+                // IVA, sconto, pagamenti e validità detti a voce.
+                var fields: [String: Any] = [:]
+                if let x = quoteFields.vatRate { fields["vatRate"] = x }
+                if let x = quoteFields.discountPercent { fields["discountType"] = x > 0 ? "percent" : NSNull(); fields["discountValue"] = x > 0 ? x : NSNull() }
+                if let x = quoteFields.paymentTerms { fields["paymentTerms"] = x }
+                if let x = quoteFields.validUntil { fields["validUntil"] = x }
+                if !fields.isEmpty {
+                    let _: OKResponse = try await APIClient.shared.send("PATCH", "/api/quotes/\(id)", json: fields)
                 }
                 for (index, shot) in shots.enumerated() {
                     progress = "Foto \(index + 1) di \(shots.count)…"
@@ -916,3 +1050,10 @@ struct SurveyReviewView: View {
 }
 
 private struct OKResponse: Decodable {}
+
+private extension String {
+    var nilIfEmpty: String? {
+        let t = trimmingCharacters(in: .whitespacesAndNewlines)
+        return t.isEmpty ? nil : t
+    }
+}

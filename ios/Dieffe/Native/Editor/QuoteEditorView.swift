@@ -22,6 +22,7 @@ struct QuoteEditorView: View {
     @State private var orderingSections = false
     @State private var showSummary = false
     @State private var showChat = false
+    @State private var showVoice = false
     @State private var keyboardVisible = false
     @State private var showSignature = false
     /// Inizio del sopralluogo in corso su questo preventivo (Dynamic Island).
@@ -79,6 +80,7 @@ struct QuoteEditorView: View {
             switch PreviewOptions.editorSheet {
             case "summary": showSummary = true
             case "chat": showChat = true
+            case "voice": showVoice = true
             case "signature": showSignature = editor.quote?.signature != nil
             default: break
             }
@@ -138,6 +140,9 @@ struct QuoteEditorView: View {
         }
         .sheet(isPresented: $showChat) {
             AIChatView(quote: editor.quote)
+        }
+        .sheet(isPresented: $showVoice) {
+            VoiceCommandView(editor: editor)
         }
         .sheet(isPresented: $showSignature) {
             if let signature = editor.quote?.signature {
@@ -201,12 +206,21 @@ struct QuoteEditorView: View {
             HStack(spacing: 10) {
                 TotalBar(total: totals.total, taxable: totals.taxable, state: editor.saveState) { showSummary = true }
                 if editor.canEdit {
-                    Button { showChat = true } label: {
-                        Image(systemName: "bubble.left.and.text.bubble.right.fill")
-                            .font(.system(size: 20, weight: .semibold))
+                    // Un solo tasto IA: si sceglie se parlare (comando vocale, D1c,
+                    // solo se il preventivo è modificabile) o scrivere all'assistente.
+                    Menu {
+                        if editor.isEditable {
+                            Button("Modifica a voce", systemImage: "waveform") { showVoice = true }
+                        }
+                        Button("Scrivi all'assistente", systemImage: "bubble.left.and.text.bubble.right") { showChat = true }
+                    } label: {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 18, weight: .semibold))
                             .foregroundStyle(.white)
-                            .frame(width: 58, height: 58)
+                            .frame(width: 50, height: 50)
+                            .contentShape(Circle())
                     }
+                    .menuOrder(.fixed)
                     .glassEffect(.regular.tint(.purple).interactive(), in: Circle())
                     .accessibilityLabel("Assistente AI")
                 }
@@ -818,20 +832,24 @@ private struct TotalBar: View {
                         Text("Totale IVA inclusa")
                         Image(systemName: "chevron.up").fontWeight(.bold)
                     }
+                    .lineLimit(1)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     Text(Format.currency(total))
-                        .font(.title3.weight(.bold))
+                        .font(.headline.weight(.bold))
                         .monospacedDigit()
                         .foregroundStyle(Color.primary)
                         .contentTransition(.numericText())
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                 }
-                Spacer()
+                .layoutPriority(1)
+                Spacer(minLength: 8)
                 saveLabel
                     .font(.caption.weight(.medium))
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 10)
+            .padding(.horizontal, 18)
+            .frame(height: 50)
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
