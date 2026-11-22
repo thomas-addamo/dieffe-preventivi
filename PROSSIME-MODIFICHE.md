@@ -20,7 +20,7 @@
 | B2 | Correzione automatica con IA | ✅ Fatto | 4.8.0 |
 | B3 | Documenti PDF nel cantiere | ✅ Fatto | 4.8.0 → 4.8.2 |
 | C1–C3 | Restyling (solo sito e Mac) | ✅ Fatto | 4.9.0 |
-| D1 | Sopralluogo con IA vocale (solo iPhone) | 🔨 D1a online (4.10.0, provata dall'utente); D1b pronta in locale, da pubblicare | 4.10.0 |
+| D1 | Sopralluogo con IA vocale (solo iPhone) | 🚀 D1a + D1b online (22/11); D1b da provare su iPhone vero; poi D1c | 4.10.0 → 4.11.0 |
 | D2 | iPhone: menu laterale al posto di "Altro" | 🚀 Pubblicato il 22/11 | 4.9.1 |
 
 ---

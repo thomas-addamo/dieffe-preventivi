@@ -43,6 +43,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "4.11.0",
+    date: "2026-11-22",
+    headline: "iPhone: nel sopralluogo l'IA scrive le voci mentre parli.",
+    highlights: [
+      { icon: "sparkles", title: "Voci create dall'IA (iPhone)", description: "Durante il sopralluogo le lavorazioni dette diventano voci con sezione e quantità; i prezzi solo se li dici. Ogni voce si toglie con la ✕." },
+    ],
+  },
+  {
     version: "4.10.0",
     date: "2026-11-22",
     headline: "iPhone: sopralluogo con l'IA.",
