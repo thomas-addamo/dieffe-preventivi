@@ -404,6 +404,7 @@ _(scelte condivise che valgono per tutte le modifiche — aggiungere con data)_
 - 2026-11-22 — **Cartellini delle novità** (`src/components/shared/FeatureTips.tsx`): fumetto accanto al tasto nuovo («Da adesso l'elenco completo dei preventivi lo trovi qui!»), uno alla volta, solo nei 5 giorni dopo il rilascio e solo finché l'utente non lo chiude (memoria del browser, per utente). Da usare per tutte le novità importanti: `data-tip="…"` sul tasto + una voce in `TIPS`.
 - 2026-11-22 — Su richiesta dell'utente tutte le voci A, B e C sono segnate **Fatte**; i controlli ancora aperti restano in «5b. In sospeso».
 - 2026-11-22 — D1: avvio da Nuovo/cliente (bozza) e da cantiere (lavoro extra); voci subito nella bozza e annullabili; **prezzi solo se detti a voce**, altrimenti li mette l'utente nell'editor; foto al preventivo e poi al cantiere; **testo trascritto cancellato a fine revisione**; comando vocale sul preventivo anche dopo (D1c); si parte con D1a.
+- 2026-11-22 — **Il sopralluogo (D1) è solo per iPhone**: sito e Mac non hanno la registrazione. Schermata disegnata su misura (sfera dell'IA animata con la voce, bozza che si costruisce con animazioni); stile scelto da Claude su richiesta dell'utente. Prova sul simulatore: avvio con `-DieffeSurveyDemo YES`.
 - 2026-11-22 — Dashboard corretta a pagina stretta (le colonne uscivano dallo schermo).
 
 ## 5b. In sospeso (da controllare)

@@ -19,6 +19,29 @@ struct NewQuoteView: View {
         NavigationStack {
             Form {
                 Section {
+                    // Sopralluogo con IA vocale (D1, solo iPhone): si parla, il preventivo si prepara.
+                    Button {
+                        let context = SurveyContext(title: trimmedTitle.isEmpty ? nil : trimmedTitle, client: client,
+                                                    address: { let a = address.trimmingCharacters(in: .whitespacesAndNewlines); return a.isEmpty ? nil : a }())
+                        dismiss()
+                        Task {
+                            try? await Task.sleep(for: .milliseconds(450))
+                            model.survey = context
+                        }
+                    } label: {
+                        HStack(spacing: 14) {
+                            SurveyOrb(mood: .idle, level: 0, size: 40)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Sopralluogo con l'IA").font(.headline).foregroundStyle(.primary)
+                                Text("Parla mentre giri il cantiere: il preventivo si prepara da solo.")
+                                    .font(.subheadline).foregroundStyle(.secondary)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+
+                Section {
                     TextField("Titolo", text: $title, prompt: Text("Es. Ristrutturazione appartamento"), axis: .vertical)
                         .focused($titleFocused)
                         .submitLabel(.next)

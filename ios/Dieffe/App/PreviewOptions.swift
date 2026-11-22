@@ -27,6 +27,9 @@ enum PreviewOptions {
     /// Nell'editor apre subito "summary" (riepilogo), "chat" (assistente AI) o "signature" (firma).
     static var editorSheet: String? { defaults.string(forKey: "DieffeEditorSheet") }
 
+    /// Apre il sopralluogo in modalità dimostrativa (-DieffeSurveyDemo YES).
+    static var surveyDemo: Bool { defaults.bool(forKey: "DieffeSurveyDemo") }
+
     /// Mostra il login nativo anche con una sessione valida (solo per le schermate).
     static var showLogin: Bool {
         defaults.bool(forKey: "DieffeLogin")
@@ -49,6 +52,7 @@ enum PreviewOptions {
     static let startTab: AppTab? = nil
     static let showSettings = false
     static let showLogin = false
+    static let surveyDemo = false
     static let startPage: String? = nil
     static let startQuote: String? = nil
     static let editorSheet: String? = nil

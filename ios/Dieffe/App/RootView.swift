@@ -39,12 +39,16 @@ struct RootView: View {
             ImportQuoteView()
         }
         // Con una pagina del menu aperta, l'editor lo presenta quella pagina (MenuPageScreen).
-        .fullScreenCover(item: Binding(get: { model.menuPage == nil ? model.editor : nil }, set: { model.editor = $0 }),
+        .fullScreenCover(item: Binding(get: { model.menuPage == nil && model.survey == nil ? model.editor : nil }, set: { model.editor = $0 }),
                          onDismiss: model.closeEditor) { session in
             EditorCover(session: session)
         }
         .fullScreenCover(item: $model.menuPage) { page in
             MenuPageScreen(page: page)
+        }
+        // Sopralluogo con IA vocale (D1, solo iPhone): finito, si apre il preventivo creato.
+        .fullScreenCover(item: $model.survey, onDismiss: model.openPendingQuote) { context in
+            SurveyView(context: context)
         }
         .sheet(item: $model.whatsNew, onDismiss: { WhatsNew.markSeen() }) { entry in
             WhatsNewView(entry: entry)

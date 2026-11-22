@@ -35,6 +35,8 @@ final class AppModel {
     var sideMenuOpen = false
     /// Pagina aperta dal menu laterale, a tutto schermo con la sua navigazione.
     var menuPage: MenuPage?
+    /// Sopralluogo con IA vocale in corso (D1, solo iPhone).
+    var survey: SurveyContext?
     var showNotifications = false
     /// "Novità" da mostrare dopo un aggiornamento importante (WhatsNew).
     var whatsNew: WhatsNewEntry?
@@ -59,6 +61,7 @@ final class AppModel {
     init() {
         if let tab = PreviewOptions.startTab { selectedTab = tab }
         showSettings = PreviewOptions.showSettings
+        if PreviewOptions.surveyDemo { survey = SurveyContext(title: "Ristrutturazione bagno", demo: true) }
         needsLogin = PreviewOptions.showLogin
         if let page = PreviewOptions.startPage { openPath(page) }
         APIClient.shared.onUnauthorized = { [weak self] in self?.sessionExpired() }
