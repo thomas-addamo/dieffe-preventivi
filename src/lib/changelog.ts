@@ -43,6 +43,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "4.10.0",
+    date: "2026-11-22",
+    headline: "iPhone: sopralluogo con l'IA.",
+    highlights: [
+      { icon: "sparkles", title: "Sopralluogo con l'IA (iPhone)", description: "Da Nuovo preventivo: parli mentre giri il cantiere, l'iPhone trascrive e scatti le foto; alla fine rivedi il testo e il preventivo si crea con note e foto." },
+    ],
+  },
+  {
     version: "4.9.1",
     date: "2026-11-22",
     headline: "iPhone: il menu laterale prende il posto della scheda Altro.",
