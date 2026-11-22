@@ -12,6 +12,7 @@ import { UserRoleProvider } from "./UserRoleContext";
 import { WhatsNewBanner } from "./WhatsNewBanner";
 import { DesktopBridge } from "./DesktopBridge";
 import { MenuActions } from "./MenuActions";
+import { FeatureTips } from "./FeatureTips";
 import type { UserRole } from "@/lib/permissions/types";
 import { cn } from "@/lib/utils";
 
@@ -64,6 +65,7 @@ export function AppShell({ children, userRole, userName, userEmail, trashCount =
       <PushRegistrar />
       <DesktopBridge />
       <MenuActions />
+      <FeatureTips user={userEmail} />
       <div className="lg:flex lg:h-screen lg:overflow-hidden">
         {/* Sidebar desktop — invariata */}
         <div className="hidden lg:block">

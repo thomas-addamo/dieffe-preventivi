@@ -50,6 +50,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       { icon: "layout", title: "Dashboard più utile", description: "Cosa fare adesso: preventivi scaduti, clienti da richiamare, SAL da fatturare. L'elenco dei preventivi ora è nella pagina Preventivi." },
       { icon: "keyboard", title: "Ricerca ovunque con ⌘K", description: "Preventivi, clienti e cantieri dalla barra in alto, che ora mostra anche il percorso della pagina." },
       { icon: "format", title: "Intestazione del preventivo", description: "Titolo in evidenza, cliente da una tendina con ricerca, validità con scelte rapide e avviso se le note citano un'IVA diversa." },
+      { icon: "sparkles", title: "Cartellini delle novità", description: "Nei primi giorni un piccolo fumetto accanto ai tasti nuovi spiega cosa è cambiato." },
     ],
   },
   {

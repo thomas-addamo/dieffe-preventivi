@@ -33,9 +33,10 @@ const VAT_LABEL: Record<number, string> = { 0: "Esente (0%)", 4: "Ridotta (4%)",
 const dt = (iso: string | Date | null | undefined) =>
   iso ? new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(iso)) : "";
 
-function Tile({ icon: Icon, label, children, tone }: { icon: React.ElementType; label: string; children: React.ReactNode; tone?: "warn" | "bad" }) {
+function Tile({ icon: Icon, label, children, tone, tip }: { icon: React.ElementType; label: string; children: React.ReactNode; tone?: "warn" | "bad"; tip?: string }) {
   return (
     <div
+      data-tip={tip}
       className={cn(
         "flex min-w-0 flex-col gap-1.5 rounded-2xl border p-3.5",
         tone === "warn" && "border-orange-200 bg-orange-50/60 dark:border-orange-900/60 dark:bg-orange-950/20",
@@ -264,7 +265,7 @@ export function QuoteHeaderForm({ quote, clients, onChange }: QuoteHeaderFormPro
       {!collapsed && (
         <div className="space-y-4 border-t px-4 pb-4 pt-4 md:px-5">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 min-[1700px]:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)]">
-            <Tile icon={User} label="Cliente">
+            <Tile icon={User} label="Cliente" tip={isViewer ? undefined : "quote-client"}>
               <ClientPicker value={quote.clientId} clients={clients} onPick={(id) => onChange({ clientId: id })} disabled={isViewer} />
               {quote.clientId && (
                 <Link href={`/clienti?apri=${quote.clientId}`} className={linkCls}>

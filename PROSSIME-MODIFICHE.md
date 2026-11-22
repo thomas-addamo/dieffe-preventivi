@@ -19,7 +19,7 @@
 | B1 | Blocco automatico dei preventivi | 🧪 In test: verificato da admin ed editor; manca il 423 via API | 4.8.0 + 4.8.1 |
 | B2 | Correzione automatica con IA | 🧪 In test: online, da provare nell'uso reale | 4.8.0 |
 | B3 | Documenti PDF nel cantiere | 🧪 In test: caricamento e apertura verificati; manca il PDF grande | 4.8.0 → 4.8.2 |
-| C1–C3 | Restyling (solo sito e Mac) | 🧪 Pronto, provato su una copia del DB; in attesa di «pubblica» | 4.9.0 |
+| C1–C3 | Restyling (solo sito e Mac) | 🚀 Pubblicato il 22/11; controllo in produzione da fare | 4.9.0 |
 | D1 | Sopralluogo con IA vocale | 📋 Da fare (prima lo studio) | — |
 | D2 | iPhone: menu laterale al posto di "Altro" | 📋 Da fare (prima il mockup) | — |
 
@@ -297,7 +297,7 @@ Da fare per prime: sono bug che bloccano il lavoro o modifiche piccole e già ch
 Da fare insieme, per avere un linguaggio visivo coerente. **Proporre all'utente bozze o mockup prima di implementare.**
 
 ### C1. Nuova sezione introduttiva della dashboard  _(#2)_
-- **Stato:** 🧪 Pronto in 4.9.0, non ancora pubblicato
+- **Stato:** 🚀 Pubblicato in 4.9.0 (22/11)
 - **Cosa:** ridisegnare "Buongiorno, Admin" + "Consigli per te" + le 4 card numeriche: più bella e soprattutto **più utile e dinamica**. Mostrare le cose importanti del momento: preventivi in scadenza, clienti da richiamare, SAL da fatturare, cantieri attivi oggi, richieste di sblocco (B1). Card cliccabili che portano alla lista filtrata, andamento rispetto al mese prima.
 - **Schermata:** `docs/prossime-modifiche/01-dashboard-intro.webp`
 - **Dove:** `src/app/(app)/dashboard/WelcomeBriefing.tsx`, `src/app/api/ai/briefing/route.ts`; Home iPhone `ios/Dieffe/Native/Home/`.
@@ -314,7 +314,7 @@ Da fare insieme, per avere un linguaggio visivo coerente. **Proporre all'utente 
 - **Esito:** —
 
 ### C2. Barra in alto dell'app (intestazione)  _(#5)_
-- **Stato:** 🧪 Pronto in 4.9.0, non ancora pubblicato
+- **Stato:** 🚀 Pubblicato in 4.9.0 (22/11)
 - **Cosa:** togliere la scritta "Dieffe Ristrutturazioni" a sinistra e mettere qualcosa di utile. Proposte da valutare con l'utente:
   - ricerca globale (preventivi, clienti, cantieri) con scorciatoia ⌘K;
   - percorso della pagina (es. Preventivi › PREV-2026-062);
@@ -327,7 +327,7 @@ Da fare insieme, per avere un linguaggio visivo coerente. **Proporre all'utente 
 - **Esito:** —
 
 ### C3. Intestazione del preventivo  _(#6)_
-- **Stato:** 🧪 Pronto in 4.9.0, non ancora pubblicato
+- **Stato:** 🚀 Pubblicato in 4.9.0 (22/11)
 - **Cosa:** ridisegnare il blocco "Intestazione preventivo" (titolo, codice, cliente, indirizzo cantiere, validità, IVA, note generali): gerarchia più chiara, titolo in evidenza, cliente e indirizzo con icone e collegamenti (scheda cliente, mappa), layout più compatto.
 - **Schermata:** `docs/prossime-modifiche/03-intestazione-preventivo.png`
 - **Dove:** `src/components/quote-editor/QuoteHeaderForm.tsx`; equivalente iPhone in `ios/Dieffe/Native/Editor/`.
@@ -399,6 +399,8 @@ _(scelte condivise che valgono per tutte le modifiche — aggiungere con data)_
 - 2026-11-21 — C3 approvato con una scelta del cliente migliore (tendina con ricerca) e tutti i campi dell'intestazione modificabili.
 - 2026-11-22 — **Le prove non modificano mai i preventivi reali**: si fanno su un ramo Neon di prova (copia del DB) e, anche lì, senza modificare preventivi.
 - 2026-11-22 — 4.9.0 **non** segnata `important`: la schermata Novità comparirebbe anche sull'iPhone, che in fase C non si tocca.
+- 2026-11-22 — **Cartellini delle novità** (`src/components/shared/FeatureTips.tsx`): fumetto accanto al tasto nuovo («Da adesso l'elenco completo dei preventivi lo trovi qui!»), uno alla volta, solo nei 5 giorni dopo il rilascio e solo finché l'utente non lo chiude (memoria del browser, per utente). Da usare per tutte le novità importanti: `data-tip="…"` sul tasto + una voce in `TIPS`.
+- 2026-11-22 — Dashboard corretta a pagina stretta (le colonne uscivano dallo schermo).
 
 ## 5b. In sospeso (da controllare)
 - **Fase C (4.9.0), 22/11:** provata in locale su un ramo Neon di prova (`prova-fase-c-accepted-at`): migrazione `0019_accepted_at` ok (14 accettati con data; novembre 5, ottobre 6), dashboard, filtri «scaduti/da sollecitare», ricerca ⌘K, intestazione e tendina cliente. Durante la prova il preventivo PREV-2026-038 è stato sbloccato **solo sulla copia**; produzione verificata intatta. Il ramo di prova va eliminato (con l'ok dell'utente).

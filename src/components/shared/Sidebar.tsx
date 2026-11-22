@@ -473,7 +473,7 @@ export function Sidebar({ userRole, onClose, trashCount = 0 }: SidebarProps) {
               {navItems.filter((i) => !i.sites || sitesEnabledFor(userRole)).map(({ href, label, icon: Icon }) =>
                 href === "/preventivi" ? (
                   // Riga "Preventivi" con freccia che apre l'elenco (solo da aperta)
-                  <div key={href} className="relative">
+                  <div key={href} className="relative" data-tip="nav-preventivi">
                     {renderLink(href, label, Icon, preventiviActive)}
                     <button
                       onClick={openQuotesPanel}

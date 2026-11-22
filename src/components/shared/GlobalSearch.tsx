@@ -37,6 +37,7 @@ export function GlobalSearchField() {
       <button
         type="button"
         onClick={openGlobalSearch}
+        data-tip="search"
         className="flex h-9 w-full max-w-[520px] items-center gap-2.5 rounded-[10px] border bg-muted/60 px-3 text-left text-sm text-muted-foreground transition-colors hover:bg-muted"
       >
         <Search className="h-4 w-4 shrink-0" />

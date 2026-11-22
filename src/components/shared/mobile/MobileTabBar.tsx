@@ -66,6 +66,7 @@ function TabLink({ tab, active }: { tab: TabItem; active: boolean }) {
   return (
     <Link
       href={tab.href}
+      data-tip={tab.href === "/preventivi" ? "nav-preventivi" : undefined}
       className="group flex flex-1 flex-col items-center justify-center gap-1 pt-1 transition-transform active:scale-90"
     >
       <span

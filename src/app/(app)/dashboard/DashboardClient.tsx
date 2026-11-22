@@ -136,7 +136,7 @@ export function DashboardClient({
       />
 
       <SectionTitle>Da fare adesso</SectionTitle>
-      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div data-tip="dashboard-todo" className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <TodoCard href="/preventivi?vista=scaduti" icon={Clock} value={todo.expired} tone="orange"
           label={todo.expired === 1 ? "preventivo scaduto, ancora «inviato»" : "preventivi scaduti, ancora «inviati»"} />
         <TodoCard href="/preventivi?vista=sollecitare" icon={Phone} value={todo.followup} tone="blue"
@@ -171,8 +171,8 @@ export function DashboardClient({
         <KpiCard href="/preventivi?stato=draft" label="Bozze aperte" value={kpi.drafts} note="riprendi da dove eri rimasto" />
       </div>
 
-      <div className={cn("grid gap-3", data.showSites && "lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]")}>
-        <div className="surface !p-0">
+      <div className={cn("grid grid-cols-1 gap-3", data.showSites && "lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]")}>
+        <div className="surface min-w-0 !p-0">
           <p className="px-4 pb-1.5 pt-3.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">In sospeso</p>
           {data.pending.length === 0 ? (
             <p className="border-t px-4 py-6 text-center text-sm text-muted-foreground">Niente in sospeso: tutto in ordine.</p>
