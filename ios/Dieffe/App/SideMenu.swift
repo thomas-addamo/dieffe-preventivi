@@ -1,16 +1,22 @@
 import SwiftUI
+import UIKit
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Menu laterale (D2), al posto della scheda "Altro".
-//  • si apre scorrendo dal bordo sinistro (solo dalle schermate principali,
-//    così il gesto "indietro" di iOS resta libero) o con il tasto ☰ in alto;
-//  • come l'app Claude: il menu sta sotto, a tutta altezza, e la pagina scorre a
-//    destra diventando una scheda con gli angoli dello schermo (ConcentricRectangle,
-//    regola del border radius annidato); tasti rotondi e tasti in basso in Liquid
-//    Glass, concentrici agli angoli dell'iPhone;
+// Menu laterale (D2), al posto della scheda "Altro". Stesso modello dell'app
+// Polso (thomas-addamo/polso, iOS/RootView.swift), che a sua volta riprende
+// l'app Claude:
+//  • il menu sta sotto, su un fondo leggermente più scuro della pagina;
+//  • aprendo, la pagina scorre a destra e diventa una scheda: gli angoli
+//    crescono con l'apertura fino al raggio dello schermo dell'iPhone (border
+//    radius annidato), con bordo sottile e ombra;
+//  • il menu entra con un leggero scorrimento e dissolvenza;
+//  • animazione a molla; si apre trascinando dai primi 60 punti del bordo
+//    sinistro (solo nelle schermate principali, così il gesto "indietro"
+//    resta libero) o con ☰; si chiude toccando la pagina o trascinandola;
 //  • vibrazione all'apertura e alla chiusura;
-//  • in alto il logo Dieffe (le notifiche restano nella Home), poi i preventivi recenti e le pagine di "Altro";
-//    in basso a sinistra il profilo e accanto "Nuovo preventivo".
+//  • a menu chiuso la pagina non viene ritagliata né ombreggiata: gli angoli
+//    sono disegnati sopra solo mentre il menu è aperto (passaggio tra le
+//    schede pulito, senza sfarfallii di titoli e ricerca).
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Pagina aperta dal menu laterale.
@@ -22,6 +28,22 @@ enum MenuPage: Hashable, Identifiable {
 
     var id: Self { self }
 }
+
+/// Fondo del menu: un tono più scuro della pagina (come Polso), così la scheda si stacca.
+private let menuBackground = Color(uiColor: UIColor {
+    $0.userInterfaceStyle == .dark
+        ? UIColor(red: 0.035, green: 0.035, blue: 0.045, alpha: 1)
+        : UIColor(red: 0.905, green: 0.915, blue: 0.94, alpha: 1)
+})
+
+/// Raggio degli angoli dello schermo dell'iPhone (55 se iOS non lo dice).
+@MainActor
+let screenCornerRadius: CGFloat = {
+    let value = (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.screen.value(forKey: "_displayCornerRadius") as? CGFloat
+    return value.flatMap { $0 > 0 ? $0 : nil } ?? 55
+}()
+
+private let menuSpring = Animation.spring(response: 0.38, dampingFraction: 0.86)
 
 extension View {
     /// Il menu laterale sopra le schede (in RootView).
@@ -38,7 +60,7 @@ private struct SideMenuButton: ViewModifier {
         content.toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button("Menu", systemImage: "line.3.horizontal") {
-                    withAnimation(.snappy(duration: 0.32)) { model.sideMenuOpen = true }
+                    withAnimation(menuSpring) { model.sideMenuOpen = true }
                 }
                 .accessibilityHint("Apre il menu con le altre sezioni dell'app")
             }
@@ -46,25 +68,13 @@ private struct SideMenuButton: ViewModifier {
     }
 }
 
-/// Raggio degli angoli dello schermo dell'iPhone (55 se iOS non lo dice).
-@MainActor
-let screenCornerRadius: CGFloat = {
-    let value = (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.screen.value(forKey: "_displayCornerRadius") as? CGFloat
-    return value.flatMap { $0 > 0 ? $0 : nil } ?? 55
-}()
-
-/// La forma dello schermo: la pagina spostata ha gli stessi angoli dell'iPhone.
-@MainActor
-private var screenShape: RoundedRectangle { RoundedRectangle(cornerRadius: screenCornerRadius, style: .continuous) }
-
-/// Fondo del menu: bianco in chiaro e nero in scuro, così la pagina (grigia) si stacca
-/// come una scheda, come nell'app Claude.
-private let menuBackground = Color(.systemBackground)
-
-/// Il rettangolo dello schermo meno la sua forma arrotondata: riempito (pari-dispari)
-/// copre solo i quattro angoli.
-private struct ScreenCornerMask: Shape {
-    let radius: CGFloat
+/// Il rettangolo meno la sua forma arrotondata: riempito (pari-dispari) copre i 4 angoli.
+private struct CornerCutout: Shape {
+    var radius: CGFloat
+    var animatableData: CGFloat {
+        get { radius }
+        set { radius = newValue }
+    }
 
     func path(in rect: CGRect) -> Path {
         var path = Path(rect)
@@ -76,8 +86,9 @@ private struct ScreenCornerMask: Shape {
 private struct SideMenuContainer: ViewModifier {
     @Environment(AppModel.self) private var model
     /// Spostamento del dito mentre si apre o si chiude (punti).
-    @State private var drag: CGFloat = 0
-    @State private var dragging = false
+    @State private var dragOffset: CGFloat = 0
+    @State private var size = CGSize(width: 402, height: 874)
+    @State private var insets = EdgeInsets()
 
     /// Il gesto dal bordo vale solo dove non c'è una pagina da cui tornare indietro.
     private var edgeEnabled: Bool {
@@ -90,156 +101,143 @@ private struct SideMenuContainer: ViewModifier {
         }
     }
 
-    /// Larghezza e margini di sistema dello schermo, letti senza avvolgere la pagina in un
-    /// GeometryReader (che cambierebbe il suo layout e farebbe sfarfallare titoli e ricerca).
-    @State private var width: CGFloat = 402
-    @State private var insets = EdgeInsets()
-
     func body(content: Content) -> some View {
-        // Come l'app Claude: il menu sta sotto, a tutta altezza; la pagina scorre a destra e
-        // ne resta visibile un pezzo, come una scheda con gli angoli dello schermo.
-        // A menu chiuso la pagina NON viene toccata (niente ritaglio, ombra o margini nuovi):
-        // solo così il passaggio tra le schede resta pulito come prima.
-        let travel = max(200, width - 70)
+        let menuWidth = min(size.width * 0.82, 340)
         let open = model.sideMenuOpen
-        let progress = max(0, min(1, open ? 1 + drag / travel : drag / travel))
+        let progress = min(1, max(0, (open ? 1 : 0) + dragOffset / menuWidth))
+        let radius = screenCornerRadius * progress
 
         ZStack(alignment: .leading) {
             if progress > 0 {
-                menuBackground
-                    .ignoresSafeArea()
-                SideMenuPanel(top: insets.top, bottom: insets.bottom, close: { setOpen(false) })
-                    .frame(width: travel)
-                    .offset(x: (progress - 1) * 60)
+                menuBackground.ignoresSafeArea()
+
+                SideMenuPanel(top: insets.top, bottom: insets.bottom, close: { setMenu(false) })
+                    .frame(width: menuWidth)
+                    .opacity(0.3 + 0.7 * progress)
+                    .offset(x: -40 * (1 - progress))
                     .ignoresSafeArea()
                     .accessibilityHidden(!open)
             }
 
             content
-                // Ombra dietro la scheda (solo con il menu aperto).
                 .background {
+                    // Ombra della scheda (dietro la pagina, solo con il menu aperto).
                     if progress > 0 {
-                        screenShape
+                        RoundedRectangle(cornerRadius: radius, style: .continuous)
                             .fill(Color(.systemBackground))
-                            .shadow(color: .black.opacity(0.06 * progress), radius: 10, x: 0)
+                            .shadow(color: .black.opacity(0.25 * progress), radius: 24)
                             .ignoresSafeArea()
                     }
                 }
                 .overlay {
                     if progress > 0 {
                         ZStack {
-                            // Angoli dello schermo: fuori dalla curva si vede il fondo del menu,
-                            // così la pagina diventa una scheda con gli stessi angoli dell'iPhone.
-                            ScreenCornerMask(radius: screenCornerRadius)
+                            // Angoli: fuori dalla curva si vede il fondo del menu.
+                            CornerCutout(radius: radius)
                                 .fill(menuBackground, style: FillStyle(eoFill: true))
-                            // Solo un filo sottile sul bordo, come nell'app Claude: niente velo.
-                            screenShape
-                                .strokeBorder(Color.primary.opacity(0.12 * progress), lineWidth: 0.5)
-                            Color.clear
+                            RoundedRectangle(cornerRadius: radius, style: .continuous)
+                                .strokeBorder(Color.primary.opacity(0.08 * progress))
+                            // Pagina spostata: un tocco la riporta al centro.
+                            if open {
+                                Color.black.opacity(0.001)
+                                    .onTapGesture { setMenu(false) }
+                                    .accessibilityLabel("Chiudi il menu")
+                                    .accessibilityAddTraits(.isButton)
+                            }
                         }
                         .ignoresSafeArea()
-                        // Un tocco o un trascinamento riportano la pagina al centro.
-                        .contentShape(Rectangle())
-                        .onTapGesture { setOpen(false) }
-                        .gesture(closeDrag(travel: travel))
-                        .accessibilityLabel("Chiudi il menu")
-                        .accessibilityAddTraits(.isButton)
                     }
                 }
-                .offset(x: progress * travel)
+                .offset(x: menuWidth * progress)
 
-            // Striscia sul bordo sinistro: si scorre verso destra per aprire.
+            // Apertura: si trascina dal bordo sinistro. La lista della Home è un componente di
+            // sistema che si prende il tocco, quindi serve una striscia SwiftUI sopra la pagina
+            // (24 punti, nel margine: non copre tasti o righe).
             if edgeEnabled, !open {
                 Color.clear
-                    .frame(width: 18)
+                    .frame(width: 24)
                     .frame(maxHeight: .infinity)
                     .contentShape(Rectangle())
-                    .gesture(openDrag(travel: travel))
+                    .gesture(openGesture(menuWidth: menuWidth))
+                    .ignoresSafeArea()
                     .accessibilityHidden(true)
             }
         }
-        .animation(dragging ? nil : .snappy(duration: 0.34), value: progress)
-        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+        // Chiusura: trascinando la pagina spostata verso sinistra.
+        .simultaneousGesture(dragGesture(menuWidth: menuWidth))
+        .onGeometryChange(for: CGSize.self) { $0.size } action: { size = $0 }
         .onGeometryChange(for: EdgeInsets.self) { $0.safeAreaInsets } action: { insets = $0 }
         .sensoryFeedback(trigger: model.sideMenuOpen) { _, isOpen in
             isOpen ? .impact(weight: .medium) : .impact(weight: .light)
         }
         .onChange(of: model.selectedTab) {
-            if model.sideMenuOpen || drag != 0 { setOpen(false) }
+            if model.sideMenuOpen { setMenu(false) }
         }
     }
 
-    private func setOpen(_ value: Bool) {
-        drag = 0
-        dragging = false
-        model.sideMenuOpen = value
+    private func setMenu(_ value: Bool) {
+        withAnimation(menuSpring) {
+            model.sideMenuOpen = value
+            dragOffset = 0
+        }
     }
 
-    private func openDrag(travel: CGFloat) -> some Gesture {
-        DragGesture(minimumDistance: 8, coordinateSpace: .global)
+    private func openGesture(menuWidth: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 6, coordinateSpace: .global)
             .onChanged { value in
-                dragging = true
-                drag = max(0, min(travel, value.translation.width))
+                dragOffset = max(0, min(menuWidth, value.translation.width))
             }
             .onEnded { value in
-                let goal = max(value.translation.width, value.predictedEndTranslation.width)
-                setOpen(goal > travel * 0.35)
+                withAnimation(menuSpring) {
+                    if value.predictedEndTranslation.width > menuWidth / 3 { model.sideMenuOpen = true }
+                    dragOffset = 0
+                }
             }
     }
 
-    private func closeDrag(travel: CGFloat) -> some Gesture {
-        DragGesture(minimumDistance: 10, coordinateSpace: .global)
+    private func dragGesture(menuWidth: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 12)
             .onChanged { value in
-                guard model.sideMenuOpen else { return }
-                dragging = true
-                drag = min(0, max(-travel, value.translation.width))
+                let dx = value.translation.width
+                guard abs(dx) > abs(value.translation.height) else { return }
+                if model.sideMenuOpen { dragOffset = min(0, dx) }
             }
             .onEnded { value in
-                guard model.sideMenuOpen else { return }
-                let goal = min(value.translation.width, value.predictedEndTranslation.width)
-                setOpen(goal > -travel * 0.3)
+                let predicted = value.predictedEndTranslation.width
+                let wasDragging = dragOffset != 0
+                withAnimation(menuSpring) {
+                    if model.sideMenuOpen, wasDragging, predicted < -menuWidth / 3 {
+                        model.sideMenuOpen = false
+                    }
+                    dragOffset = 0
+                }
             }
     }
 }
 
-// MARK: - Pannello
-
+// MARK: - Menu
 
 private struct SideMenuPanel: View {
     @Environment(AppModel.self) private var model
-    /// Margini di sistema (ora, Dynamic Island, barra Home): il pannello va fino ai bordi.
+    /// Margini di sistema (ora, Dynamic Island, barra Home): il menu va fino ai bordi.
     let top: CGFloat
     let bottom: CGFloat
     let close: () -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
-                header
-                    .padding(.top, top + 8)
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 18) {
-                        recents
-                        sections
-                    }
-                    .padding(.vertical, 12)
+        VStack(alignment: .leading, spacing: 0) {
+            header
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 2) {
+                    recents
+                    sections
                 }
-                .scrollIndicators(.hidden)
-                .scrollEdgeEffectStyle(.soft, for: .vertical)
-                footer
-                    .padding(.top, 10)
-                    .background(alignment: .top) {
-                        // La lista sfuma sotto i tasti invece di finirci sotto di netto.
-                        LinearGradient(colors: [menuBackground.opacity(0), menuBackground],
-                                       startPoint: .top, endPoint: .bottom)
-                            .frame(height: 24)
-                            .offset(y: -24)
-                            .allowsHitTesting(false)
-                    }
-                    .background(menuBackground)
-                    .padding(.bottom, max(12, bottom - 8))
+                .padding(.bottom, 110)
             }
-            .padding(.horizontal, 12)
-        .padding(.leading, 8)
+            .scrollIndicators(.hidden)
+        }
+        .padding(.top, top + 12)
+        .overlay(alignment: .bottom) { bottomBar }
     }
 
     // MARK: Parti
@@ -249,46 +247,46 @@ private struct SideMenuPanel: View {
             Image("Logo")
                 .resizable()
                 .scaledToFit()
-                .frame(width: 32, height: 32)
+                .frame(width: 34, height: 34)
                 .accessibilityHidden(true)
             Text("Dieffe")
-                .font(.title.weight(.bold))
+                .font(.system(size: 34, weight: .bold))
                 .accessibilityAddTraits(.isHeader)
             Spacer()
         }
-        .padding(.leading, 6)
+        .padding(.horizontal, 20)
+        .padding(.bottom, 14)
     }
 
     private var recentQuotes: [QuoteSummary] {
         let all = model.home.data?.quotes ?? []
         let byID = Dictionary(all.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
-        return model.recents.ids.compactMap { byID[$0] }.prefix(4).map { $0 }
+        return model.recents.ids.compactMap { byID[$0] }.prefix(5).map { $0 }
     }
 
     @ViewBuilder
     private var recents: some View {
         let quotes = recentQuotes
         if !quotes.isEmpty {
-            VStack(alignment: .leading, spacing: 2) {
-                HStack {
-                    sectionTitle("Recenti")
-                    Spacer()
-                    Button {
-                        close()
-                        model.select(.home)
-                    } label: {
-                        HStack(spacing: 2) {
-                            Text("Vedi tutto")
-                            Image(systemName: "chevron.right").font(.caption.weight(.semibold))
-                        }
-                        .font(.subheadline)
+            HStack {
+                sectionTitle("Recenti")
+                Spacer()
+                Button {
+                    close()
+                    model.select(.home)
+                } label: {
+                    HStack(spacing: 2) {
+                        Text("Vedi tutto")
+                        Image(systemName: "chevron.right").font(.caption.weight(.semibold))
                     }
-                    .tint(.primary)
+                    .font(.subheadline)
                 }
-                ForEach(quotes) { quote in
-                    row(quote.title, symbol: "doc.text", detail: [quote.code, quote.clientName].compactMap { $0 }.joined(separator: " · ")) {
-                        model.openQuote(quote.id)
-                    }
+                .buttonStyle(.plain)
+                .padding(.trailing, 22)
+            }
+            ForEach(quotes) { quote in
+                row(quote.title.trimmingCharacters(in: .whitespacesAndNewlines), icon: "doc.text") {
+                    model.openQuote(quote.id)
                 }
             }
         }
@@ -296,47 +294,44 @@ private struct SideMenuPanel: View {
 
     @ViewBuilder
     private var sections: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            sectionTitle("Operatività")
-            row("Lavori extra", symbol: "doc.badge.plus") { model.openMenuPage(.route(.extras)) }
-            row("Statistiche", symbol: "chart.bar") { model.openMenuPage(.route(.stats)) }
-            row("Comunicazioni", symbol: "envelope") { model.openMenuPage(.route(.communications)) }
-            if model.canEdit {
-                row("Cestino", symbol: "trash", badge: model.home.data?.trashCount ?? 0) { model.openMenuPage(.route(.trash)) }
-            }
+        sectionTitle("Operatività").padding(.top, 14)
+        row("Lavori extra", icon: "doc.badge.plus") { model.openMenuPage(.route(.extras)) }
+        row("Statistiche", icon: "chart.bar") { model.openMenuPage(.route(.stats)) }
+        row("Comunicazioni", icon: "envelope") { model.openMenuPage(.route(.communications)) }
+        if model.canEdit {
+            row("Cestino", icon: "trash", badge: model.home.data?.trashCount ?? 0) { model.openMenuPage(.route(.trash)) }
         }
         if model.currentUser?.role == "admin" {
-            VStack(alignment: .leading, spacing: 2) {
-                sectionTitle("Amministrazione")
-                row("Invia notifica", symbol: "bell.badge") { model.openMenuPage(.route(.notify)) }
-                row("Utenti", symbol: "person.2") { model.openMenuPage(.route(.users)) }
-                row("Impostazioni azienda", symbol: "building.2") { model.openMenuPage(.route(.company)) }
-            }
+            sectionTitle("Amministrazione").padding(.top, 14)
+            row("Invia notifica", icon: "bell.badge") { model.openMenuPage(.route(.notify)) }
+            row("Utenti", icon: "person.2") { model.openMenuPage(.route(.users)) }
+            row("Impostazioni azienda", icon: "building.2") { model.openMenuPage(.route(.company)) }
         }
-        VStack(alignment: .leading, spacing: 2) {
-            sectionTitle("App")
-            row("Aiuto", symbol: "questionmark.circle") { model.openMenuPage(.help) }
-            row("App iPhone", symbol: "iphone", detail: "Face ID, versione, cache") { model.openMenuPage(.appSettings) }
-        }
+        sectionTitle("App").padding(.top, 14)
+        row("Aiuto", icon: "questionmark.circle") { model.openMenuPage(.help) }
+        row("App iPhone", icon: "iphone") { model.openMenuPage(.appSettings) }
         Text("Dieffe Preventivi · app \(AppConfig.version)")
-            .font(.caption2)
+            .font(.caption)
             .foregroundStyle(.secondary)
-            .padding(.leading, 6)
+            .padding(.horizontal, 22)
+            .padding(.top, 12)
     }
 
-    private var footer: some View {
-        HStack(spacing: 10) {
+    private var bottomBar: some View {
+        HStack(spacing: 14) {
             Button {
                 close()
                 model.showProfile = true
             } label: {
-                InitialsAvatar(name: model.currentUser?.name ?? "", size: 40)
+                Text(InitialsAvatar.initials(of: model.currentUser?.name ?? ""))
+                    .font(.system(size: 18, weight: .semibold))
                     .frame(width: 52, height: 52)
-                    .contentShape(ConcentricRectangle())
             }
             .buttonStyle(.plain)
-            .glassEffect(.regular.interactive(), in: ConcentricRectangle(corners: .concentric(minimum: 26), isUniform: true))
+            .glassEffect(.regular.interactive(), in: .circle)
             .accessibilityLabel("Profilo")
+
+            Spacer(minLength: 0)
 
             if model.canEdit {
                 Button {
@@ -344,54 +339,61 @@ private struct SideMenuPanel: View {
                     model.newQuote()
                 } label: {
                     Label("Nuovo preventivo", systemImage: "plus")
-                        .font(.body.weight(.semibold))
-                        .frame(maxWidth: .infinity, minHeight: 52)
-                        .contentShape(ConcentricRectangle())
+                        .font(.headline)
+                        .lineLimit(1)
+                        .fixedSize()
+                        .foregroundStyle(Color(uiColor: .systemBackground))
+                        .padding(.horizontal, 22)
+                        .padding(.vertical, 16)
+                        .background(Color.primary, in: Capsule())
+                        .shadow(color: .black.opacity(0.2), radius: 12, y: 4)
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(.white)
-                .glassEffect(.regular.tint(.accentColor).interactive(), in: ConcentricRectangle(corners: .concentric(minimum: 26), isUniform: false))
             }
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 28)
+        .padding(.bottom, max(bottom, 20))
+        // La lista sfuma sotto i tasti invece di finirci sotto di netto.
+        .background {
+            LinearGradient(stops: [.init(color: menuBackground.opacity(0), location: 0),
+                                   .init(color: menuBackground, location: 0.45)],
+                           startPoint: .top, endPoint: .bottom)
+                .allowsHitTesting(false)
         }
     }
 
-    private func sectionTitle(_ text: String) -> some View {
-        Text(text)
+    private func sectionTitle(_ title: String) -> some View {
+        Text(title)
             .font(.subheadline)
             .foregroundStyle(.secondary)
-            .padding(.leading, 6)
-            .padding(.bottom, 4)
+            .padding(.horizontal, 22)
+            .padding(.vertical, 6)
             .accessibilityAddTraits(.isHeader)
     }
 
-    private func row(_ title: String, symbol: String, detail: String? = nil, badge: Int = 0, action: @escaping () -> Void) -> some View {
+    private func row(_ title: String, icon: String, badge: Int = 0, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack(spacing: 12) {
-                Image(systemName: symbol)
-                    .font(.body)
-                    .frame(width: 24)
+            HStack(spacing: 14) {
+                Image(systemName: icon)
+                    .font(.system(size: 17))
                     .foregroundStyle(.secondary)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(title).lineLimit(1)
-                    if let detail, !detail.isEmpty {
-                        Text(detail).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                    }
-                }
-                Spacer(minLength: 4)
+                    .frame(width: 24)
+                Text(title)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
                 if badge > 0 {
                     Text("\(badge)")
-                        .font(.caption.weight(.semibold))
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 2)
-                        .background(.red, in: Capsule())
-                        .foregroundStyle(.white)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                 }
             }
-            .padding(.horizontal, 6)
-            .frame(minHeight: 44)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .padding(.horizontal, 8)
     }
 }
 
