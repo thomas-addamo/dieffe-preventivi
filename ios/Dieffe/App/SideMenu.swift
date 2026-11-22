@@ -9,7 +9,7 @@ import SwiftUI
 //    regola del border radius annidato); tasti rotondi e tasti in basso in Liquid
 //    Glass, concentrici agli angoli dell'iPhone;
 //  • vibrazione all'apertura e alla chiusura;
-//  • in alto il logo Dieffe, poi i preventivi recenti e le pagine di "Altro";
+//  • in alto il logo Dieffe (le notifiche restano nella Home), poi i preventivi recenti e le pagine di "Altro";
 //    in basso a sinistra il profilo e accanto "Nuovo preventivo".
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -215,15 +215,6 @@ private struct SideMenuPanel: View {
                 .font(.title.weight(.bold))
                 .accessibilityAddTraits(.isHeader)
             Spacer()
-            Button("Notifiche", systemImage: model.unreadNotifications > 0 ? "bell.badge.fill" : "bell") {
-                close()
-                model.showNotifications = true
-            }
-            .labelStyle(.iconOnly)
-            .font(.title3)
-            .frame(width: 44, height: 44)
-            .glassEffect(.regular.interactive(), in: Circle())
-            .accessibilityValue(model.unreadNotifications > 0 ? "\(model.unreadNotifications) da leggere" : "")
         }
         .padding(.leading, 6)
     }
