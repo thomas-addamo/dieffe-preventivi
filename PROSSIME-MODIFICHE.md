@@ -21,7 +21,7 @@
 | B3 | Documenti PDF nel cantiere | ✅ Fatto | 4.8.0 → 4.8.2 |
 | C1–C3 | Restyling (solo sito e Mac) | ✅ Fatto | 4.9.0 |
 | D1 | Sopralluogo con IA vocale | 📄 Studio consegnato il 22/11: in attesa delle 5 scelte | — |
-| D2 | iPhone: menu laterale al posto di "Altro" | 🎨 Mockup proposto il 22/11: in attesa delle scelte | — |
+| D2 | iPhone: menu laterale al posto di "Altro" | 🧪 Fatto sul simulatore iPhone 18 Pro (22/11), in attesa di «pubblica» | — |
 
 ---
 
@@ -362,7 +362,8 @@ Da fare insieme, per avere un linguaggio visivo coerente. **Proporre all'utente 
 
 
 ### D2. iPhone: menu laterale al posto della scheda "Altro"  _(#17, aggiunta il 2026-11-21)_
-- **Stato:** 🎨 Mockup proposto il 2026-11-22: https://claude.ai/artifact/SwvLEj2bGXFVYNeEdSqKDw (menu aperto; Home con tasto ☰ e barra in basso a 4 schede: Home, Clienti, Cantieri, Listino). In attesa delle scelte.
+- **Stato:** 🧪 Fatto e provato sul simulatore iPhone 18 Pro il 2026-11-22, non ancora pubblicato. Mockup: https://claude.ai/artifact/SwvLEj2bGXFVYNeEdSqKDw
+- **Come è fatto (scelte dell'utente del 22/11):** come l'app Claude — il menu sta sotto a tutta altezza e **la pagina scorre a destra diventando una scheda con gli angoli dello schermo dell'iPhone** (stesso raggio del display: regola del border radius annidato); tasti rotondi e tasti in basso in **Liquid Glass**, concentrici agli angoli dell'iPhone. Si apre col gesto dal bordo sinistro (solo nelle schermate principali delle schede, così il gesto «indietro» resta libero) o col tasto ☰ in alto a sinistra; vibrazione in apertura e chiusura. Barra in basso: Home, Clienti, Cantieri, Listino. In basso nel menu: profilo e «+ Nuovo preventivo». Recenti = ultimi 4 preventivi aperti dall'app. Le pagine di «Altro» si aprono a tutto schermo con la X per chiudere. Codice: `ios/Dieffe/App/SideMenu.swift`.
 - **Piattaforme:** iPhone (il sito e l'app desktop hanno già la barra laterale)
 - **Cosa:** un menu laterale che si apre **scorrendo dal bordo sinistro** dell'app, come nell'app Claude per iPhone (schermata di riferimento).
   1. Dentro il menu va **tutto il contenuto della scheda "Altro"**, che va **tolta dalla barra in basso**. Oggi "Altro" (`ios/Dieffe/Native/More/AltroView.swift`) contiene: Profilo (nome, sicurezza, aspetto), Notifiche, Aiuto, App iPhone (Face ID, versione, cache), Gestione Cantieri; sezione Operatività: Lavori extra, Statistiche, Comunicazioni, Cestino; sezione Amministrazione (solo admin): Invia notifica, Utenti, Impostazioni azienda.

@@ -27,6 +27,7 @@ struct HomeView: View {
             }
             .navigationTitle("Preventivi")
             .navigationSubtitle(greeting)
+            .sideMenuButton()
             .toolbar { toolbar }
             .searchable(text: $search, placement: .navigationBarDrawer, prompt: "Titolo, codice o cliente")
             .refreshable { await store.load() }
@@ -227,9 +228,6 @@ struct HomeView: View {
 
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            ProfileMenu(confirmLogout: $confirmLogout)
-        }
         ToolbarItem(placement: .topBarTrailing) {
             Button {
                 model.showNotifications = true

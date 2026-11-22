@@ -22,6 +22,7 @@ struct ClientsView: View {
                 }
             }
             .navigationTitle("Clienti")
+            .sideMenuButton()
             .navigationDestination(for: String.self) { id in
                 ClientDetailView(clientID: id)
             }

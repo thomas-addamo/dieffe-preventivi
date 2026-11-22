@@ -39,6 +39,7 @@ struct PriceListHome: View {
                 }
             }
             .navigationTitle("Listino")
+            .sideMenuButton()
             .searchable(text: $search, placement: .navigationBarDrawer, prompt: "Cerca in tutto il listino")
             .refreshable { await store.load() }
             .toolbar {

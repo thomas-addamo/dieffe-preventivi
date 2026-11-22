@@ -2,7 +2,8 @@ import QuickLook
 import SwiftUI
 import WebKit
 
-/// Tab bar nativa (Liquid Glass): Home, Clienti, Cantieri (se attiva), Listino, Altro. Il nuovo
+/// Tab bar nativa (Liquid Glass): Home, Clienti, Cantieri (se attiva), Listino; il resto è nel
+/// menu laterale (D2, SideMenu.swift). Il nuovo
 /// preventivo si crea dal ＋ blu in alto nella Home.
 /// L'editor dei preventivi si apre a tutto schermo; il Profilo in un foglio.
 struct RootView: View {
@@ -27,27 +28,23 @@ struct RootView: View {
             Tab(AppTab.listino.title, systemImage: AppTab.listino.symbol, value: AppTab.listino) {
                 PriceListHome()
             }
-            Tab(AppTab.altro.title, systemImage: AppTab.altro.symbol, value: AppTab.altro) {
-                AltroView()
-            }
-            .badge(model.home.data?.trashCount.flatMap { $0 > 0 && model.canEdit ? $0 : nil } ?? 0)
         }
         .tabBarMinimizeBehavior(.never)
+        // D2: "Altro" non è più una scheda ma il menu laterale (gesto dal bordo o ☰).
+        .sideMenu()
         .sheet(isPresented: $model.showNewQuote, onDismiss: model.openPendingQuote) {
             NewQuoteView()
         }
         .sheet(isPresented: $model.showImport, onDismiss: model.openPendingQuote) {
             ImportQuoteView()
         }
-        .fullScreenCover(item: $model.editor, onDismiss: model.closeEditor) { session in
-            Group {
-                if let page = session.page {
-                    QuoteEditorScreen(page: page)
-                } else {
-                    QuoteEditorView(quoteID: session.quoteID)
-                }
-            }
-            .appMessages(active: true)
+        // Con una pagina del menu aperta, l'editor lo presenta quella pagina (MenuPageScreen).
+        .fullScreenCover(item: Binding(get: { model.menuPage == nil ? model.editor : nil }, set: { model.editor = $0 }),
+                         onDismiss: model.closeEditor) { session in
+            EditorCover(session: session)
+        }
+        .fullScreenCover(item: $model.menuPage) { page in
+            MenuPageScreen(page: page)
         }
         .sheet(item: $model.whatsNew, onDismiss: { WhatsNew.markSeen() }) { entry in
             WhatsNewView(entry: entry)
@@ -60,7 +57,7 @@ struct RootView: View {
                 ProfileView(inSheet: true)
             }
         }
-        .appMessages(active: model.editor == nil)
+        .appMessages(active: model.editor == nil && model.menuPage == nil)
         .sheet(isPresented: $model.showSettings) {
             SettingsView()
                 .presentationDetents([.medium, .large])
@@ -126,6 +123,22 @@ struct RootView: View {
     }
 }
 
+/// L'editor a tutto schermo: nativo, o il sito ("Apri nel sito").
+struct EditorCover: View {
+    let session: EditorSession
+
+    var body: some View {
+        Group {
+            if let page = session.page {
+                QuoteEditorScreen(page: page)
+            } else {
+                QuoteEditorView(quoteID: session.quoteID)
+            }
+        }
+        .appMessages(active: true)
+    }
+}
+
 /// Editor del preventivo del sito ("Apri nel sito") a tutto schermo: la sua
 /// freccia "indietro" porta alla dashboard, e l'app chiude l'editor (vedi AppModel.route).
 private struct QuoteEditorScreen: View {
@@ -137,7 +150,7 @@ private struct QuoteEditorScreen: View {
     }
 }
 
-private extension View {
+extension View {
     /// Quick Look e avvisi: presentati dalla vista in primo piano (l'editor a
     /// tutto schermo o la tab bar), altrimenti iOS non li mostrerebbe.
     func appMessages(active: Bool) -> some View {

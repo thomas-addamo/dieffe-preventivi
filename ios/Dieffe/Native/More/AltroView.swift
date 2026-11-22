@@ -1,126 +1,21 @@
 import SwiftUI
 
-/// Altro nativo (come src/app/(app)/altro/AltroClient.tsx): profilo, aiuto,
-/// operatività e amministrazione, tutto in SwiftUI. Audit log e Sessioni
-/// attive restano solo sul sito e nell'app desktop.
-struct AltroView: View {
-    @Environment(AppModel.self) private var model
+/// Le pagine che stavano in "Altro" (D2: ora si aprono dal menu laterale).
+/// Audit log e Sessioni attive restano solo sul sito e nell'app desktop.
+struct AltroDestination: View {
+    let route: AltroRoute
 
     var body: some View {
-        @Bindable var model = model
-        let user = model.currentUser
-
-        NavigationStack(path: $model.altroPath) {
-            List {
-                Section {
-                    NavigationLink {
-                        ProfileView()
-                    } label: {
-                        HStack(spacing: 14) {
-                            InitialsAvatar(name: user?.name ?? "", size: 52)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(user?.name ?? "Profilo")
-                                    .font(.headline)
-                                Text("Profilo, sicurezza, aspetto")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        .padding(.vertical, 4)
-                    }
-                }
-
-                Section {
-                    Button {
-                        model.showNotifications = true
-                    } label: {
-                        MoreRow(title: "Notifiche", subtitle: "Firme, stati, assegnazioni, comunicazioni",
-                                symbol: "bell.fill", color: .red, badge: model.unreadNotifications, chevron: true)
-                    }
-                    .tint(.primary)
-                    NavigationLink {
-                        HelpView()
-                    } label: {
-                        MoreRow(title: "Aiuto", subtitle: "Chiedi all'assistente o scrivi all'amministratore",
-                                symbol: "questionmark.circle.fill", color: .cyan)
-                    }
-                    NavigationLink {
-                        SettingsView(embedded: true)
-                    } label: {
-                        MoreRow(title: "App iPhone", subtitle: "Face ID, versione, cache",
-                                symbol: "iphone", color: .gray)
-                    }
-                }
-
-                Section("Operatività") {
-                    if model.sitesEnabled {
-                        Button {
-                            model.select(.cantieri)
-                        } label: {
-                            MoreRow(title: "Gestione Cantieri", subtitle: "Mappa, avanzamento lavori, SAL e scadenze",
-                                    symbol: "hammer.fill", color: .orange, chevron: true)
-                        }
-                        .tint(.primary)
-                    }
-                    link(.extras, "Lavori extra", "Lavorazioni aggiuntive di un preventivo", "doc.badge.plus", .orange)
-                    Button {
-                        model.select(.listino)
-                    } label: {
-                        MoreRow(title: "Listino", subtitle: "Prezzi e voci ricorrenti",
-                                symbol: "list.bullet.rectangle.portrait.fill", color: .blue, chevron: true)
-                    }
-                    .tint(.primary)
-                    link(.stats, "Statistiche", "Andamento preventivi e conversioni", "chart.bar.fill", .green)
-                    link(.communications, "Comunicazioni", "Lettere su carta intestata con timbro", "envelope.fill", .purple)
-                    if model.canEdit {
-                        link(.trash, "Cestino", "Preventivi eliminati di recente", "trash.fill", .orange,
-                             badge: model.home.data?.trashCount ?? 0)
-                    }
-                }
-
-                if user?.role == "admin" {
-                    Section {
-                        link(.notify, "Invia notifica", "Comunicazioni agli utenti", "bell.badge.fill", .pink)
-                        link(.users, "Utenti", "Gestione account e ruoli", "person.2.badge.gearshape.fill", .indigo)
-                        link(.company, "Impostazioni azienda", "Dati, logo, PDF, numerazione, team", "gearshape.fill", .gray)
-                    } header: {
-                        Label("Amministrazione", systemImage: "shield.lefthalf.filled")
-                    } footer: {
-                        Text("Audit log e Sessioni attive sono disponibili sul sito e nell'app desktop.")
-                    }
-                }
-
-                Section {
-                } footer: {
-                    Text("Dieffe Preventivi · app \(AppConfig.version)")
-                        .frame(maxWidth: .infinity)
-                }
-            }
-            .navigationTitle("Altro")
-            .navigationDestination(for: WebDestination.self) { destination in
-                WebScreen(path: destination.path, title: destination.title)
-            }
-            .navigationDestination(for: AltroRoute.self) { route in
-                switch route {
-                case .sites, .sitesArchive, .site:
-                    SiteRouteView(route: route)
-                case .extras: ExtrasView()
-                case .stats: StatsView()
-                case .communications: CommunicationsView()
-                case .trash: TrashView()
-                case .notify: SendNotificationView()
-                case .users: UsersView()
-                case .company: CompanySettingsView()
-                }
-            }
-            .refreshable { model.dataChanged() }
-        }
-    }
-
-    private func link(_ route: AltroRoute, _ title: String, _ subtitle: String, _ symbol: String, _ color: Color,
-                      badge: Int = 0) -> some View {
-        NavigationLink(value: route) {
-            MoreRow(title: title, subtitle: subtitle, symbol: symbol, color: color, badge: badge)
+        switch route {
+        case .sites, .sitesArchive, .site:
+            SiteRouteView(route: route)
+        case .extras: ExtrasView()
+        case .stats: StatsView()
+        case .communications: CommunicationsView()
+        case .trash: TrashView()
+        case .notify: SendNotificationView()
+        case .users: UsersView()
+        case .company: CompanySettingsView()
         }
     }
 }
@@ -133,6 +28,7 @@ struct SitesTab: View {
         @Bindable var model = model
         NavigationStack(path: $model.sitesPath) {
             SiteRouteView(route: .sites)
+                .sideMenuButton()
                 .navigationDestination(for: AltroRoute.self) { SiteRouteView(route: $0) }
         }
     }

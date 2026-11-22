@@ -31,6 +31,10 @@ final class AppModel {
     /// Editor del preventivo a tutto schermo: nativo, oppure il sito ("Apri nel sito").
     var editor: EditorSession?
     var showProfile = false
+    /// Menu laterale (D2): al posto della scheda "Altro".
+    var sideMenuOpen = false
+    /// Pagina aperta dal menu laterale, a tutto schermo con la sua navigazione.
+    var menuPage: MenuPage?
     var showNotifications = false
     /// "Novità" da mostrare dopo un aggiornamento importante (WhatsNew).
     var whatsNew: WhatsNewEntry?
@@ -74,6 +78,10 @@ final class AppModel {
             newQuote()
             return
         }
+        if tab == .altro {
+            sideMenuOpen = true
+            return
+        }
         if tab == selectedTab {
             switch tab {
             case .clienti: clientsPath = NavigationPath()
@@ -101,6 +109,7 @@ final class AppModel {
 
     func openQuote(_ id: String) {
         recents.add(id)
+        sideMenuOpen = false
         if editor?.quoteID == id, editor?.page == nil { return }
         editor = EditorSession(quoteID: id, page: nil)
     }
@@ -143,12 +152,14 @@ final class AppModel {
             open(route)
             return
         }
-        selectedTab = .altro
-        if let route = AltroRoute(path: path) {
-            altroPath.append(route)
-        } else {
-            altroPath.append(WebDestination(path: path, title: title))
-        }
+        openMenuPage(AltroRoute(path: path).map(MenuPage.route) ?? .web(WebDestination(path: path, title: title)))
+    }
+
+    /// Una pagina del menu laterale, a tutto schermo (la chiude la X in alto).
+    func openMenuPage(_ page: MenuPage) {
+        sideMenuOpen = false
+        altroPath = NavigationPath()
+        menuPage = page
     }
 
     /// Apre un percorso del sito (notifiche, link dieffe://): schermata nativa se c'è.
@@ -170,9 +181,7 @@ final class AppModel {
             if route != .sites { sitesPath.append(route) }
             return
         }
-        selectedTab = .altro
-        altroPath = NavigationPath()
-        altroPath.append(route)
+        openMenuPage(.route(route))
     }
 
     /// Esci: chiude la sessione sul server e cancella il cookie dall'app.
@@ -183,12 +192,16 @@ final class AppModel {
         sites.reset()
         sessionExpired()
         selectedTab = .home
+        menuPage = nil
+        sideMenuOpen = false
         altroPath = NavigationPath()
         sitesPath = NavigationPath()
     }
 
     private func sessionExpired() {
         editor = nil
+        menuPage = nil
+        sideMenuOpen = false
         showProfile = false
         showNewQuote = false
         showImport = false
@@ -243,7 +256,7 @@ final class AppModel {
         case .quote(let id): openQuote(id)
         case .priceList: selectedTab = .listino
         case .profile: showProfile = true
-        case .more: selectedTab = .altro
+        case .more: sideMenuOpen = true
         case .notifications: showNotifications = true
         case nil:
             // Altre pagine del sito (cestino, statistiche…) dentro Altro.
