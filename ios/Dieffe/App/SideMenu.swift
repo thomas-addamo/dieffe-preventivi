@@ -57,6 +57,18 @@ let screenCornerRadius: CGFloat = {
 @MainActor
 private var screenShape: RoundedRectangle { RoundedRectangle(cornerRadius: screenCornerRadius, style: .continuous) }
 
+/// Il rettangolo dello schermo meno la sua forma arrotondata: riempito (pari-dispari)
+/// copre solo i quattro angoli.
+private struct ScreenCornerMask: Shape {
+    let radius: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path(rect)
+        path.addPath(RoundedRectangle(cornerRadius: radius, style: .continuous).path(in: rect))
+        return path
+    }
+}
+
 private struct SideMenuContainer: ViewModifier {
     @Environment(AppModel.self) private var model
     /// Spostamento del dito mentre si apre o si chiude (punti).
@@ -74,59 +86,83 @@ private struct SideMenuContainer: ViewModifier {
         }
     }
 
-    func body(content: Content) -> some View {
-        GeometryReader { geo in
-            // Come l'app Claude: il menu sta sotto, a tutta altezza; la pagina scorre a
-            // destra e ne resta visibile un pezzo, come una scheda.
-            let travel = geo.size.width - 70
-            let open = model.sideMenuOpen
-            let progress = max(0, min(1, open ? 1 + drag / travel : drag / travel))
+    /// Larghezza e margini di sistema dello schermo, letti senza avvolgere la pagina in un
+    /// GeometryReader (che cambierebbe il suo layout e farebbe sfarfallare titoli e ricerca).
+    @State private var width: CGFloat = 402
+    @State private var insets = EdgeInsets()
 
-            ZStack(alignment: .leading) {
-                SideMenuPanel(top: geo.safeAreaInsets.top, bottom: geo.safeAreaInsets.bottom, close: { setOpen(false) })
+    func body(content: Content) -> some View {
+        // Come l'app Claude: il menu sta sotto, a tutta altezza; la pagina scorre a destra e
+        // ne resta visibile un pezzo, come una scheda con gli angoli dello schermo.
+        // A menu chiuso la pagina NON viene toccata (niente ritaglio, ombra o margini nuovi):
+        // solo così il passaggio tra le schede resta pulito come prima.
+        let travel = max(200, width - 70)
+        let open = model.sideMenuOpen
+        let progress = max(0, min(1, open ? 1 + drag / travel : drag / travel))
+
+        ZStack(alignment: .leading) {
+            if progress > 0 {
+                Color(.systemGroupedBackground)
+                    .ignoresSafeArea()
+                SideMenuPanel(top: insets.top, bottom: insets.bottom, close: { setOpen(false) })
                     .frame(width: travel)
                     .offset(x: (progress - 1) * 60)
-                    .opacity(progress > 0 ? 1 : 0)
+                    .ignoresSafeArea()
                     .accessibilityHidden(!open)
+            }
 
-                content
-                    // Angoli della pagina = angoli dello schermo dell'iPhone (stesso raggio).
-                    .clipShape(screenShape)
-                    .overlay {
-                        // Pagina spostata: un tocco o un trascinamento la riportano al centro.
-                        if progress > 0 {
+            content
+                // Ombra dietro la scheda (solo con il menu aperto).
+                .background {
+                    if progress > 0 {
+                        screenShape
+                            .fill(Color(.systemBackground))
+                            .shadow(color: .black.opacity(0.18 * progress), radius: 24, x: -6)
+                            .ignoresSafeArea()
+                    }
+                }
+                .overlay {
+                    if progress > 0 {
+                        ZStack {
+                            // Angoli dello schermo: fuori dalla curva si vede il fondo del menu,
+                            // così la pagina diventa una scheda con gli stessi angoli dell'iPhone.
+                            ScreenCornerMask(radius: screenCornerRadius)
+                                .fill(Color(.systemGroupedBackground), style: FillStyle(eoFill: true))
                             screenShape
                                 .fill(Color.black.opacity(0.06 * progress))
-                                .overlay(screenShape.stroke(Color.primary.opacity(0.1 * progress), lineWidth: 1))
-                                .contentShape(Rectangle())
-                                .onTapGesture { setOpen(false) }
-                                .gesture(closeDrag(travel: travel))
-                                .accessibilityLabel("Chiudi il menu")
-                                .accessibilityAddTraits(.isButton)
+                            screenShape
+                                .stroke(Color.primary.opacity(0.1 * progress), lineWidth: 1)
                         }
-                    }
-                    .shadow(color: .black.opacity(0.18 * progress), radius: 24, x: -6)
-                    .offset(x: progress * travel)
-
-                // Striscia sul bordo sinistro: si scorre verso destra per aprire.
-                if edgeEnabled, !open {
-                    Color.clear
-                        .frame(width: 18)
+                        .ignoresSafeArea()
+                        // Un tocco o un trascinamento riportano la pagina al centro.
                         .contentShape(Rectangle())
-                        .gesture(openDrag(travel: travel))
-                        .accessibilityHidden(true)
+                        .onTapGesture { setOpen(false) }
+                        .gesture(closeDrag(travel: travel))
+                        .accessibilityLabel("Chiudi il menu")
+                        .accessibilityAddTraits(.isButton)
+                    }
                 }
+                .offset(x: progress * travel)
+
+            // Striscia sul bordo sinistro: si scorre verso destra per aprire.
+            if edgeEnabled, !open {
+                Color.clear
+                    .frame(width: 18)
+                    .frame(maxHeight: .infinity)
+                    .contentShape(Rectangle())
+                    .gesture(openDrag(travel: travel))
+                    .accessibilityHidden(true)
             }
-            // Tutto a schermo intero: la pagina spostata è una scheda con gli angoli dell'iPhone
-            // dall'alto in basso (i margini di sistema arrivano comunque ai contenuti).
-            .ignoresSafeArea()
-            .background(Color(.systemGroupedBackground).ignoresSafeArea())
-            .animation(dragging ? nil : .snappy(duration: 0.34), value: progress)
         }
+        .animation(dragging ? nil : .snappy(duration: 0.34), value: progress)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+        .onGeometryChange(for: EdgeInsets.self) { $0.safeAreaInsets } action: { insets = $0 }
         .sensoryFeedback(trigger: model.sideMenuOpen) { _, isOpen in
             isOpen ? .impact(weight: .medium) : .impact(weight: .light)
         }
-        .onChange(of: model.selectedTab) { setOpen(false) }
+        .onChange(of: model.selectedTab) {
+            if model.sideMenuOpen || drag != 0 { setOpen(false) }
+        }
     }
 
     private func setOpen(_ value: Bool) {
