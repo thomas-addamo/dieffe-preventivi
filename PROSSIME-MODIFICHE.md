@@ -19,7 +19,7 @@
 | B1 | Blocco automatico dei preventivi | 🧪 In test: verificato da admin ed editor; manca il 423 via API | 4.8.0 + 4.8.1 |
 | B2 | Correzione automatica con IA | 🧪 In test: online, da provare nell'uso reale | 4.8.0 |
 | B3 | Documenti PDF nel cantiere | 🧪 In test: caricamento e apertura verificati; manca il PDF grande | 4.8.0 → 4.8.2 |
-| C1–C3 | Restyling (solo sito e Mac) | 🚀 Pubblicato il 22/11; controllo in produzione da fare | 4.9.0 |
+| C1–C3 | Restyling (solo sito e Mac) | 🚀 Online dal 22/11; manca la prova a mano dopo l'accesso | 4.9.0 |
 | D1 | Sopralluogo con IA vocale | 📋 Da fare (prima lo studio) | — |
 | D2 | iPhone: menu laterale al posto di "Altro" | 📋 Da fare (prima il mockup) | — |
 
@@ -403,6 +403,7 @@ _(scelte condivise che valgono per tutte le modifiche — aggiungere con data)_
 - 2026-11-22 — Dashboard corretta a pagina stretta (le colonne uscivano dallo schermo).
 
 ## 5b. In sospeso (da controllare)
+- **4.9.0 online (22/11):** deploy pronto, migrazione applicata (14 accettati su 14 con `accepted_at`), nessun preventivo modificato, nessun errore del server. La pagina vera dopo l'accesso va guardata dall'utente (Claude non inserisce password). La versione dell'app Mac installata riceve il nuovo menu «Cerca… ⌘K» solo col prossimo aggiornamento dell'app.
 - **Fase C (4.9.0), 22/11:** provata in locale su un ramo Neon di prova (`prova-fase-c-accepted-at`): migrazione `0019_accepted_at` ok (14 accettati con data; novembre 5, ottobre 6), dashboard, filtri «scaduti/da sollecitare», ricerca ⌘K, intestazione e tendina cliente. Durante la prova il preventivo PREV-2026-038 è stato sbloccato **solo sulla copia**; produzione verificata intatta. Il ramo di prova va eliminato (con l'ok dell'utente).
 - **iPhone 17 Pro:** non aggiornato dalla 4.7.0 (telefono non raggiungibile alle 14:46 e alle 14:58); il servizio sul Mac (`agent.sh`) riprova da solo. L'iPhone di Thomas ha la 4.8.2 (build 145); l'iPhone 17 Pro non era raggiungibile neanche alle 15:06.
 - **Account non admin:** serve ancora per il rifiuto 423 via API (B1) e per A3 da utente normale. «Richiedi sblocco» è già stato provato da Riccardo.
