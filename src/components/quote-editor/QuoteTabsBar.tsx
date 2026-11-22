@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMounted } from "@/hooks/use-mounted";
 import { usePathname, useRouter } from "next/navigation";
 import { X, FileText } from "lucide-react";
 import { useQuoteTabs } from "@/lib/stores/quote-tabs";
@@ -17,8 +17,7 @@ export function QuoteTabsBar() {
   const pathname = usePathname();
   const tabs = useQuoteTabs((s) => s.tabs);
   const closeTab = useQuoteTabs((s) => s.closeTab);
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const mounted = useMounted();
 
   const activeId = pathname.startsWith("/preventivi/") ? pathname.split("/")[2] : null;
 

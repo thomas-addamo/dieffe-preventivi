@@ -1,7 +1,8 @@
 "use client";
 
+import { useMounted } from "@/hooks/use-mounted";
 import { useMenuParam } from "@/hooks/use-menu-param";
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -9,9 +10,6 @@ import {
   Plus,
   Search,
   FileText,
-  CheckCircle,
-  Clock,
-  TrendingUp,
   ChevronRight,
   ChevronDown,
   FilePlus2,
@@ -117,8 +115,7 @@ function inView(r: QuoteRow, view: View) {
 function RecentQuotes({ quotes }: { quotes: QuoteRow[] }) {
   const router = useRouter();
   const recent = useQuoteTabs((s) => s.recent);
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const mounted = useMounted();
 
   const items = useMemo(() => {
     if (!mounted) return [] as QuoteRow[];
