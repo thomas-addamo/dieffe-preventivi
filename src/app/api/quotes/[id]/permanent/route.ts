@@ -4,6 +4,7 @@ import { quotes, auditLog } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 import { deleteCloudinaryFolder } from "@/lib/cloudinary";
+import { quotePhotoFolder } from "@/lib/sites/photos";
 import { generateId } from "@/lib/utils";
 import { deleteSitePhotosOfQuote } from "@/lib/sites/complete";
 
@@ -18,6 +19,8 @@ export async function DELETE(
   const { id } = await params;
 
   await deleteCloudinaryFolder(`dieffe-preventivi/${id}`).catch(() => {});
+  // Foto del sopralluogo (D1) non ancora passate a un cantiere.
+  await deleteCloudinaryFolder(quotePhotoFolder(id)).catch(() => {});
   await deleteSitePhotosOfQuote(id).catch(() => {});
 
   await db.insert(auditLog).values({
