@@ -263,7 +263,7 @@ export function QuoteHeaderForm({ quote, clients, onChange }: QuoteHeaderFormPro
 
       {!collapsed && (
         <div className="space-y-4 border-t px-4 pb-4 pt-4 md:px-5">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 min-[1700px]:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)]">
             <Tile icon={User} label="Cliente">
               <ClientPicker value={quote.clientId} clients={clients} onPick={(id) => onChange({ clientId: id })} disabled={isViewer} />
               {quote.clientId && (
@@ -274,14 +274,18 @@ export function QuoteHeaderForm({ quote, clients, onChange }: QuoteHeaderFormPro
             </Tile>
 
             <Tile icon={MapPin} label="Cantiere">
-              <Input
-                value={quote.projectAddress ?? ""}
-                onChange={(e) => onChange({ projectAddress: e.target.value })}
-                readOnly={isViewer}
-                placeholder="Via e numero civico, città"
-                aria-label="Indirizzo del cantiere"
-                className="h-9 rounded-lg px-2.5 text-[15px] font-semibold"
-              />
+              {isViewer ? (
+                <span className="line-clamp-2 text-[15px] font-semibold">{address || "Indirizzo non indicato"}</span>
+              ) : (
+                <Input
+                  value={quote.projectAddress ?? ""}
+                  onChange={(e) => onChange({ projectAddress: e.target.value })}
+                  placeholder="Via e numero civico, città"
+                  aria-label="Indirizzo del cantiere"
+                  title={address}
+                  className="h-9 rounded-lg px-2.5 text-[15px] font-semibold"
+                />
+              )}
               {address && (
                 <a
                   href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`}

@@ -193,8 +193,10 @@ function GlobalSearchDialog() {
                 className={cn("flex w-full items-center gap-3 px-4 py-2 text-left", i === active && "bg-primary/10")}
               >
                 <e.icon className={cn("h-4 w-4 shrink-0", i === active ? "text-primary" : "text-muted-foreground")} />
-                <span className="min-w-0 flex-1 truncate text-sm font-medium">{e.label}</span>
-                {e.detail && <span className="max-w-[55%] shrink-0 truncate text-xs text-muted-foreground">{e.detail}</span>}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium">{e.label}</span>
+                  {e.detail && <span className="block truncate text-xs text-muted-foreground">{e.detail}</span>}
+                </span>
               </button>
             </div>
           ))}

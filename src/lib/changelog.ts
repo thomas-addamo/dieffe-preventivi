@@ -43,6 +43,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "4.9.0",
+    date: "2026-11-22",
+    headline: "Dashboard nuova, ricerca ⌘K e intestazione del preventivo ridisegnata.",
+    highlights: [
+      { icon: "layout", title: "Dashboard più utile", description: "Cosa fare adesso: preventivi scaduti, clienti da richiamare, SAL da fatturare. L'elenco dei preventivi ora è nella pagina Preventivi." },
+      { icon: "keyboard", title: "Ricerca ovunque con ⌘K", description: "Preventivi, clienti e cantieri dalla barra in alto, che ora mostra anche il percorso della pagina." },
+      { icon: "format", title: "Intestazione del preventivo", description: "Titolo in evidenza, cliente da una tendina con ricerca, validità con scelte rapide e avviso se le note citano un'IVA diversa." },
+    ],
+  },
+  {
     version: "4.8.3",
     date: "2026-11-21",
     headline: "Notifiche più ordinate.",
