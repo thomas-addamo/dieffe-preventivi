@@ -20,7 +20,7 @@
 | B2 | Correzione automatica con IA | ✅ Fatto | 4.8.0 |
 | B3 | Documenti PDF nel cantiere | ✅ Fatto | 4.8.0 → 4.8.2 |
 | C1–C3 | Restyling (solo sito e Mac) | ✅ Fatto | 4.9.0 |
-| D1 | Sopralluogo con IA vocale (solo iPhone) | 🚀 D1a pubblicata il 22/11; da provare su iPhone vero; poi D1b | 4.10.0 |
+| D1 | Sopralluogo con IA vocale (solo iPhone) | 🔨 D1a online (4.10.0, provata dall'utente); D1b pronta in locale, da pubblicare | 4.10.0 |
 | D2 | iPhone: menu laterale al posto di "Altro" | 🚀 Pubblicato il 22/11 | 4.9.1 |
 
 ---
@@ -405,6 +405,7 @@ _(scelte condivise che valgono per tutte le modifiche — aggiungere con data)_
 - 2026-11-22 — Su richiesta dell'utente tutte le voci A, B e C sono segnate **Fatte**; i controlli ancora aperti restano in «5b. In sospeso».
 - 2026-11-22 — D1: avvio da Nuovo/cliente (bozza) e da cantiere (lavoro extra); voci subito nella bozza e annullabili; **prezzi solo se detti a voce**, altrimenti li mette l'utente nell'editor; foto al preventivo e poi al cantiere; **testo trascritto cancellato a fine revisione**; comando vocale sul preventivo anche dopo (D1c); si parte con D1a.
 - 2026-11-22 — **Il sopralluogo (D1) è solo per iPhone**: sito e Mac non hanno la registrazione. Schermata disegnata su misura (sfera dell'IA animata con la voce, bozza che si costruisce con animazioni); stile scelto da Claude su richiesta dell'utente. Prova sul simulatore: avvio con `-DieffeSurveyDemo YES`.
+- 2026-11-22 — D1b: l'IA riceve solo il testo nuovo + la bozza e risponde con operazioni (aggiungi/modifica/togli voce, nota, titolo); **il prezzo passa solo se il numero è stato detto** (controllo sul server, `src/lib/ai/survey.ts`); voci annullabili con la ✕; senza rete il testo resta in coda e si riprova ogni 8 s; al salvataggio sezioni e voci diventano reali, le note dell'IA vanno nelle note del preventivo.
 - 2026-11-22 — Dashboard corretta a pagina stretta (le colonne uscivano dallo schermo).
 
 ## 5b. In sospeso (da controllare)

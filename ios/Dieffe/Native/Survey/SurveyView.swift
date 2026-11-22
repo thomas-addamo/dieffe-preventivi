@@ -31,12 +31,41 @@ struct SurveyItem: Identifiable, Equatable {
     let id = UUID()
     var section: String
     var text: String
+    /// Etichetta della quantità (es. "30 m²"); per le voci dell'IA si ricava da qty e unit.
     var quantity: String?
+    var qty: Double? = nil
+    var unit: String? = nil
+    /// Prezzo unitario, solo se detto a voce (D1b).
+    var price: Double? = nil
+
+    static func label(qty: Double?, unit: String?) -> String? {
+        switch (qty, unit) {
+        case let (q?, u?): return "\(q.formatted(.number.precision(.fractionLength(0...2)))) \(u)"
+        case let (q?, nil): return q.formatted(.number.precision(.fractionLength(0...2)))
+        case let (nil, u?): return u
+        default: return nil
+        }
+    }
 }
 
 struct SurveyNote: Identifiable, Equatable {
     let id = UUID()
     var text: String
+}
+
+/// Operazione decisa dall'IA (src/lib/ai/survey.ts).
+struct SurveyOp: Decodable {
+    let op: String
+    let section: String?
+    let text: String?
+    let match: String?
+    let quantity: Double?
+    let unit: String?
+    let price: Double?
+}
+
+struct SurveyOpsResponse: Decodable {
+    let ops: [SurveyOp]
 }
 
 struct SurveyShot: Identifiable {
@@ -57,6 +86,12 @@ struct SurveyView: View {
     @State private var pausedTotal: TimeInterval = 0
     @State private var pausedAt: Date?
     @State private var showCamera = false
+    // IA sul parlato (D1b)
+    @State private var draftTitle: String?
+    @State private var processed = 0
+    @State private var aiBusy = false
+    @State private var aiOffline = false
+    @State private var aiTask: Task<Void, Never>?
     @State private var showReview = false
     @State private var confirmCancel = false
     // Dimostrazione
@@ -72,7 +107,7 @@ struct SurveyView: View {
     private var text: String { isDemo ? [demoFinal, demoVolatile].filter { !$0.isEmpty }.joined(separator: " ") : speech.fullText }
     private var level: Double { isDemo ? demoLevel : speech.level }
     private var mood: OrbMood {
-        if isDemo ? demoThinking : speech.state == .preparing { return .thinking }
+        if isDemo ? demoThinking : (speech.state == .preparing || aiBusy) { return .thinking }
         if paused { return .idle }
         return (isDemo || speech.state == .listening) ? .listening : .idle
     }
@@ -90,7 +125,8 @@ struct SurveyView: View {
                 LiveTranscript(text: text)
                     .padding(.horizontal, 24)
                     .padding(.top, 10)
-                DraftSheet(context: context, items: items, notes: notes, shots: shots, fresh: fresh, demo: isDemo)
+                DraftSheet(context: context, title: draftTitle, items: items, notes: notes, shots: shots, fresh: fresh, demo: isDemo,
+                           offline: aiOffline, onRemove: removeItem, onRemoveNote: removeNote)
                     .padding(.horizontal, 12)
                     .padding(.top, 14)
             }
@@ -102,8 +138,12 @@ struct SurveyView: View {
         .sensoryFeedback(.selection, trigger: paused)
         .task {
             started = .now
+            draftTitle = context.title
             if isDemo { runDemo() } else { await speech.start() }
         }
+        // Ogni frase definitiva fa ripartire l'attesa: si manda all'IA dopo una pausa
+        // di 2 secondi, o subito se il testo da elaborare è già lungo.
+        .onChange(of: speech.finalText) { scheduleAI() }
         .onDisappear {
             demoTask?.cancel()
             speech.cancel()
@@ -115,7 +155,7 @@ struct SurveyView: View {
             .ignoresSafeArea()
         }
         .sheet(isPresented: $showReview) {
-            SurveyReviewView(context: context, initialText: text, items: items, shots: shots)
+            SurveyReviewView(context: context, title: draftTitle, initialText: text, items: items, aiNotes: notes.map(\.text), shots: shots)
         }
         .confirmationDialog("Annullare il sopralluogo?", isPresented: $confirmCancel, titleVisibility: .visible) {
             Button("Annulla il sopralluogo", role: .destructive) { model.survey = nil }
@@ -263,9 +303,133 @@ struct SurveyView: View {
 
     private func finish() {
         Task {
-            if isDemo { demoTask?.cancel(); demoLevel = 0 } else { await speech.finish() }
+            if isDemo {
+                demoTask?.cancel()
+                demoLevel = 0
+            } else {
+                await speech.finish()
+                // Le ultime frasi passano all'IA prima della revisione (al massimo 20 secondi).
+                aiTask?.cancel()
+                await withTaskGroup(of: Void.self) { group in
+                    group.addTask { await processAI(force: true) }
+                    group.addTask { try? await Task.sleep(for: .seconds(20)) }
+                    await group.next()
+                    group.cancelAll()
+                }
+            }
             showReview = true
         }
+    }
+
+    // MARK: IA sul parlato (D1b)
+
+    private func scheduleAI() {
+        guard !isDemo else { return }
+        aiTask?.cancel()
+        let pending = speech.finalText.count - processed
+        aiTask = Task {
+            if pending < 260 { try? await Task.sleep(for: .seconds(2)) }
+            guard !Task.isCancelled else { return }
+            await processAI(force: false)
+        }
+    }
+
+    /// Manda all'IA il testo non ancora elaborato con la bozza attuale e applica le
+    /// operazioni. Senza rete il testo resta in attesa e si riprova da solo.
+    private func processAI(force: Bool) async {
+        guard !aiBusy else { return }
+        let full = speech.finalText
+        let chunk = String(full.dropFirst(processed)).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard chunk.count >= (force ? 1 : 12) else { return }
+        aiBusy = true
+        defer { aiBusy = false }
+        do {
+            let response: SurveyOpsResponse = try await APIClient.shared.send("POST", "/api/ai/survey", json: [
+                "text": chunk,
+                "draft": draftPayload(),
+            ])
+            processed = full.count
+            aiOffline = false
+            apply(response.ops)
+        } catch {
+            aiOffline = true
+            // Riprova fra poco (rete assente o IA occupata): il testo non si perde.
+            guard !force else { return }
+            aiTask = Task {
+                try? await Task.sleep(for: .seconds(8))
+                guard !Task.isCancelled else { return }
+                await processAI(force: false)
+            }
+        }
+    }
+
+    private func draftPayload() -> [String: Any] {
+        var order: [String] = []
+        var groups: [String: [[String: Any]]] = [:]
+        for item in items {
+            if groups[item.section] == nil { order.append(item.section) }
+            var row: [String: Any] = ["text": item.text]
+            if let q = item.qty { row["quantity"] = q }
+            if let u = item.unit { row["unit"] = u }
+            if let p = item.price { row["price"] = p }
+            groups[item.section, default: []].append(row)
+        }
+        var payload: [String: Any] = [
+            "sections": order.map { ["title": $0, "items": groups[$0] ?? []] },
+            "notes": notes.map(\.text),
+        ]
+        if let draftTitle { payload["title"] = draftTitle }
+        return payload
+    }
+
+    private func apply(_ ops: [SurveyOp]) {
+        for op in ops {
+            switch op.op {
+            case "add_item":
+                guard let text = op.text, let section = op.section else { continue }
+                add(SurveyItem(section: section, text: text, quantity: SurveyItem.label(qty: op.quantity, unit: op.unit),
+                               qty: op.quantity, unit: op.unit, price: op.price))
+            case "update_item":
+                guard let match = op.match, let index = indexOfItem(matching: match) else { continue }
+                withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
+                    if let text = op.text, !text.isEmpty { items[index].text = text }
+                    if let q = op.quantity { items[index].qty = q }
+                    if let u = op.unit { items[index].unit = u }
+                    if let p = op.price { items[index].price = p }
+                    items[index].quantity = SurveyItem.label(qty: items[index].qty, unit: items[index].unit) ?? items[index].quantity
+                    fresh.insert(items[index].id)
+                }
+                let id = items[index].id
+                Task {
+                    try? await Task.sleep(for: .seconds(1.6))
+                    _ = withAnimation(.smooth(duration: 0.8)) { fresh.remove(id) }
+                }
+            case "remove_item":
+                guard let match = op.match, let index = indexOfItem(matching: match) else { continue }
+                _ = withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) { items.remove(at: index) }
+            case "add_note":
+                guard let text = op.text else { continue }
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.75)) { notes.append(SurveyNote(text: text)) }
+            case "set_title":
+                guard let text = op.text, draftTitle?.isEmpty ?? true else { continue }
+                withAnimation(.smooth) { draftTitle = text }
+            default:
+                continue
+            }
+        }
+    }
+
+    private func indexOfItem(matching match: String) -> Int? {
+        let m = match.lowercased()
+        return items.lastIndex { $0.text.lowercased().contains(m) || m.contains($0.text.lowercased()) }
+    }
+
+    private func removeItem(_ item: SurveyItem) {
+        _ = withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) { items.removeAll { $0.id == item.id } }
+    }
+
+    private func removeNote(_ note: SurveyNote) {
+        _ = withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) { notes.removeAll { $0.id == note.id } }
     }
 
     private func add(_ item: SurveyItem) {
@@ -360,11 +524,15 @@ private struct LiveTranscript: View {
 
 private struct DraftSheet: View {
     let context: SurveyContext
+    let title: String?
     let items: [SurveyItem]
     let notes: [SurveyNote]
     let shots: [SurveyShot]
     let fresh: Set<UUID>
     let demo: Bool
+    var offline = false
+    var onRemove: (SurveyItem) -> Void = { _ in }
+    var onRemoveNote: (SurveyNote) -> Void = { _ in }
 
     private var sections: [(String, [SurveyItem])] {
         var order: [String] = []
@@ -388,7 +556,8 @@ private struct DraftSheet: View {
                         VStack(alignment: .leading, spacing: 8) {
                             SectionLabel(section)
                             ForEach(rows) { item in
-                                ItemRow(index: (items.firstIndex(of: item) ?? 0) + 1, item: item, fresh: fresh.contains(item.id))
+                                ItemRow(index: (items.firstIndex(of: item) ?? 0) + 1, item: item, fresh: fresh.contains(item.id),
+                                        onRemove: demo ? nil : { onRemove(item) })
                                     .id(item.id)
                                     .transition(.asymmetric(
                                         insertion: .move(edge: .bottom).combined(with: .opacity).combined(with: .scale(scale: 0.94, anchor: .bottom)),
@@ -401,10 +570,15 @@ private struct DraftSheet: View {
                         VStack(alignment: .leading, spacing: 8) {
                             SectionLabel("Note")
                             ForEach(notes) { note in
-                                Label(note.text, systemImage: "lightbulb")
-                                    .font(.subheadline)
+                                HStack(alignment: .top, spacing: 8) {
+                                    Label(note.text, systemImage: "lightbulb")
+                                        .font(.subheadline)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                    if !demo {
+                                        RemoveButton(label: "Togli la nota") { onRemoveNote(note) }
+                                    }
+                                }
                                     .padding(10)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
                                     .background(Color.yellow.opacity(0.14), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                                     .transition(.move(edge: .leading).combined(with: .opacity))
                             }
@@ -456,7 +630,8 @@ private struct DraftSheet: View {
             Text(context.parentQuoteID != nil ? "Lavoro extra" : "Bozza del preventivo")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(Color.accentColor)
-            Text(context.title?.isEmpty == false ? context.title! : (context.parentTitle ?? "Nuovo sopralluogo"))
+            Text(title?.isEmpty == false ? title! : (context.parentTitle ?? "Nuovo sopralluogo"))
+                .contentTransition(.opacity)
                 .font(.title3.weight(.bold))
                 .lineLimit(2)
             if let client = context.client?.name {
@@ -464,7 +639,15 @@ private struct DraftSheet: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
+            if offline {
+                Label("Senza rete: il testo è al sicuro e verrà elaborato appena torna la connessione.", systemImage: "wifi.slash")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                    .padding(.top, 4)
+                    .transition(.opacity)
+            }
         }
+        .animation(.smooth, value: offline)
     }
 
     private var placeholder: some View {
@@ -473,7 +656,7 @@ private struct DraftSheet: View {
                 .font(.title2)
                 .foregroundStyle(.secondary)
                 .symbolEffect(.variableColor.iterative, options: .repeating)
-            Text(demo ? "Le voci compariranno qui mentre parli." : "Parla liberamente: il testo diventerà le note del preventivo, che potrai rivedere alla fine.")
+            Text("Descrivi i lavori: le voci e le note compariranno qui mentre parli.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -498,10 +681,31 @@ private struct SectionLabel: View {
     }
 }
 
+private struct RemoveButton: View {
+    let label: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "xmark")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(.secondary)
+                .frame(width: 26, height: 26)
+                .background(Color.primary.opacity(0.06), in: Circle())
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .padding(-9)
+        .accessibilityLabel(label)
+    }
+}
+
 private struct ItemRow: View {
     let index: Int
     let item: SurveyItem
     let fresh: Bool
+    var onRemove: (() -> Void)? = nil
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -515,14 +719,26 @@ private struct ItemRow: View {
                 .font(.subheadline.weight(.medium))
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            if let quantity = item.quantity {
-                Text(quantity)
-                    .font(.caption.weight(.semibold).monospacedDigit())
-                    .lineLimit(1)
-                    .fixedSize()
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.primary.opacity(0.06), in: Capsule())
+            VStack(alignment: .trailing, spacing: 4) {
+                if let quantity = item.quantity {
+                    Text(quantity)
+                        .font(.caption.weight(.semibold).monospacedDigit())
+                        .lineLimit(1)
+                        .fixedSize()
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.primary.opacity(0.06), in: Capsule())
+                }
+                if let price = item.price {
+                    Text(price, format: .currency(code: "EUR"))
+                        .font(.caption.weight(.semibold).monospacedDigit())
+                        .foregroundStyle(Color.accentColor)
+                        .lineLimit(1)
+                        .fixedSize()
+                }
+            }
+            if let onRemove {
+                RemoveButton(label: "Togli la voce", action: onRemove)
             }
         }
         .padding(12)
@@ -549,11 +765,13 @@ struct SurveyReviewView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     let context: SurveyContext
+    var title: String?
     let initialText: String
     let items: [SurveyItem]
+    var aiNotes: [String] = []
     let shots: [SurveyShot]
 
-    @State private var title = ""
+    @State private var editTitle = ""
     @State private var notes = ""
     @State private var saving = false
     @State private var progress = ""
@@ -564,7 +782,7 @@ struct SurveyReviewView: View {
             Form {
                 if context.parentQuoteID == nil {
                     Section("Titolo") {
-                        TextField("Titolo", text: $title, prompt: Text("Es. Ristrutturazione bagno"), axis: .vertical)
+                        TextField("Titolo", text: $editTitle, prompt: Text("Es. Ristrutturazione bagno"), axis: .vertical)
                     }
                 }
                 Section {
@@ -574,6 +792,13 @@ struct SurveyReviewView: View {
                     Text("Note dal sopralluogo")
                 } footer: {
                     Text("Correggi il testo se serve: va nelle note del preventivo. Il testo trascritto non viene conservato altrove.")
+                }
+                if !items.isEmpty {
+                    Section {
+                        Label("\(items.count) \(items.count == 1 ? "voce" : "voci") in \(Set(items.map(\.section)).count) sezioni", systemImage: "list.bullet.rectangle")
+                    } footer: {
+                        Text("Le voci entrano nel preventivo con le loro sezioni; i prezzi non detti restano da completare nell'editor.")
+                    }
                 }
                 if !shots.isEmpty {
                     Section("Foto (\(shots.count))") {
@@ -611,8 +836,9 @@ struct SurveyReviewView: View {
             .interactiveDismissDisabled(saving)
         }
         .onAppear {
-            title = context.title ?? ""
-            notes = initialText
+            editTitle = title ?? context.title ?? ""
+            // Con l'IA le note sono quelle che ha raccolto; senza, il testo dettato.
+            notes = aiNotes.isEmpty ? initialText : aiNotes.map { "• " + $0 }.joined(separator: "\n")
         }
     }
 
@@ -626,7 +852,7 @@ struct SurveyReviewView: View {
         saving = true
         error = nil
         let note = notes.trimmingCharacters(in: .whitespacesAndNewlines)
-        let finalTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let finalTitle = editTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         Task {
             defer { saving = false }
             do {
@@ -647,6 +873,29 @@ struct SurveyReviewView: View {
                         "notes": note.isEmpty ? nil : note,
                     ])
                     id = created.id
+                }
+                // Sezioni e voci dettate (D1b), nell'ordine in cui sono comparse.
+                var order: [String] = []
+                for item in items where !order.contains(item.section) { order.append(item.section) }
+                let letters = Array("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+                for (sIndex, section) in order.enumerated() {
+                    progress = "Sezione \(sIndex + 1) di \(order.count)…"
+                    let createdSection: CreatedID = try await APIClient.shared.send("POST", "/api/quotes/\(id)/sections", json: [
+                        "code": sIndex < letters.count ? String(letters[sIndex]) : "\(sIndex + 1)",
+                        "title": section,
+                        "orderIndex": sIndex,
+                    ])
+                    for (iIndex, item) in items.filter({ $0.section == section }).enumerated() {
+                        let _: CreatedID = try await APIClient.shared.send("POST", "/api/quotes/\(id)/items", json: [
+                            "sectionId": createdSection.id,
+                            "description": item.text,
+                            "unitOfMeasure": item.unit ?? "a corpo",
+                            "quantity": item.qty ?? 1,
+                            "unitPrice": item.price ?? 0,
+                            "discount": 0,
+                            "orderIndex": iIndex,
+                        ])
+                    }
                 }
                 for (index, shot) in shots.enumerated() {
                     progress = "Foto \(index + 1) di \(shots.count)…"
