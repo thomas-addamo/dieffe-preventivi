@@ -43,6 +43,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "4.9.1",
+    date: "2026-11-22",
+    headline: "iPhone: il menu laterale prende il posto della scheda Altro.",
+    highlights: [
+      { icon: "layout", title: "Menu laterale su iPhone", description: "Scorri dal bordo sinistro o tocca ☰: la pagina si sposta e trovi recenti, lavori extra, statistiche, comunicazioni, cestino, profilo e Nuovo preventivo." },
+    ],
+  },
+  {
     version: "4.9.0",
     date: "2026-11-22",
     headline: "Dashboard nuova, ricerca ⌘K e intestazione del preventivo ridisegnata.",
