@@ -98,7 +98,10 @@ private struct SideMenuContainer: ViewModifier {
 
                 SideMenuPanel(top: insets.top, bottom: insets.bottom, close: { setMenu(false) })
                     .frame(width: menuWidth)
-                    .opacity(0.3 + 0.7 * progress)
+                    // Le scritte sfumano fino a zero insieme al movimento (prima restavano al 30%
+                    // e sparivano di colpo a fine chiusura).
+                    .opacity(Double(progress * progress))
+                    .scaleEffect(0.97 + 0.03 * progress, anchor: .leading)
                     .offset(x: -40 * (1 - progress))
                     .ignoresSafeArea()
                     .accessibilityHidden(!open)
@@ -213,37 +216,45 @@ private struct SideMenuPanel: View {
     let close: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            header
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 2) {
-                    recents
-                    sections
-                }
-                .padding(.bottom, 110)
+        // Intestazione e tasti in basso sono barre di iOS 26 sopra la lista: scorrendo, le
+        // voci spariscono dietro con la sfumatura sfocata di sistema (come ChatGPT e Claude).
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 2) {
+                recents
+                sections
             }
-            .scrollIndicators(.hidden)
+            .padding(.vertical, 8)
         }
-        .padding(.top, top + 12)
-        .overlay(alignment: .bottom) { bottomBar }
+        .scrollIndicators(.hidden)
+        .scrollEdgeEffectStyle(.soft, for: .vertical)
+        .safeAreaBar(edge: .top) {
+            header.padding(.top, top + 6)
+        }
+        .safeAreaBar(edge: .bottom) {
+            bottomBar
+        }
     }
 
     // MARK: Parti
 
+    /// L'icona del logo e «Dieffe» in nero (bianco in modalità scura), con le grazie
+    /// come la scritta del logo originale.
     private var header: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 12) {
             Image("Logo")
                 .resizable()
                 .scaledToFit()
-                .frame(width: 34, height: 34)
+                .frame(width: 38, height: 38)
                 .accessibilityHidden(true)
             Text("Dieffe")
-                .font(.system(size: 34, weight: .bold))
+                .font(.system(size: 32, weight: .semibold, design: .serif))
+                .foregroundStyle(.primary)
+                .accessibilityLabel("Dieffe Ristrutturazioni")
                 .accessibilityAddTraits(.isHeader)
             Spacer()
         }
         .padding(.horizontal, 20)
-        .padding(.bottom, 14)
+        .padding(.bottom, 10)
     }
 
     private var recentQuotes: [QuoteSummary] {
@@ -347,15 +358,8 @@ private struct SideMenuPanel: View {
         }
         .padding(.leading, inset)
         .padding(.trailing, 16)
-        .padding(.top, 28)
+        .padding(.top, 10)
         .padding(.bottom, inset)
-        // La lista sfuma sotto i tasti invece di finirci sotto di netto.
-        .background {
-            LinearGradient(stops: [.init(color: menuBackground.opacity(0), location: 0),
-                                   .init(color: menuBackground, location: 0.3)],
-                           startPoint: .top, endPoint: .bottom)
-                .allowsHitTesting(false)
-        }
     }
 
     private func sectionTitle(_ title: String) -> some View {
