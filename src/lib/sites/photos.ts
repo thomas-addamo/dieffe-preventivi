@@ -87,3 +87,58 @@ export async function deleteSitePhoto(siteId: string, photoId: string, user: { i
   await deleteCloudinaryAsset(ph.publicId).catch(() => {});
   return { ok: true };
 }
+
+// ── Foto del sopralluogo (D1) ────────────────────────────────────────────────
+// Scattate durante il sopralluogo, quando il cantiere spesso non esiste ancora:
+// restano legate al preventivo (quote_id) e la sincronizzazione dei cantieri le
+// sposta nelle Foto del cantiere quando il preventivo diventa cantiere.
+
+export const quotePhotoFolder = (quoteId: string) => `dieffe-preventivi/sopralluoghi/${quoteId}`;
+
+export async function addQuotePhoto(quoteId: string, siteId: string | null, form: FormData, userId: string): Promise<Result> {
+  const file = form.get("file");
+  if (!(file instanceof File)) return { ok: false, status: 400, error: "Nessuna foto" };
+  if (!ALLOWED.includes(file.type)) return { ok: false, status: 400, error: "Formato non supportato (JPEG, PNG o WebP)" };
+  if (file.size > MAX_PHOTO_BYTES) return { ok: false, status: 413, error: "Foto troppo grande (max 4 MB)" };
+  const caption = String(form.get("caption") ?? "").trim().slice(0, 300) || null;
+  const buf = Buffer.from(await file.arrayBuffer());
+  if (!looksLikeImage(buf, file.type)) return { ok: false, status: 400, error: "File non valido" };
+
+  const up = await uploadToCloudinary(buf, quotePhotoFolder(quoteId), generateId(10));
+  const row = {
+    id: generateId(),
+    siteId,
+    quoteId,
+    phaseId: null,
+    publicId: up.publicId,
+    url: up.url,
+    width: up.width ?? null,
+    height: up.height ?? null,
+    caption,
+    userId,
+    createdAt: new Date(),
+  };
+  await db.insert(sitePhotos).values(row);
+  return { ok: true, data: row };
+}
+
+export async function listQuotePhotos(quoteId: string) {
+  return db
+    .select({ id: sitePhotos.id, url: sitePhotos.url, width: sitePhotos.width, height: sitePhotos.height, caption: sitePhotos.caption, createdAt: sitePhotos.createdAt })
+    .from(sitePhotos)
+    .where(eq(sitePhotos.quoteId, quoteId))
+    .orderBy(sitePhotos.createdAt);
+}
+
+export async function deleteQuotePhoto(quoteId: string, photoId: string, user: { id: string; role: string }): Promise<Result> {
+  const [ph] = await db
+    .select({ userId: sitePhotos.userId, publicId: sitePhotos.publicId })
+    .from(sitePhotos)
+    .where(and(eq(sitePhotos.id, photoId), eq(sitePhotos.quoteId, quoteId)))
+    .limit(1);
+  if (!ph) return { ok: true };
+  if (ph.userId !== user.id && user.role !== "admin") return { ok: false, status: 403, error: "Puoi eliminare solo le tue foto" };
+  await db.delete(sitePhotos).where(eq(sitePhotos.id, photoId));
+  await deleteCloudinaryAsset(ph.publicId).catch(() => {});
+  return { ok: true };
+}

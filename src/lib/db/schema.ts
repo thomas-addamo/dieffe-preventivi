@@ -590,9 +590,11 @@ export const sitePhotos = pgTable(
   "site_photos",
   {
     id: text("id").primaryKey(),
-    siteId: text("site_id")
-      .notNull()
-      .references(() => sites.id, { onDelete: "cascade" }),
+    /** Cantiere della foto. Vuoto per le foto di un sopralluogo (D1) fatto prima che il
+     *  cantiere esista: la sincronizzazione lo riempie quando il preventivo diventa cantiere. */
+    siteId: text("site_id").references(() => sites.id, { onDelete: "cascade" }),
+    /** Preventivo del sopralluogo in cui è stata scattata (D1). */
+    quoteId: text("quote_id").references((): AnyPgColumn => quotes.id, { onDelete: "cascade" }),
     /** Fase a cui si riferisce la foto (facoltativa). */
     phaseId: text("phase_id").references(() => sitePhases.id, { onDelete: "set null" }),
     publicId: text("public_id").notNull(),
@@ -603,7 +605,10 @@ export const sitePhotos = pgTable(
     userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("site_photos_site_idx").on(t.siteId, t.createdAt)]
+  (t) => [
+    index("site_photos_site_idx").on(t.siteId, t.createdAt),
+    index("site_photos_quote_idx").on(t.quoteId, t.createdAt),
+  ]
 );
 
 /** Documenti PDF del cantiere (B3): permessi, progetti, contratti. Il file sta

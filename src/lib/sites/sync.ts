@@ -123,6 +123,12 @@ export async function syncSites(): Promise<void> {
              or (q.kind = 'extra' and q.parent_quote_id = s.main_quote_id
                  and q.deleted_at is null and q.status in ${LIVE}))
         and q.site_id is distinct from s.id`),
+
+    // 8. Foto dei sopralluoghi (D1): passano al cantiere del loro preventivo.
+    db.execute(sql`
+      update site_photos f set site_id = q.site_id
+      from quotes q
+      where f.quote_id = q.id and q.site_id is not null and f.site_id is distinct from q.site_id`),
   ]);
 }
 

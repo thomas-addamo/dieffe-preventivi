@@ -287,7 +287,7 @@ export type SiteDetail = {
   milestones: (SiteMilestone & { value: number })[];
   events: SiteEvent[];
   notes: { id: string; body: string; createdAt: Date; updatedAt: Date | null; userId: string | null; userName: string | null }[];
-  photos: (Omit<SitePhoto, "siteId"> & { userName: string | null })[];
+  photos: (Omit<SitePhoto, "siteId" | "quoteId"> & { userName: string | null })[];
   /** Documenti PDF (B3, dalla 4.8.0: opzionale per l'iPhone). */
   documents: { id: string; name: string; url: string; bytes: number | null; userId: string | null; userName: string | null; createdAt: Date }[];
   metrics: SiteMetrics;
