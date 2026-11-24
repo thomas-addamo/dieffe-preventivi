@@ -22,7 +22,7 @@
 | C1–C3 | Restyling (solo sito e Mac) | ✅ Fatto | 4.9.0 |
 | D1 | Sopralluogo con IA vocale (solo iPhone) | 🚀 D1a + D1b + D1c online (22/11); cliente a voce in 4.13.0; da provare su iPhone vero la qualità dell'IA | 4.10.0 → 4.13.0 |
 | D2 | iPhone: menu laterale al posto di "Altro" | 🚀 Pubblicato il 22/11 | 4.9.1 |
-| D3 | Sopralluogo: annotazioni, foto preliminari e logistica di cantiere | 🧪 Provato sul ramo Neon e sul simulatore, da pubblicare | 4.14.0 |
+| D3 | Sopralluogo: annotazioni, foto preliminari e logistica di cantiere | 🚀 Pubblicata il 24/11; foto e sopralluogo vero da provare su iPhone | 4.14.0 |
 
 ---
 
@@ -382,7 +382,7 @@ Da fare insieme, per avere un linguaggio visivo coerente. **Proporre all'utente 
 - **Analisi DB:** nessun impatto previsto (solo interfaccia iPhone); da confermare se "Recenti" richiede dati nuovi dal server.
 - **Esito:** —
 ### D3. Sopralluogo: annotazioni, foto preliminari e logistica di cantiere  _(#18, aggiunta il 2026-11-24)_
-- **Stato:** 🧪 In test (4.14.0, 2026-11-24) — branch `claude/project-changes-documentation-e7b724`, non ancora pubblicata.
+- **Stato:** 🚀 Pubblicata in 4.14.0 il 2026-11-24 (deploy `f4f37dd` pronto, migrazione `0021` applicata in produzione, nessun errore del server; build 180 su iPhone di Thomas e iPhone 17 Pro). Ramo Neon `prova-sopralluogo-note-logistica` ancora presente.
 - **Piattaforme:** sito · desktop · iPhone
 - **Cosa (parole dell'utente):** durante i sopralluoghi un tasto per creare annotazioni sul cantiere e aggiungere foto preliminari, che finiscono nella pagina cantiere; disponibile già dalla bozza, ma senza una vera pagina cantiere: dal preventivo un tasto apre una **pagina laterale** con note e foto del sopralluogo. In più la sezione **Logistica di cantiere** con 4 livelli da spuntare: 1 semplice (cortile dal passo carraio, montacarico, camion con gru) · 2 intermedia (cortile interno con una o più manovre) · 3 difficile (solo mezzi piccoli) · 4 accesso impossibile (permesso di suolo pubblico).
 - **Analisi DB (2026-11-24, sola lettura in produzione):** `site_notes` 0 righe (48 kB), `site_photos` 0 righe (64 kB), 6 bozze su 38 preventivi vivi, 22 cantieri. Impatto **basso**: nessuna tabella nuova. Scelte:
