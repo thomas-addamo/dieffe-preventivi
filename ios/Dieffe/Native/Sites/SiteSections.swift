@@ -781,9 +781,19 @@ struct SiteNotesSection: View {
             ForEach(detail.notes) { n in
                 let pending = n.id.hasPrefix("tmp-")
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(meta(n))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 6) {
+                        Text(meta(n))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        if n.fromSurvey == true {
+                            Text("Sopralluogo")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.teal)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 1)
+                                .background(.teal.opacity(0.14), in: Capsule())
+                        }
+                    }
                     Text(n.body).textSelection(.enabled)
                 }
                 .padding(.vertical, 2)

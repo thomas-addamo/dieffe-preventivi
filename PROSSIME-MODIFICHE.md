@@ -22,6 +22,7 @@
 | C1–C3 | Restyling (solo sito e Mac) | ✅ Fatto | 4.9.0 |
 | D1 | Sopralluogo con IA vocale (solo iPhone) | 🚀 D1a + D1b + D1c online (22/11); cliente a voce in 4.13.0; da provare su iPhone vero la qualità dell'IA | 4.10.0 → 4.13.0 |
 | D2 | iPhone: menu laterale al posto di "Altro" | 🚀 Pubblicato il 22/11 | 4.9.1 |
+| D3 | Sopralluogo: annotazioni, foto preliminari e logistica di cantiere | 🧪 Provato sul ramo Neon e sul simulatore, da pubblicare | 4.14.0 |
 
 ---
 
@@ -380,6 +381,26 @@ Da fare insieme, per avere un linguaggio visivo coerente. **Proporre all'utente 
 - **Test specifici:** apertura e chiusura con il gesto e con il tasto; vibrazione; tutte le voci di "Altro" raggiungibili (admin e non admin); collegamenti dalle notifiche e dai link (es. Cestino, Statistiche) che oggi aprono la scheda Altro; gesto "indietro" ancora funzionante; VoiceOver; tema chiaro e scuro; iPhone piccolo e grande.
 - **Analisi DB:** nessun impatto previsto (solo interfaccia iPhone); da confermare se "Recenti" richiede dati nuovi dal server.
 - **Esito:** —
+### D3. Sopralluogo: annotazioni, foto preliminari e logistica di cantiere  _(#18, aggiunta il 2026-11-24)_
+- **Stato:** 🧪 In test (4.14.0, 2026-11-24) — branch `claude/project-changes-documentation-e7b724`, non ancora pubblicata.
+- **Piattaforme:** sito · desktop · iPhone
+- **Cosa (parole dell'utente):** durante i sopralluoghi un tasto per creare annotazioni sul cantiere e aggiungere foto preliminari, che finiscono nella pagina cantiere; disponibile già dalla bozza, ma senza una vera pagina cantiere: dal preventivo un tasto apre una **pagina laterale** con note e foto del sopralluogo. In più la sezione **Logistica di cantiere** con 4 livelli da spuntare: 1 semplice (cortile dal passo carraio, montacarico, camion con gru) · 2 intermedia (cortile interno con una o più manovre) · 3 difficile (solo mezzi piccoli) · 4 accesso impossibile (permesso di suolo pubblico).
+- **Analisi DB (2026-11-24, sola lettura in produzione):** `site_notes` 0 righe (48 kB), `site_photos` 0 righe (64 kB), 6 bozze su 38 preventivi vivi, 22 cantieri. Impatto **basso**: nessuna tabella nuova. Scelte:
+  - le annotazioni stanno in `site_notes` con `quote_id` (come le foto in `site_photos` dalla D1a) e `site_id` facoltativo: **nessuna copia** quando nasce il cantiere, la sincronizzazione (`sync.ts`, passo 9) riempie `site_id`;
+  - logistica = `quotes.site_logistics` smallint 1–4 con vincolo CHECK (+ chi e quando); un lavoro extra usa quella del principale;
+  - indice nuovo `site_notes_quote_idx (quote_id, created_at)`; le letture del pannello (note e foto «del preventivo o del suo cantiere») usano BitmapOr sui due indici (verificato con EXPLAIN);
+  - pannello caricato **solo all'apertura** (3 letture in parallelo); sull'editor una sola lettura in più per il numerino del tasto (due count su indice);
+  - migrazione `0021_site_notes_logistics` solo additiva (colonne nullable, `site_id` di `site_notes` reso facoltativo): rientro = togliere le colonne, nessun dato esistente toccato.
+- **Comportamento con il cantiere:** se il preventivo torna in bozza e il cantiere viene tolto, note e foto del sopralluogo **restano al preventivo** (prima i cantieri con foto del sopralluogo finivano in archivio invece di essere tolti); tornano nel cantiere quando il preventivo viene reinviato.
+- **Dove:** `src/lib/sites/survey-board.ts`, `src/lib/sites/logistics.ts`, `src/app/api/quotes/[id]/survey-board/`, `src/components/quote-editor/SurveyBoardPanel.tsx`, `src/components/sites/SiteLogistics.tsx`, pagina cantiere (`CantiereClient.tsx`, `NotesTab.tsx`); iPhone `Native/Survey/SurveyBoardView.swift`, `SiteLogistics.swift`, `SurveyView.swift` (tasto ✎), `SiteDetailView.swift`.
+- **Esito delle prove (ramo Neon `prova-sopralluogo-note-logistica`, solo su un preventivo di prova nuovo PREV-2026-070):**
+  - API: nota, testo vuoto rifiutato, logistica 3, livello 7 rifiutato, 401 senza accesso;
+  - inviato → cantiere creato, nota con etichetta «Sopralluogo» e logistica nel cantiere; tornato bozza → cantiere tolto, nota rimasta al preventivo; reinviato → di nuovo nel cantiere;
+  - sito: pannello a 1440 px e 375 px, tema scuro, annotazione aggiunta e logistica cambiata dal pannello, striscia Logistica nella pagina cantiere; ~0,3 s a pannello caldo dal Mac;
+  - iPhone (simulatore iPhone 18 Pro): pannello dall'editor (logistica cambiata, annotazione salvata sul server), tasto ✎ nel sopralluogo (pausa e ripresa dell'ascolto, numerino, annotazione nella bozza e nella revisione), logistica nella revisione e nella scheda cantiere;
+  - `tsc`, 28 test, build Xcode ok; lint: nessun errore nei file nuovi (restano 5 errori già presenti altrove).
+  - **Non provato:** caricamento foto (in locale manca Cloudinary), salvataggio di un sopralluogo vero con annotazioni (serve il microfono: da provare su iPhone vero), app Mac.
+
 ---
 
 ## 5. Decisioni prese
@@ -407,6 +428,7 @@ _(scelte condivise che valgono per tutte le modifiche — aggiungere con data)_
 - 2026-11-22 — **Il sopralluogo (D1) è solo per iPhone**: sito e Mac non hanno la registrazione. Schermata disegnata su misura (sfera dell'IA animata con la voce, bozza che si costruisce con animazioni); stile scelto da Claude su richiesta dell'utente. Prova sul simulatore: avvio con `-DieffeSurveyDemo YES`.
 - 2026-11-22 — D1b: l'IA riceve solo il testo nuovo + la bozza e risponde con operazioni (aggiungi/modifica/togli voce, nota, titolo); **il prezzo passa solo se il numero è stato detto** (controllo sul server, `src/lib/ai/survey.ts`); voci annullabili con la ✕; senza rete il testo resta in coda e si riprova ogni 8 s; al salvataggio sezioni e voci diventano reali, le note dell'IA vanno nelle note del preventivo.
 - 2026-11-22 — Dashboard corretta a pagina stretta (le colonne uscivano dallo schermo).
+- 2026-11-24 — D3: annotazioni e foto del sopralluogo nelle tabelle del cantiere legate al preventivo (nessuna copia); logistica sul preventivo principale (1–4); le annotazioni si scrivono anche a preventivo bloccato (non sono parte del preventivo e non vanno nel PDF). 4.14.0 **non** `important`.
 
 ## 5b. In sospeso (da controllare)
 - **4.13.0 (22/11):** l'IA agisce anche sul cliente (`set_client`: usa quello in rubrica con lo stesso nome o lo crea; `update_client`: telefono, email, indirizzo, P.IVA/CF, nome), nel sopralluogo (al salvataggio cerca/crea/aggiorna il cliente) e nel comando vocale (annullabile: il cliente creato si toglie se nessun preventivo lo usa). Tasto ☰ con il numero del cestino (stesso numero della riga Cestino). Provato sul ramo Neon `prova-cliente-ia` (cliente nuovo, modificato, già in rubrica, annulla → rubrica identica) e sul simulatore (badge «2»). Pannello «Novità» aggiornato: 4.13.0 è `important` e riassume le novità dalla 4.8.0 (su richiesta dell'utente). Ramo di prova eliminato dopo la pubblicazione.

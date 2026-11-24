@@ -101,6 +101,13 @@ struct SiteDetailView: View {
 
             HeaderSection(detail: d, openQuote: { model.openQuote($0) })
 
+            Section {
+                LogisticsSummaryRow(level: d.logistics.flatMap(SiteLogistics.init(rawValue:)), editable: editable) { level in
+                    data?.logistics = level?.rawValue
+                    Task { _ = await mutate("PATCH", "/api/quotes/\(d.site.mainQuoteId)/survey-board", ["logistics": level?.rawValue]) }
+                }
+            }
+
             if d.isPending, !d.isArchived {
                 Section {
                     Label("Il preventivo è stato inviato ma non ancora accettato: fasi e SAL arrivano all'accettazione. Puoi già annotare sopralluoghi ed eventi.",

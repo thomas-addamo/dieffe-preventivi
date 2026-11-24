@@ -23,11 +23,13 @@ import {
   Mail,
   MoreHorizontal,
   HardHat,
+  ClipboardList,
 } from "lucide-react";
 import { SharePopover } from "./SharePopover";
 import { DuplicateQuoteDialog } from "./DuplicateQuoteDialog";
 import { SendQuoteEmailDialog, type EmailSentResult } from "./SendQuoteEmailDialog";
 import { AiChatAssistant } from "./AiChatAssistant";
+import { SurveyBoardPanel } from "./SurveyBoardPanel";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -245,6 +247,10 @@ interface QuoteEditorProps {
   };
   /** Cantiere collegato (tasto "Vai al cantiere"); undefined = Gestione Cantieri non disponibile. */
   site?: QuoteSite;
+  /** Annotazioni + foto del sopralluogo (numero sul tasto del pannello). */
+  surveyCount?: number;
+  /** Chi sta usando l'editor (autore delle annotazioni). */
+  currentUser?: { id: string; name: string };
 }
 
 const SECTION_CODES = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
@@ -258,7 +264,7 @@ function findScrollParent(el: HTMLElement): HTMLElement | null {
   return null;
 }
 
-export function QuoteEditor({ initialQuote, clients, related, site: initialSite }: QuoteEditorProps) {
+export function QuoteEditor({ initialQuote, clients, related, site: initialSite, surveyCount = 0, currentUser }: QuoteEditorProps) {
   const router = useRouter();
   const { isViewer: roleViewer, isAdmin, role, can: perms } = usePermissions();
   const [quote, setQuote] = useState<QuoteWithRelations>(initialQuote);
@@ -734,6 +740,9 @@ export function QuoteEditor({ initialQuote, clients, related, site: initialSite 
   const [creatingExtra, setCreatingExtra] = useState(false);
   const [duplicateOpen, setDuplicateOpen] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
+  // Pannello «Sopralluogo»: annotazioni, foto e logistica (anche sulla bozza).
+  const [surveyOpen, setSurveyOpen] = useState(false);
+  const [surveyN, setSurveyN] = useState(surveyCount);
 
   /** Dopo l'invio per email: stato "Inviato" e nuovo link, se creati. */
   function handleEmailSent(r: EmailSentResult) {
@@ -1185,6 +1194,22 @@ export function QuoteEditor({ initialQuote, clients, related, site: initialSite 
             </DropdownMenuContent>
           </DropdownMenu>
 
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 h-8"
+            onClick={() => setSurveyOpen(true)}
+            title="Annotazioni, foto e logistica del sopralluogo"
+            aria-label={`Sopralluogo${surveyN ? `, ${surveyN} tra note e foto` : ""}`}
+            data-tip="sopralluogo"
+          >
+            <ClipboardList className="w-3.5 h-3.5" />
+            <span className={label}>Sopralluogo</span>
+            {surveyN > 0 && (
+              <span className="min-w-[1.1rem] rounded-full bg-primary px-1 text-[10px] font-semibold leading-4 text-primary-foreground tabular-nums">{surveyN}</span>
+            )}
+          </Button>
+
           {sitesEnabled &&
             (site ? (
               <Button asChild variant="outline" size="sm" className="gap-1.5 h-8" title={siteHint}>
@@ -1272,6 +1297,9 @@ export function QuoteEditor({ initialQuote, clients, related, site: initialSite 
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem onClick={() => setSurveyOpen(true)}>
+              <ClipboardList className="w-4 h-4 mr-2" /> Sopralluogo{surveyN > 0 ? ` (${surveyN})` : ""}
+            </DropdownMenuItem>
             {sitesEnabled &&
               (site ? (
                 <DropdownMenuItem asChild>
@@ -1492,6 +1520,19 @@ export function QuoteEditor({ initialQuote, clients, related, site: initialSite 
           onClose={() => setDuplicateOpen(false)}
         />
       )}
+
+      <SurveyBoardPanel
+        open={surveyOpen}
+        onOpenChange={setSurveyOpen}
+        quoteId={quote.id}
+        isExtra={quote.kind === "extra"}
+        siteId={site?.id ?? null}
+        canWrite={!roleViewer}
+        userId={currentUser?.id ?? ""}
+        userName={currentUser?.name ?? ""}
+        isAdmin={isAdmin}
+        onCountChange={setSurveyN}
+      />
 
       {emailOpen && (
         <SendQuoteEmailDialog

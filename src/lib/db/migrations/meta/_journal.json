@@ -148,6 +148,13 @@
       "when": 1795352770280,
       "tag": "0020_quote_photos",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1795548062767,
+      "tag": "0021_site_notes_logistics",
+      "breakpoints": true
     }
   ]
 }

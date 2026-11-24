@@ -229,6 +229,8 @@ struct SiteDetail: Decodable {
     var metrics: SiteMetrics
     let setupPending: Bool
     var insightsStale: Bool?
+    /// Logistica di cantiere 1–4 del preventivo principale (dalla 4.14.0).
+    var logistics: Int?
 
     struct Site: Decodable {
         let id: String
@@ -307,6 +309,8 @@ struct SiteDetail: Decodable {
         var updatedAt: String?
         let userId: String?
         let userName: String?
+        /// Annotazione presa sul preventivo / al sopralluogo (dalla 4.14.0).
+        var fromSurvey: Bool?
     }
 
     struct Photo: Decodable, Identifiable, Hashable {

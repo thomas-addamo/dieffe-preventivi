@@ -3,6 +3,7 @@ import { sql, eq, asc, desc, and, gte, lte, isNull, isNotNull } from "drizzle-or
 import { db } from "@/lib/db/client";
 import {
   sites,
+  quotes as quotesTable,
   clients,
   sitePhases,
   siteMilestones,
@@ -286,21 +287,25 @@ export type SiteDetail = {
   phases: SitePhase[];
   milestones: (SiteMilestone & { value: number })[];
   events: SiteEvent[];
-  notes: { id: string; body: string; createdAt: Date; updatedAt: Date | null; userId: string | null; userName: string | null }[];
+  /** fromSurvey: annotazione presa sul preventivo (sopralluogo o pannello del preventivo). */
+  notes: { id: string; body: string; createdAt: Date; updatedAt: Date | null; userId: string | null; userName: string | null; fromSurvey?: boolean }[];
   photos: (Omit<SitePhoto, "siteId" | "quoteId"> & { userName: string | null })[];
   /** Documenti PDF (B3, dalla 4.8.0: opzionale per l'iPhone). */
   documents: { id: string; name: string; url: string; bytes: number | null; userId: string | null; userName: string | null; createdAt: Date }[];
   metrics: SiteMetrics;
   /** Fasi/SAL ancora da generare per preventivi accettati. */
   setupPending: boolean;
+  /** Logistica di cantiere (1–4) indicata sul preventivo principale; null = non indicata. */
+  logistics: number | null;
 };
 
 export async function getSiteDetail(id: string): Promise<SiteDetail | null> {
   const [[row], quoteRows, phases, milestones, events, notes, photos, documents] = await Promise.all([
     db
-      .select({ site: sites, clientName: clients.name, clientPhone: clients.phone, clientEmail: clients.email })
+      .select({ site: sites, clientName: clients.name, clientPhone: clients.phone, clientEmail: clients.email, logistics: quotesTable.siteLogistics })
       .from(sites)
       .leftJoin(clients, eq(sites.clientId, clients.id))
+      .leftJoin(quotesTable, eq(quotesTable.id, sites.mainQuoteId))
       .where(eq(sites.id, id))
       .limit(1),
     getSiteQuotes(id),
@@ -315,6 +320,7 @@ export async function getSiteDetail(id: string): Promise<SiteDetail | null> {
         updatedAt: siteNotes.updatedAt,
         userId: siteNotes.userId,
         userName: users.name,
+        fromSurvey: sql<boolean>`${siteNotes.quoteId} is not null`,
       })
       .from(siteNotes)
       .leftJoin(users, eq(siteNotes.userId, users.id))
@@ -381,5 +387,6 @@ export async function getSiteDetail(id: string): Promise<SiteDetail | null> {
     documents,
     metrics,
     setupPending: !row.site.archivedAt && row.site.status === "active" && quotes.some((q) => q.status === "accepted" && !q.setupDone),
+    logistics: row.logistics ?? null,
   };
 }

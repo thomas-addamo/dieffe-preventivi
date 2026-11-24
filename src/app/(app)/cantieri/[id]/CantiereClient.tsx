@@ -29,7 +29,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Page } from "@/components/shared/Page";
 import { cn, formatCurrency } from "@/lib/utils";
 import { HealthBadge, ProgressBar, directionsUrl, formatDays, formatShortDate, siteTitle, useAppleDevice } from "@/components/sites/site-ui";
-import { siteKey, siteRequest, type SiteData } from "./site-api";
+import { siteKey, siteRequest, useSiteMutation, type SiteData } from "./site-api";
+import { LogisticsStrip } from "@/components/sites/SiteLogistics";
 import { PhasesTab } from "./PhasesTab";
 import { MilestonesTab } from "./MilestonesTab";
 import { CalendarTab } from "./CalendarTab";
@@ -102,6 +103,12 @@ export function CantiereClient({
   // I cantieri in archivio si consultano soltanto (si riaprono dal riquadro in alto).
   const archived = !!s.archivedAt;
   const canManage = canManageRole && !archived;
+  // Logistica di cantiere: sta sul preventivo principale (vista al sopralluogo).
+  const setLogistics = useSiteMutation<number | null>(
+    s.id,
+    (level) => siteRequest("PATCH", `/api/quotes/${s.mainQuoteId}/survey-board`, { logistics: level }),
+    (d, level) => ({ ...d, logistics: level })
+  );
   const [busy, setBusy] = useState(false);
   const notInvoiced = data.milestones.filter((x) => !x.invoicedAt);
 
@@ -257,6 +264,10 @@ export function CantiereClient({
           arrivano all’accettazione.
         </div>
       )}
+
+      <div className="mb-4">
+        <LogisticsStrip value={data.logistics ?? null} onChange={(l) => setLogistics.mutate(l)} canEdit={canManage} />
+      </div>
 
       {/* Numeri chiave */}
       {!pending && (

@@ -179,6 +179,9 @@ export function NotesTab({
                   <span>
                     {n.userName ?? "—"} · {fmt(n.createdAt)}
                     {n.updatedAt && <span title={`Modificata il ${fmt(n.updatedAt)}`}> · modificata</span>}
+                    {n.fromSurvey && (
+                      <span className="ml-1.5 rounded-full bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-medium text-sky-700 dark:text-sky-300">Sopralluogo</span>
+                    )}
                   </span>
                   {mine && editing !== n.id && (
                     <span className="flex gap-0.5 md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100">

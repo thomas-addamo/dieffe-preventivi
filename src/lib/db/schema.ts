@@ -2,6 +2,8 @@ import {
   pgTable,
   text,
   integer,
+  smallint,
+  check,
   boolean,
   doublePrecision,
   numeric,
@@ -179,6 +181,12 @@ export const quotes = pgTable(
     /** Richiesta di sblocco in attesa dell'admin. */
     unlockRequestedAt: timestamp("unlock_requested_at", { withTimezone: true }),
     unlockRequestedBy: text("unlock_requested_by").references(() => users.id, { onDelete: "set null" }),
+    /** Logistica di cantiere vista al sopralluogo: 1 semplice · 2 intermedia ·
+     *  3 difficile · 4 accesso impossibile (suolo pubblico). Null = non indicata.
+     *  Per un lavoro extra vale quella del preventivo principale. */
+    siteLogistics: smallint("site_logistics"),
+    siteLogisticsAt: timestamp("site_logistics_at", { withTimezone: true }),
+    siteLogisticsBy: text("site_logistics_by").references(() => users.id, { onDelete: "set null" }),
   },
   (t) => [
     uniqueIndex("quotes_code_idx").on(t.code),
@@ -186,6 +194,7 @@ export const quotes = pgTable(
     index("quotes_client_id_idx").on(t.clientId),
     index("quotes_parent_id_idx").on(t.parentQuoteId),
     index("quotes_site_id_idx").on(t.siteId),
+    check("quotes_site_logistics_chk", sql`${t.siteLogistics} between 1 and 4`),
   ]
 );
 
@@ -573,16 +582,21 @@ export const siteNotes = pgTable(
   "site_notes",
   {
     id: text("id").primaryKey(),
-    siteId: text("site_id")
-      .notNull()
-      .references(() => sites.id, { onDelete: "cascade" }),
+    /** Cantiere della nota. Vuoto per le annotazioni del sopralluogo prese prima che il
+     *  cantiere esista: la sincronizzazione lo riempie, come per le foto. */
+    siteId: text("site_id").references(() => sites.id, { onDelete: "cascade" }),
+    /** Preventivo su cui è stata presa l'annotazione (sopralluogo o pannello del preventivo). */
+    quoteId: text("quote_id").references((): AnyPgColumn => quotes.id, { onDelete: "cascade" }),
     body: text("body").notNull(),
     userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     /** Ultima modifica del testo (null = mai modificata). */
     updatedAt: timestamp("updated_at", { withTimezone: true }),
   },
-  (t) => [index("site_notes_site_idx").on(t.siteId)]
+  (t) => [
+    index("site_notes_site_idx").on(t.siteId),
+    index("site_notes_quote_idx").on(t.quoteId, t.createdAt),
+  ]
 );
 
 /** Foto di cantiere (su Cloudinary, cartella dieffe-preventivi/cantieri/<id>). */

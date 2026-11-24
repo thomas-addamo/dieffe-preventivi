@@ -27,6 +27,8 @@ struct QuoteEditorView: View {
     @State private var showSignature = false
     /// Inizio del sopralluogo in corso su questo preventivo (Dynamic Island).
     @State private var siteVisitStart: Date?
+    /// Pannello «Sopralluogo»: annotazioni, foto e logistica di cantiere.
+    @State private var showSurveyBoard = false
 
     init(quoteID: String) {
         _editor = State(initialValue: QuoteEditorModel(quoteID: quoteID))
@@ -81,6 +83,7 @@ struct QuoteEditorView: View {
             case "summary": showSummary = true
             case "chat": showChat = true
             case "voice": showVoice = true
+            case "survey": showSurveyBoard = true
             case "signature": showSignature = editor.quote?.signature != nil
             default: break
             }
@@ -140,6 +143,9 @@ struct QuoteEditorView: View {
         }
         .sheet(isPresented: $showChat) {
             AIChatView(quote: editor.quote)
+        }
+        .sheet(isPresented: $showSurveyBoard) {
+            SurveyBoardView(quoteID: editor.quoteID, isExtra: editor.quote?.isExtra ?? false)
         }
         .sheet(isPresented: $showVoice) {
             VoiceCommandView(editor: editor)
@@ -446,6 +452,7 @@ struct QuoteEditorView: View {
             }
             ToolbarItem(placement: .primaryAction) {
                 Menu {
+                    Button("Sopralluogo: note, foto e logistica", systemImage: "list.clipboard") { showSurveyBoard = true }
                     if model.sitesEnabled {
                         Button("Vai al cantiere", systemImage: "hammer") { goToSite(status: quote.status) }
                     }

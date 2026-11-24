@@ -7,6 +7,7 @@ import { QuoteEditor } from "@/components/quote-editor/QuoteEditor";
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { sitesEnabledFor } from "@/lib/features";
 import { getQuoteSite } from "@/lib/sites/quote-site";
+import { countSurveyBoard } from "@/lib/sites/survey-board";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -27,7 +28,7 @@ export default async function QuotePage({ params }: Props) {
 
   // Lavori extra: il preventivo principale (se questo è un extra) e gli extra collegati.
   const rootId = quote.kind === "extra" ? quote.parentQuoteId : quote.id;
-  const [parent, extras, site] = await Promise.all([
+  const [parent, extras, site, surveyCount] = await Promise.all([
     quote.kind === "extra" && quote.parentQuoteId
       ? db
           .select({ id: quotes.id, code: quotes.code, title: quotes.title })
@@ -45,6 +46,8 @@ export default async function QuotePage({ params }: Props) {
       : Promise.resolve([]),
     // Cantiere collegato: una lettura per chiave primaria (solo se la funzione è attiva).
     sitesEnabledFor(session.user.role) ? getQuoteSite(id).then((r) => r.site) : Promise.resolve(undefined),
+    // Note e foto del sopralluogo: il numero sul tasto del pannello.
+    countSurveyBoard(id, quote.siteId ?? null),
   ]);
 
   return (
@@ -53,6 +56,8 @@ export default async function QuotePage({ params }: Props) {
       clients={allClients}
       related={{ parent, extras }}
       site={site}
+      surveyCount={surveyCount}
+      currentUser={{ id: session.user.id, name: session.user.name }}
     />
   );
 }

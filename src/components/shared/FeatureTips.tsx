@@ -27,6 +27,8 @@ const TIPS: Tip[] = [
   { id: "dashboard-todo", until: "2026-11-26", text: "La dashboard ti mostra cosa fare adesso: tocca un riquadro per aprire l'elenco già filtrato." },
   { id: "search", until: "2026-11-26", text: "Nuovo: cerca preventivi, clienti e cantieri da qui, anche con ⌘K." },
   { id: "quote-client", until: "2026-11-26", text: "Il cliente ora si sceglie con la ricerca, e da qui puoi anche crearne uno nuovo." },
+  // 4.14.0: pannello Sopralluogo, 5 giorni.
+  { id: "sopralluogo", until: "2026-11-29", text: "Nuovo: annotazioni, foto e logistica del sopralluogo, anche sulla bozza." },
 ];
 
 const STORE = "dieffe-tips-seen";

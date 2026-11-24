@@ -43,6 +43,30 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "4.14.0",
+    date: "2026-11-24",
+    headline: "Note, foto e logistica del sopralluogo, già dalla bozza.",
+    highlights: [
+      {
+        icon: "site",
+        title: "Pannello Sopralluogo",
+        description:
+          "Nel preventivo, il tasto «Sopralluogo» apre un pannello laterale con annotazioni e foto preliminari. Quando il preventivo diventa cantiere le ritrovi nelle Note e Foto del cantiere.",
+      },
+      {
+        icon: "layout",
+        title: "Logistica di cantiere",
+        description:
+          "Quattro livelli da spuntare dopo il sopralluogo: semplice, intermedia, difficile, accesso impossibile (suolo pubblico). Si vede anche nella pagina del cantiere.",
+      },
+      {
+        icon: "sparkles",
+        title: "Annotazioni durante il sopralluogo su iPhone",
+        description: "Nel sopralluogo vocale il tasto ✎ mette in pausa l'ascolto e ti fa scrivere (o dettare) un'annotazione sul cantiere.",
+      },
+    ],
+  },
+  {
     version: "4.13.0",
     date: "2026-11-22",
     headline: "Sopralluogo con l'IA, preventivi modificati a voce e una dashboard nuova.",

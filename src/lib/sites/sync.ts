@@ -33,9 +33,9 @@ const GONE = sql`(q.deleted_at is not null or q.status not in ${LIVE})`;
 /** Cantiere (alias s) su cui qualcuno ha già lavorato. */
 const HAS_WORK = sql`(
   s.start_date is not null
-  or exists (select 1 from site_notes n where n.site_id = s.id)
+  or exists (select 1 from site_notes n where n.site_id = s.id and n.quote_id is null)
   or exists (select 1 from site_events e where e.site_id = s.id)
-  or exists (select 1 from site_photos f where f.site_id = s.id)
+  or exists (select 1 from site_photos f where f.site_id = s.id and f.quote_id is null)
   or exists (select 1 from site_phases p where p.site_id = s.id and p.done_at is not null)
   or exists (select 1 from site_milestones m where m.site_id = s.id and (m.invoiced_at is not null or m.paid_at is not null))
 )`;
@@ -57,6 +57,19 @@ export async function syncSites(): Promise<void> {
     db.execute(sql`
       update quotes set site_setup_at = null
       where site_id in (
+        select s.id from sites s join quotes q on q.id = s.main_quote_id
+        where s.archived_at is null and ${GONE} and not ${HAS_WORK}
+      )`),
+    //    Note e foto del sopralluogo restano al loro preventivo (non si perdono).
+    db.execute(sql`
+      update site_notes set site_id = null
+      where quote_id is not null and site_id in (
+        select s.id from sites s join quotes q on q.id = s.main_quote_id
+        where s.archived_at is null and ${GONE} and not ${HAS_WORK}
+      )`),
+    db.execute(sql`
+      update site_photos set site_id = null
+      where quote_id is not null and site_id in (
         select s.id from sites s join quotes q on q.id = s.main_quote_id
         where s.archived_at is null and ${GONE} and not ${HAS_WORK}
       )`),
@@ -129,6 +142,12 @@ export async function syncSites(): Promise<void> {
       update site_photos f set site_id = q.site_id
       from quotes q
       where f.quote_id = q.id and q.site_id is not null and f.site_id is distinct from q.site_id`),
+
+    // 9. Annotazioni del sopralluogo: come le foto, nelle Note del cantiere.
+    db.execute(sql`
+      update site_notes n set site_id = q.site_id
+      from quotes q
+      where n.quote_id = q.id and q.site_id is not null and n.site_id is distinct from q.site_id`),
   ]);
 }
 

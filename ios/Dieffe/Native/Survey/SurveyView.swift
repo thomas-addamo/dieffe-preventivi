@@ -145,6 +145,11 @@ struct SurveyView: View {
     @State private var items: [SurveyItem] = []
     @State private var notes: [SurveyNote] = []
     @State private var shots: [SurveyShot] = []
+    /// Annotazioni scritte a mano (tasto ✎): vanno nelle note del cantiere, non nel preventivo.
+    @State private var annotations: [SurveyNote] = []
+    @State private var writingNote = false
+    /// Ascolto da riprendere chiuso il foglio dell'annotazione.
+    @State private var resumeAfterNote = false
     @State private var fresh: Set<UUID> = []
     @State private var started = Date()
     @State private var pausedTotal: TimeInterval = 0
@@ -197,9 +202,9 @@ struct SurveyView: View {
                 LiveTranscript(text: text)
                     .padding(.horizontal, 24)
                     .padding(.top, 10)
-                DraftSheet(context: context, title: draftTitle, client: client, items: items, notes: notes, shots: shots, fresh: fresh, demo: isDemo,
+                DraftSheet(context: context, title: draftTitle, client: client, items: items, notes: notes, annotations: annotations, shots: shots, fresh: fresh, demo: isDemo,
                            sectionOrder: sectionOrder, optionalSections: optionalSections,
-                           offline: aiOffline, onRemove: removeItem, onRemoveNote: removeNote)
+                           offline: aiOffline, onRemove: removeItem, onRemoveNote: removeNote, onRemoveAnnotation: removeAnnotation)
                     .padding(.horizontal, 12)
                     .padding(.top, 14)
             }
@@ -229,15 +234,25 @@ struct SurveyView: View {
             }
             .ignoresSafeArea()
         }
+        .sheet(isPresented: $writingNote, onDismiss: {
+            if resumeAfterNote { resumeAfterNote = false; togglePause() }
+        }) {
+            AnnotationEditorSheet(title: "Annotazione", text: "") { text in
+                let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !t.isEmpty else { return }
+                withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) { annotations.append(SurveyNote(text: t)) }
+            }
+        }
         .sheet(isPresented: $showReview) {
-            SurveyReviewView(context: context, title: draftTitle, initialText: text, items: items, aiNotes: notes.map(\.text), shots: shots,
+            SurveyReviewView(context: context, title: draftTitle, initialText: text, items: items, aiNotes: notes.map(\.text),
+                             annotations: annotations.map(\.text), shots: shots,
                              sectionOrder: sectionOrder, optionalSections: optionalSections, quoteFields: quoteFields, client: client)
         }
         .confirmationDialog("Annullare il sopralluogo?", isPresented: $confirmCancel, titleVisibility: .visible) {
             Button("Annulla il sopralluogo", role: .destructive) { model.survey = nil }
             Button("Continua", role: .cancel) {}
         } message: {
-            Text("Il testo e le foto non sono ancora salvati e andranno persi.")
+            Text("Il testo, le annotazioni e le foto non sono ancora salvati e andranno persi.")
         }
     }
 
@@ -257,7 +272,7 @@ struct SurveyView: View {
     private var topBar: some View {
         HStack {
             Button {
-                if text.isEmpty && shots.isEmpty { model.survey = nil } else { confirmCancel = true }
+                if text.isEmpty && shots.isEmpty && annotations.isEmpty { model.survey = nil } else { confirmCancel = true }
             } label: {
                 Image(systemName: "xmark")
                     .font(.system(size: 17, weight: .semibold))
@@ -333,12 +348,41 @@ struct SurveyView: View {
             .disabled(!UIImagePickerController.isSourceTypeAvailable(.camera) && !isDemo)
 
             Button {
+                // Mentre si scrive l'ascolto va in pausa: non trascrive la stanza.
+                if !paused { resumeAfterNote = true; togglePause() }
+                writingNote = true
+            } label: {
+                Image(systemName: "square.and.pencil")
+                    .font(.system(size: 20, weight: .semibold))
+                    .frame(width: 64, height: 64)
+                    .overlay(alignment: .topTrailing) {
+                        if !annotations.isEmpty {
+                            Text("\(annotations.count)")
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(.white)
+                                .padding(5)
+                                .background(Color.teal, in: Circle())
+                                .offset(x: 2, y: -2)
+                                .transition(.scale.combined(with: .opacity))
+                        }
+                    }
+            }
+            .buttonStyle(.plain)
+            .glassEffect(.regular.interactive(), in: .circle)
+            .accessibilityLabel("Scrivi un'annotazione sul cantiere")
+
+            Button {
                 togglePause()
             } label: {
-                Label(paused ? "Riprendi" : "Pausa", systemImage: paused ? "mic.fill" : "pause.fill")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity, minHeight: 64)
-                    .contentTransition(.symbolEffect(.replace))
+                ViewThatFits(in: .horizontal) {
+                    Label(paused ? "Riprendi" : "Pausa", systemImage: paused ? "mic.fill" : "pause.fill")
+                        .fixedSize()
+                    Image(systemName: paused ? "mic.fill" : "pause.fill")
+                }
+                .font(.headline)
+                .frame(maxWidth: .infinity, minHeight: 64)
+                .contentTransition(.symbolEffect(.replace))
+                .accessibilityLabel(paused ? "Riprendi" : "Pausa")
             }
             .buttonStyle(.plain)
             .glassEffect(.regular.interactive(), in: .capsule)
@@ -592,6 +636,10 @@ struct SurveyView: View {
         _ = withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) { items.removeAll { $0.id == item.id } }
     }
 
+    private func removeAnnotation(_ note: SurveyNote) {
+        _ = withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) { annotations.removeAll { $0.id == note.id } }
+    }
+
     private func removeNote(_ note: SurveyNote) {
         _ = withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) { notes.removeAll { $0.id == note.id } }
     }
@@ -692,6 +740,7 @@ private struct DraftSheet: View {
     var client: SurveyClient? = nil
     let items: [SurveyItem]
     let notes: [SurveyNote]
+    var annotations: [SurveyNote] = []
     let shots: [SurveyShot]
     let fresh: Set<UUID>
     let demo: Bool
@@ -700,6 +749,7 @@ private struct DraftSheet: View {
     var offline = false
     var onRemove: (SurveyItem) -> Void = { _ in }
     var onRemoveNote: (SurveyNote) -> Void = { _ in }
+    var onRemoveAnnotation: (SurveyNote) -> Void = { _ in }
 
     private var sections: [(String, [SurveyItem])] {
         var order = sectionOrder
@@ -712,7 +762,7 @@ private struct DraftSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     header
-                    if items.isEmpty && notes.isEmpty && shots.isEmpty {
+                    if items.isEmpty && notes.isEmpty && shots.isEmpty && annotations.isEmpty {
                         placeholder
                     }
                     ForEach(sections, id: \.0) { section, rows in
@@ -744,6 +794,22 @@ private struct DraftSheet: View {
                                     .padding(10)
                                     .background(Color.yellow.opacity(0.14), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                                     .transition(.move(edge: .leading).combined(with: .opacity))
+                            }
+                        }
+                    }
+                    if !annotations.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            SectionLabel("Annotazioni sul cantiere")
+                            ForEach(annotations) { note in
+                                HStack(alignment: .top, spacing: 8) {
+                                    Label(note.text, systemImage: "square.and.pencil")
+                                        .font(.subheadline)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                    RemoveButton(label: "Togli l'annotazione") { onRemoveAnnotation(note) }
+                                }
+                                .padding(10)
+                                .background(Color.teal.opacity(0.13), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .transition(.move(edge: .leading).combined(with: .opacity))
                             }
                         }
                     }
@@ -956,6 +1022,8 @@ struct SurveyReviewView: View {
     let initialText: String
     let items: [SurveyItem]
     var aiNotes: [String] = []
+    /// Annotazioni scritte a mano: vanno nel pannello Sopralluogo / note del cantiere.
+    var annotations: [String] = []
     let shots: [SurveyShot]
     var sectionOrder: [String] = []
     var optionalSections: Set<String> = []
@@ -964,6 +1032,7 @@ struct SurveyReviewView: View {
 
     @State private var editTitle = ""
     @State private var notes = ""
+    @State private var logistics: SiteLogistics?
     @State private var saving = false
     @State private var progress = ""
     @State private var error: String?
@@ -1006,6 +1075,24 @@ struct SurveyReviewView: View {
                     } footer: {
                         Text("Le voci entrano nel preventivo con le loro sezioni; i prezzi non detti restano da completare nell'editor.")
                     }
+                }
+                if !annotations.isEmpty {
+                    Section {
+                        ForEach(annotations, id: \.self) { a in
+                            Label(a, systemImage: "square.and.pencil").font(.subheadline)
+                        }
+                    } header: {
+                        Text("Annotazioni (\(annotations.count))")
+                    } footer: {
+                        Text("Restano nel pannello Sopralluogo del preventivo e poi nelle note del cantiere; non vanno nel PDF.")
+                    }
+                }
+                Section {
+                    LogisticsPickerRows(selection: logistics) { logistics = $0 }
+                } header: {
+                    Text("Logistica di cantiere")
+                } footer: {
+                    Text("Facoltativa: si può indicare anche dopo, dal pannello Sopralluogo.")
                 }
                 if !shots.isEmpty {
                     Section("Foto (\(shots.count))") {
@@ -1140,6 +1227,15 @@ struct SurveyReviewView: View {
                     else { continue }
                     _ = try? await APIClient.shared.upload("/api/quotes/\(id)/photos", data: jpeg,
                                                            filename: "sopralluogo-\(index + 1).jpg", mimeType: "image/jpeg", fields: [:])
+                }
+                // Annotazioni e logistica: nel pannello Sopralluogo (poi nel cantiere).
+                for (index, a) in annotations.enumerated() {
+                    progress = "Annotazione \(index + 1) di \(annotations.count)…"
+                    // Il preventivo esiste già: un errore qui non deve farlo ricreare riprovando.
+                    _ = try? await APIClient.shared.send("POST", "/api/quotes/\(id)/survey-board/notes", json: ["body": a], as: Empty.self)
+                }
+                if let logistics {
+                    _ = try? await APIClient.shared.send("PATCH", "/api/quotes/\(id)/survey-board", json: ["logistics": logistics.rawValue], as: Empty.self)
                 }
                 model.quoteToOpen = id
                 dismiss()
